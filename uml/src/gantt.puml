@@ -20,18 +20,23 @@ printscale weekly with calendar date
 language en
 
 ' Project weeks per spec.md §14: week n starts Monday 2026-08-31 + 7(n-1);
-' W14 is truncated, ending Friday 2026-12-04 (not the usual Sunday).
+' every week (including W14) is a normal Mon-Sun span. The course's final
+' deadline (final report & presentation) is Friday 2026-12-04, inside W14 -
+' not the week's own end (2026-12-06) - so task/milestone bars below that
+' represent deliverables end on 12-04, the deadline date, not on W14's
+' calendar boundary.
 ' W1 08-31..09-06  W2 09-07..09-13  W3 09-14..09-20  W4 09-21..09-27
 ' W5 09-28..10-04  W6 10-05..10-11  W7 10-12..10-18  W8 10-19..10-25
 ' W9 10-26..11-01  W10 11-02..11-08 W11 11-09..11-15 W12 11-16..11-22
-' W13 11-23..11-29 W14 11-30..12-04 (Friday close)
+' W13 11-23..11-29 W14 11-30..12-06 (deadline Fri 12-04)
 
 -- Project management --
 [1 Project management (W1-W14)] starts 2026-09-01 and ends 2026-12-04
+[1.2 Team coordination and idea collection (W1-W3)] starts 2026-09-01 and ends 2026-09-20
 
 -- Proposal --
 [2 Proposal (W1-W5)] starts 2026-09-01 and ends 2026-10-02
-[2.1 Topic selection] starts 2026-09-01 and ends 2026-09-27
+[2.1 Topic selection] starts 2026-09-21 and ends 2026-09-27
 [2.2 Proposal document] starts 2026-09-28 and ends 2026-10-02
 
 -- Requirements --
@@ -45,10 +50,12 @@ language en
 [4.2 UI design] starts 2026-10-19 and ends 2026-10-30
 
 -- Implementation --
-[5 Implementation by vibe coding (W9-W11)] starts 2026-10-26 and ends 2026-11-13
+[5 Implementation by vibe coding (W9-W12)] starts 2026-10-26 and ends 2026-11-20
 [5.1 Prompt engineering] starts 2026-10-26 and ends 2026-11-01
-[5.2 Increment 1 Must ends 11-06] starts 2026-11-02 and ends 2026-11-06
-[5.3 Increment 2 Should ends 11-13] starts 2026-11-09 and ends 2026-11-13
+[5.2 Application build] starts 2026-11-02 and ends 2026-11-20
+[5.2.1 Increment 1 (Must) ends 11-06] starts 2026-11-02 and ends 2026-11-06
+[5.2.1 Increment 2 (Should) ends 11-13] starts 2026-11-09 and ends 2026-11-13
+[5.2.2 Deploy to GitHub Pages] starts 2026-11-16 and ends 2026-11-20
 
 -- Testing --
 [6 Testing refinement (W12-W13)] starts 2026-11-16 and ends 2026-11-29

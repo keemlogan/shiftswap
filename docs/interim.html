@@ -25,6 +25,8 @@
   .pair > div { min-width: 0; }
   .pair figure { margin: 6pt 0 10pt; }
   .pair figure.shot img { max-height: 3.3in; }
+  figure.phone .clip { height: 6in; overflow: hidden; border: 1px solid var(--line); }
+  figure.phone .clip img { width: 100%; max-height: none; border: 0; display: block; }
 </style>
 </head>
 <body>
@@ -491,7 +493,7 @@
   <li>The system checks BR-03: the shift is hers, SCHEDULED, in the future, has no open request, and the deadline is before the shift start.</li>
   <li>The system applies BR-01. Choi Minho has no shift on Wednesday and is available Wednesday 17:00&ndash;23:00, which covers 18:00&ndash;23:00. Kang Doyun has no shift on Wednesday and is available Wednesday 18:00&ndash;23:00. Jung Hana is not available on Wednesday. Both Minho and Doyun are eligible.</li>
   <li>The system stores the request as REQUESTED, two PENDING targets, and a REQUEST_RECEIVED notification for each of the two candidates.</li>
-  <li>Seoyeon sees &ldquo;Notified: Choi Minho, Kang Doyun&rdquo;. On the weekly board her Wednesday shift now has a dashed amber outline.</li>
+  <li>On <em>My requests</em> Seoyeon sees the request as &ldquo;Waiting for replies&rdquo; with both candidates, Choi Minho and Kang Doyun, marked &ldquo;No reply yet&rdquo; (Figure 14). On the weekly board her Wednesday shift now has a dashed amber outline (Figure 9).</li>
 </ol>
 <p><strong>What can go wrong.</strong> If Seoyeon enters a deadline after 2026-09-30 18:00, the system refuses and says that the deadline must be no later than the shift start.</p>
 <p><strong>End state.</strong> One open request with two candidates. This is the state of the demo data.</p>
@@ -639,59 +641,62 @@
 
 <a id="ui"></a>
 <h1 id="s8">8. Main user interface screens</h1>
-<p>The screens below come from the UI prototype, which runs on the demo data of Section 2.3 with the demo clock at Monday 2026-09-28 09:00 unless stated otherwise. All screens use the same visual language: white cards on a light grey surface, blue for the signed-in worker's own shifts, and amber only for substitution (a dashed amber outline for an open request, an amber edge and stripe for a handed-over shift). Status chips carry text, not only color.</p>
+<p>The screens below were captured from the prototype on the demo data of Section 2.3, with the demo clock at Monday 2026-09-28 09:00 unless the caption states otherwise. All screens use the same visual language: white cards on a light grey surface, blue for the signed-in worker's own shifts, and amber only for substitution (a dashed amber outline for an open request, an amber edge and stripe for a handed-over shift). Status chips carry text, not only color.</p>
 
-<div class="pair">
-<div style="flex-basis:64%"><figure class="shot">
+<figure class="shot">
   <img src="img/ui-01-signin.png" alt="Sign-in screen with five demo accounts">
-  <figcaption>Figure 8. Sign-in (UC-13). The list of demo accounts: Park Jiyoung (owner) and the four workers Lee Seoyeon, Choi Minho, Jung Hana and Kang Doyun, each with a role label, and a note that the demo has no passwords.</figcaption>
-</figure></div>
-<div style="flex-basis:36%"><figure class="shot">
-  <img src="img/ui-13-mobile-board.png" alt="Weekly board at 360 pixel width shown as a day-by-day list">
-  <figcaption>Figure 9. Weekly board at 360 px width (NFR-02). On a phone the seven-column board becomes a day-by-day list and the left navigation becomes a bottom tab bar. There is no horizontal scrolling.</figcaption>
-</figure></div>
-</div>
+  <figcaption>Figure 8. Sign-in (UC-13). &ldquo;Choose an account&rdquo; lists Park Jiyoung (Owner, Dalbit Caf&eacute;, 4 workers) and the four workers with their fixed shifts and weekly hours: Lee Seoyeon 10 h, Choi Minho 16 h, Jung Hana 12 h, Kang Doyun 12 h. A note says the demo has no passwords. The header shows the demo clock at 09/28/2026 09:00 with <em>+1 hour</em> and <em>+1 day</em>, the language switch and the menu.</figcaption>
+</figure>
 
 <figure class="shot">
   <img src="img/ui-02-board-owner.png" alt="Weekly board as seen by the owner">
-  <figcaption>Figure 10. Weekly board, owner view (UC-03). Seven columns from Monday 28 September to Sunday 4 October 2026 with shifts ordered by start time. Each block shows the time range and the worker. The owner has the controls to generate the week, edit or delete a shift, and move to the previous or next week. Lee Seoyeon's Wednesday 18:00&ndash;23:00 shift has a dashed amber outline because a request is open for it.</figcaption>
+  <figcaption>Figure 9. Weekly board, owner view (UC-03), demo clock Mon 2026-09-28 09:00. The week of Mon 09-28 to Sun 10-04 has 9 shifts and 50 h; summary cards show 0 approvals waiting and 1 open substitute request. Each shift block shows its time range, the worker and an <em>Edit</em> button; <em>Generate this week</em> and <em>Add shift</em> are at the top right. Lee Seoyeon's Wednesday 18:00&ndash;23:00 shift has a dashed amber outline and the chip &ldquo;Substitute requested&rdquo;.</figcaption>
 </figure>
 
 <div class="pair">
-<div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-03-board-worker.png" alt="Weekly board as seen by a worker">
-  <figcaption>Figure 11. Weekly board, worker view (UC-03, UC-04). The same week seen by a signed-in worker. The worker's own shifts are emphasised in blue, and each future own shift offers <em>Request substitute</em>. There are no editing controls.</figcaption>
+<div style="flex:0 0 2.1in"><figure class="shot phone">
+  <div class="clip"><img src="img/ui-13-mobile-board.png" alt="Owner weekly board at 390 pixel width shown as a day-by-day list"></div>
+  <figcaption>Figure 10. Weekly board at 390 px width (NFR-02), owner view; the upper part of the page is shown. The header controls wrap onto several lines and the seven-column grid becomes a day-by-day list. The Wednesday 09-30 shift of Lee Seoyeon keeps its dashed amber outline and &ldquo;Substitute requested&rdquo; chip.</figcaption>
 </figure></div>
-<div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-04-request-form.png" alt="Substitute request form">
-  <figcaption>Figure 12. Request substitute form (UC-04). Opened from one of the worker's own future shifts. It shows the shift's date and time, an optional reason field and a deadline field pre-filled with the earlier of now + 24 hours and the shift start. After submission the screen lists the notified candidates, or states that no eligible worker exists (FR-08).</figcaption>
+<div style="flex:1"><figure class="shot">
+  <img src="img/ui-05-inbox.png" alt="Inbox item with Accept and Decline buttons">
+  <figcaption>Figure 11. Inbox of a candidate (UC-05, FR-21). The new notification of Mon 09-28 08:30 reads &ldquo;Lee Seoyeon asks for a substitute on Wed 09-30 18:00&ndash;23:00. Reply by Tue 09-29 21:00.&rdquo; with the reason &ldquo;Midterm exam&rdquo;. <em>Accept</em> and <em>Decline</em> are on the item itself, so the candidate answers without opening another screen (NFR-01).</figcaption>
+</figure>
+<figure class="shot">
+  <img src="img/ui-08-attendance.png" alt="Attendance screen of a worker recording clock-in and clock-out">
+  <figcaption>Figure 12. Attendance, worker view (UC-07), signed in as Lee Seoyeon with the demo clock at 2026-09-29T09:00. For Mon 09-28 18:00&ndash;23:00 (status &ldquo;Not recorded&rdquo;) she has entered clock-in 18:05 and clock-out 23:00 and can press <em>Save record</em>. Wed 09-30 is marked &ldquo;Not started yet&rdquo;. The owner confirms the saved record in the owner view of the same screen.</figcaption>
 </figure></div>
 </div>
 
 <div class="pair">
 <div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-05-inbox.png" alt="Notification inbox with Accept and Decline buttons">
-  <figcaption>Figure 13. Inbox (UC-05, FR-21). Notifications newest first with the unread count in the header. A REQUEST_RECEIVED item for a pending request carries <em>Accept</em> and <em>Decline</em> buttons directly on the item, so a candidate accepts in at most two clicks (NFR-01). If another candidate accepted first, the item shows &ldquo;Already taken by &lt;name&gt;&rdquo; instead.</figcaption>
+  <img src="img/ui-03-board-worker.png" alt="Weekly board as seen by the worker Lee Seoyeon">
+  <figcaption>Figure 13. Weekly board, worker view (UC-03, UC-04), signed in as Lee Seoyeon. Her own shifts (Mon and Wed 18:00&ndash;23:00) are shaded blue with her name in blue. The Monday shift offers <em>Request substitute</em>; the Wednesday shift already carries &ldquo;Substitute requested&rdquo;. The worker menu has Schedule, My requests, Inbox, Attendance and Availability, and no editing controls.</figcaption>
 </figure></div>
 <div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-08-attendance.png" alt="Attendance screen">
-  <figcaption>Figure 14. Attendance (UC-07). Shifts that have already started, with recorded clock-in and clock-out times and their confirmation state. The owner confirms a record or marks the shift absent; a worker sees and records only their own shifts.</figcaption>
+  <img src="img/ui-04-request-form.png" alt="Request substitute form on the My requests page">
+  <figcaption>Figure 14. Request substitute (UC-04) and My requests (UC-12), signed in as Lee Seoyeon. The form has the shift Mon 10-05 18:00&ndash;23:00 selected, the reason &ldquo;Family event&rdquo; and the reply deadline 09/29/2026 09:00, the default of now + 24 h. Wed 09-30 is not offered, because it already has an open request (BR-03). Below, that request is listed as &ldquo;Waiting for replies&rdquo; (reply by Tue 09-29 21:00, reason &ldquo;Midterm exam&rdquo;), with both candidates, Choi Minho and Kang Doyun, marked &ldquo;No reply yet&rdquo; and a <em>Cancel request</em> button.</figcaption>
 </figure></div>
 </div>
 
 <figure class="shot">
   <img src="img/ui-06-approval.png" alt="Approval panel comparing requester and acceptor before and after the swap">
-  <figcaption>Figure 15. Approval panel (UC-06, FR-11). The request of Lee Seoyeon accepted by Choi Minho. The before/after table gives, for both workers, contractual hours, scheduled hours of the week, holiday-allowance eligibility and holiday hours: Minho's scheduled hours change from 16 to 21 and his eligibility stays unchanged. <em>Approve</em> and <em>Reject</em> buttons are below the table.</figcaption>
+  <figcaption>Figure 15. Approval panel (UC-06, FR-11). Lee Seoyeon &rarr; Choi Minho for Wed 09-30 18:00&ndash;23:00, &ldquo;Accepted, waiting for approval&rdquo;. For the week of Mon 09-28, Seoyeon keeps 10 contract hours, her scheduled hours fall from 10 to 5 h, and she is not eligible before or after (0 h). Minho keeps 16 contract hours, his scheduled hours rise from 16 to 21 h, and he is eligible before and after with 3.2 holiday hours. The note reads &ldquo;Holiday-allowance eligibility does not change for either worker.&rdquo; Buttons: <em>Approve swap</em>, <em>Reject</em>, <em>Close</em>.</figcaption>
 </figure>
 
 <figure class="shot">
-  <img src="img/ui-09-weekly.png" alt="Weekly summary table">
-  <figcaption>Figure 16. Weekly summary (UC-08, FR-14). One row per worker for the selected week with contractual, scheduled and actual hours, perfect attendance, holiday-allowance eligibility and holiday hours. For the week of 21 September 2026, Choi Minho (16 h contract) is eligible with 3.2 holiday hours; Lee Seoyeon (10 h), Jung Hana (12 h) and Kang Doyun (12 h) are not eligible, with the reason &ldquo;contract hours below 15&rdquo;.</figcaption>
+  <img src="img/ui-14-board-handover.png" alt="Owner weekly board after the swap was approved">
+  <figcaption>Figure 16. Weekly board after approval (UC-06, BR-04). The Wednesday 09-30 18:00&ndash;23:00 shift now shows &ldquo;Choi Minho&rdquo; in bold with &ldquo;Lee Seoyeon&rdquo; struck through beneath it, on an amber left edge with a diagonal amber stripe. Open substitute requests are now 0, and the owner's inbox shows 1 unread notification.</figcaption>
 </figure>
 
 <figure class="shot">
-  <img src="img/ui-10-payroll.png" alt="Monthly payroll draft with a minimum-wage warning">
-  <figcaption>Figure 17. Monthly payroll (UC-09, FR-15, FR-16). Draft rows per worker for the selected month with base hours, base pay, holiday pay, premium pay, total and flags. Kang Doyun's row carries the minimum-wage warning (KRW 10,000 below KRW 10,320), which must be acknowledged before <em>Confirm</em> is enabled.</figcaption>
+  <img src="img/ui-09-weekly.png" alt="Weekly summary table for the week of 21 September 2026">
+  <figcaption>Figure 17. Weekly summary (UC-08, FR-14) for the week of Mon 09-21 to Sun 09-27, policy &ldquo;Given-away shifts count as: not absent&rdquo; (EXCUSED). All four workers have perfect attendance and actual hours equal to scheduled hours. Only Choi Minho (16 h) is eligible, with 3.2 holiday hours; Lee Seoyeon (10 h), Jung Hana (12 h) and Kang Doyun (12 h) are not eligible, with the reason &ldquo;contract hours below 15&rdquo;.</figcaption>
+</figure>
+
+<figure class="shot">
+  <img src="img/ui-10-payroll.png" alt="Monthly payroll draft for September 2026 with a minimum-wage warning">
+  <figcaption>Figure 18. Payroll draft for September 2026 (UC-09, FR-15, FR-16). Premium pay is 0 because the store has 4 regular employees. Rows: Lee Seoyeon 20 h, 210,000 won (estimated); Choi Minho 21 h, 216,720 won base + 33,024 won holiday pay = 249,744 won (estimated); Jung Hana 12 h, 123,840 won with the chip &ldquo;Probation minimum (90 %)&rdquo;; Kang Doyun 12 h, 120,000 won with &ldquo;Below minimum wage&rdquo; (10,000 won below the 2026 minimum of 10,320 won) and an <em>Acknowledge</em> button. Total of all workers: 703,584 won. <em>Confirm payroll</em> stays disabled until the warning on 1 row is acknowledged.</figcaption>
 </figure>
 
 <p>Table 21 maps every use case to the screen that realises it. UC-10 (settings), UC-01 (workers and schedules) and UC-02 (availability) use simple forms and are not shown as figures in this report.</p>
@@ -700,13 +705,13 @@
   <thead><tr><th>Screen</th><th>Role</th><th>Use cases</th><th>Figure</th></tr></thead>
   <tbody>
 <tr><td>Sign-in</td><td>All</td><td>UC-13</td><td>8</td></tr>
-<tr><td>Weekly board</td><td>Owner, Worker</td><td>UC-03, UC-04 (entry)</td><td>9, 10, 11</td></tr>
-<tr><td>Request substitute / My requests</td><td>Worker</td><td>UC-04, UC-12</td><td>12</td></tr>
-<tr><td>Inbox</td><td>All</td><td>UC-05, FR-21</td><td>13</td></tr>
+<tr><td>Weekly board</td><td>Owner, Worker</td><td>UC-03, UC-04 (entry), UC-06 (result)</td><td>9, 10, 13, 16</td></tr>
+<tr><td>Request substitute / My requests</td><td>Worker</td><td>UC-04, UC-12</td><td>14</td></tr>
+<tr><td>Inbox</td><td>All</td><td>UC-05, FR-21</td><td>11</td></tr>
 <tr><td>Approvals</td><td>Owner</td><td>UC-06</td><td>15</td></tr>
-<tr><td>Attendance</td><td>Owner, Worker</td><td>UC-07</td><td>14</td></tr>
-<tr><td>Weekly summary</td><td>Owner</td><td>UC-08</td><td>16</td></tr>
-<tr><td>Payroll</td><td>Owner</td><td>UC-09</td><td>17</td></tr>
+<tr><td>Attendance</td><td>Owner, Worker</td><td>UC-07</td><td>12</td></tr>
+<tr><td>Weekly summary</td><td>Owner</td><td>UC-08</td><td>17</td></tr>
+<tr><td>Payroll</td><td>Owner</td><td>UC-09</td><td>18</td></tr>
 <tr><td>Workers &amp; schedules</td><td>Owner</td><td>UC-01</td><td>&ndash;</td></tr>
 <tr><td>Availability</td><td>Worker</td><td>UC-02</td><td>&ndash;</td></tr>
 <tr><td>Settings</td><td>Owner</td><td>UC-10</td><td>&ndash;</td></tr>
@@ -756,7 +761,7 @@
 
 <h1 id="s10">10. Progress and next steps</h1>
 <p>Work package 3 of the WBS (requirements: elicitation and specification) is complete with this report, and the analysis diagrams of work package 4.1 are drawn. Work package 4.2 (UI design) has produced the screens of Section 8. Requirements validation continues with the review and prototype sessions of Section 9.</p>
-<p>The next steps follow the schedule of the proposal. In Week 8 (2026-10-19 to 10-25) the team completes the design models of work package 4.1: the design class diagram and sequence diagrams SD-1 (request substitute), SD-2 (accept with a concurrent second acceptance), SD-3 (approve with weekly recomputation) and SD-4 (generate monthly payroll). Prompt engineering (5.1) starts in the same week. Increment 1 (Must use cases) is due at the end of Week 10 (2026-11-06) and increment 2 (Should use cases) at the end of Week 11 (2026-11-13). The final report, slides and presentation are due in Week 14 (2026-12-04).</p>
+<p>The next steps follow the schedule of the proposal. By 2026-10-21 (Week 8) the team completes the design models of work package 4.1: the design class diagram and sequence diagrams SD-1 (request substitute), SD-2 (accept with a concurrent second acceptance), SD-3 (approve with weekly recomputation) and SD-4 (generate monthly payroll). The UI design (4.2) is finished by 2026-10-30, and prompt engineering (5.1) follows in Week 9. Increment 1 (Must use cases) is due at the end of Week 10 (2026-11-06) and increment 2 (Should use cases) at the end of Week 11 (2026-11-13). The system is deployed to GitHub Pages in Week 12 (2026-11-16 to 11-20). The final report, slides and presentation are due in Week 14 (2026-12-04).</p>
 
 <h1 id="refs">References</h1>
 <ol class="small">

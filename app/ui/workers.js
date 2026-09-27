@@ -1,7 +1,7 @@
 // UC-01 Register worker (FR-01) and fixed weekly schedule (FR-02). Owner only.
 import * as svc from '../core/services.js';
 import { contractHours } from '../core/rules.js';
-import { t, esc, fmtHours, fmtWon, showFormError } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, showFormError, pageHead } from './i18n.js';
 import { slotEditorHtml, bindSlotEditor, readSlots } from './availability.js';
 
 export function render(view, ctx) {
@@ -10,10 +10,7 @@ export function render(view, ctx) {
   const cols = ['workers.phone', 'workers.wage', 'workers.contract', 'workers.contractHours', 'common.status'];
 
   view.innerHTML = `
-    <div class="page-head">
-      <h1>${esc(t('workers.title'))}</h1>
-      <div class="actions"><a class="btn btn-primary" href="#/workers/new">${esc(t('workers.add'))}</a></div>
-    </div>
+    ${pageHead(t('workers.title'), t('purpose.workers'), `<a class="btn btn-primary" href="#/workers/new">${esc(t('workers.add'))}</a>`)}
     <table class="rtable">
       <thead><tr><th scope="col">${esc(t('workers.name'))}</th>${cols.map((c) => `<th scope="col">${esc(t(c))}</th>`).join('')}<th scope="col"><span class="sr-only">${esc(t('workers.edit'))}</span></th></tr></thead>
       <tbody>${workers.map((w) => `

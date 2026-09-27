@@ -1,0 +1,66 @@
+@startuml seq-3-approve-decide
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  ArrowColor #1C2230
+  BoxBorderColor #1C2230
+}
+
+title UC-06 Approve or reject substitution — decision (FR-12, BR-04; includes UC-08)
+
+actor "A2 Owner" as Owner
+boundary "approvals.js" as UI
+control "SubstituteService" as Svc
+control "LaborRules" as Rules
+database "db.js" as DB
+
+Owner -> UI : Approve
+UI -> Svc : decideRequest(requestId, 'APPROVED')
+activate Svc
+Svc -> DB : tx(fn) begin
+activate DB
+Svc -> DB : get SubRequest+Shift (requestWithShift)
+
+alt r.status !== 'ACCEPTED' (BR-04)
+  Svc -> DB : rollback (throw ServiceError('NOT_ACCEPTED'))
+  Svc --> UI : error "only an accepted request\ncan be approved or rejected"
+else r.status === 'ACCEPTED'
+  Svc -> DB : UPDATE Shift SET workerId = acceptor,\noriginalWorkerId = COALESCE(originalWorkerId, shiftWorkerId)
+  Svc -> DB : UPDATE SubRequest SET status='APPROVED', decidedAt=now
+
+  Svc -> Svc : recomputeWeek(weekStartOf(workDate),\n[requesterId, acceptorId]) — same module, self-call
+  activate Svc
+  loop for workerId in [requesterId, acceptorId]
+    Svc -> DB : weekShiftsFor(workerId, weekStart),\nget FixedSchedule
+    Svc -> Rules : computeWeeklySummary({workerId, contractHours,\nshifts, policy}) "after"
+    Rules --> Svc : after summary
+    Svc -> DB : upsert WeeklySummary(workerId, weekStart)
+  end
+  deactivate Svc
+
+  Svc -> DB : insert Notification(REQUEST_APPROVED)\nto requester, acceptor
+  Svc -> DB : commit + persist
+  deactivate DB
+  Svc --> UI : {status: 'APPROVED'}
+  UI --> Owner : show updated shift & weekly summaries (FR-11)
+end
+deactivate Svc
+
+alt Owner rejects instead
+  Owner -> UI : Reject
+  UI -> Svc : decideRequest(requestId, 'REJECTED')
+  Svc -> DB : tx: UPDATE SubRequest SET status='REJECTED',\ndecidedAt=now (Shift unchanged, BR-04)
+  Svc -> DB : insert Notification(REQUEST_REJECTED)\nto requester, acceptor
+  Svc --> UI : {status: 'REJECTED'}
+  UI --> Owner : shift unchanged
+end
+@enduml

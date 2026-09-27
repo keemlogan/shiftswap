@@ -1,13 +1,13 @@
 // FR-21 Inbox and UC-05 Respond: a REQUEST_RECEIVED item has Accept / Decline on the item itself (NFR-01).
 import * as svc from '../core/services.js';
-import { t, esc, fmtDateTime, notificationText } from './i18n.js';
+import { t, esc, fmtDateTime, notificationText, pageHead, emptyState } from './i18n.js';
 
 export function render(view, ctx) {
   const { user } = ctx;
   const { items } = svc.listNotifications(user.id);
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('inbox.title'))}</h1></div>
-    ${items.length ? `<ul class="inbox">${items.map(item).join('')}</ul>` : `<p class="empty">${esc(t('inbox.empty'))}</p>`}`;
+    ${pageHead(t('inbox.title'), t('purpose.inbox'))}
+    ${items.length ? `<ul class="inbox">${items.map(item).join('')}</ul>` : emptyState(t('inbox.emptyText'), `<a class="btn btn-primary" href="#/schedule">${esc(t('inbox.emptyAction'))}</a>`)}`;
 
   view.querySelectorAll('[data-respond]').forEach((b) => b.addEventListener('click', () => {
     const response = b.dataset.respond;

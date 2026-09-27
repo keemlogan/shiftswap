@@ -122,6 +122,7 @@ entity "Payroll" as Payroll {
   premiumPay : INTEGER
   total : INTEGER
   minWageWarning : INTEGER
+  minWageAck : INTEGER
   estimated : INTEGER
   status : TEXT
   ..

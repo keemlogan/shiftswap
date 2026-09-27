@@ -54,6 +54,18 @@ function checkTimes(start, end) {
   }
 }
 
+// ---- UC-13 / FR-20 role guard -------------------------------------------------
+
+const MENUS = {
+  WORKER: ['schedule', 'requests', 'inbox', 'attendance', 'availability'],
+  OWNER: ['schedule', 'approvals', 'inbox', 'attendance', 'weekly', 'payroll', 'workers', 'settings'],
+};
+
+/** FR-20: the screens a role may open, in menu order; any other route is redirected to the schedule. */
+export function menuFor(role) {
+  return MENUS[role] ? [...MENUS[role]] : [];
+}
+
 // ---- Read queries used by the screens ------------------------------------
 
 export function getWorkplace() {

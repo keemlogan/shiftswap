@@ -1,6 +1,6 @@
 // UC-06 Approve or reject substitution, with the FR-11 before/after comparison panel.
 import * as svc from '../core/services.js';
-import { t, esc, fmtShift, fmtDay, fmtDateTime, fmtHours } from './i18n.js';
+import { t, esc, fmtShift, fmtDay, fmtDateTime, fmtHours, pageHead, emptyState } from './i18n.js';
 import { statusChip } from './requests.js';
 
 export function render(view, ctx) {
@@ -11,17 +11,22 @@ export function render(view, ctx) {
   const selected = accepted.find((r) => r.id === selectedId);
 
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('approvals.title'))}</h1></div>
+    ${pageHead(t('approvals.title'), t('purpose.approvals'))}
     ${selectedId && !selected ? `<p class="notice notice-alert" role="status">${esc(t('approvals.gone'))}</p>` : ''}
-    <section class="stack" aria-labelledby="waiting-title">
+    <section class="group stack" aria-labelledby="waiting-title">
       <h2 id="waiting-title">${esc(t('approvals.waiting'))}</h2>
-      ${accepted.length ? accepted.map((r) => acceptedCard(r, r.id === selectedId)).join('') : `<p class="empty">${esc(t('approvals.noneWaiting'))}</p>`}
+      ${accepted.length ? accepted.map((r) => acceptedCard(r, r.id === selectedId)).join('') : emptyState(t('approvals.noneWaiting'), `<button type="button" class="btn" data-scroll="open-title">${esc(t('approvals.noneWaitingAction'))}</button>`)}
     </section>
-    <section class="stack" aria-labelledby="open-title">
-      <h2 id="open-title">${esc(t('approvals.open'))}</h2>
+    <section class="group stack" aria-labelledby="open-title">
+      <h2 id="open-title" tabindex="-1">${esc(t('approvals.open'))}</h2>
       ${open.length ? open.map(openCard).join('') : `<p class="empty">${esc(t('approvals.noneOpen'))}</p>`}
     </section>`;
 
+  view.querySelectorAll('[data-scroll]').forEach((b) => b.addEventListener('click', () => {
+    const target = view.querySelector(`#${b.dataset.scroll}`);
+    target.scrollIntoView({ block: 'start' });
+    target.focus();
+  }));
   view.querySelectorAll('[data-decide]').forEach((b) => b.addEventListener('click', () => {
     const decision = b.dataset.decide;
     const r = accepted.find((x) => x.id === Number(b.dataset.request));

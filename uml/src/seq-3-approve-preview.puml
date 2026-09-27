@@ -1,0 +1,45 @@
+@startuml seq-3-approve-preview
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  ArrowColor #1C2230
+  BoxBorderColor #1C2230
+}
+
+title UC-06 Approve or reject substitution — comparison preview (FR-11; includes UC-08)
+
+actor "A2 Owner" as Owner
+boundary "approvals.js" as UI
+control "SubstituteService" as Svc
+control "LaborRules" as Rules
+database "db.js" as DB
+
+Owner -> UI : open ACCEPTED request
+UI -> Svc : getApprovalPreview(requestId)
+activate Svc
+Svc -> DB : get SubRequest+Shift (requestWithShift),\nget Workplace.subAttendancePolicy
+DB --> Svc : r, policy
+
+loop for person in [requester, acceptor]
+  Svc -> DB : weekShiftsFor(person.id, weekStart) "before"
+  Svc -> Rules : computeWeeklySummary({workerId, contractHours,\nshifts: before, policy}) "before"
+  Rules --> Svc : before summary
+  Svc -> Svc : "after" = before shifts minus this shift,\nplus it reassigned to the acceptor
+  Svc -> Rules : computeWeeklySummary({workerId, contractHours,\nshifts: after, policy}) "after"
+  Rules --> Svc : after summary
+  Svc -> Svc : eligibilityChanged =\nbefore.holidayEligible !== after.holidayEligible
+end
+
+Svc --> UI : {request, weekStart, rows: [{role, before, after,\neligibilityChanged}, ...]}
+deactivate Svc
+UI --> Owner : show contract/scheduled hours & holiday\neligibility, before vs after (FR-11)
+@enduml

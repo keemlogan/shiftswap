@@ -1,0 +1,455 @@
+<h1 id="appendix-log">Appendix B. Prompt Log</h1>
+<p>The log of every ambiguity, review finding and change made between prompt versions, verbatim. Source file: <code>prompts/prompt-log.md</code>.</p>
+<div class="appendix small"><h3 id="appendix-log-shiftswap--prompt-log">ShiftSwap — Prompt log</h3>
+<h4
+id="appendix-log-iteration-1--ambiguities-found-while-building">Iteration
+1 — ambiguities found while building</h4>
+<p>Each bullet: what was unclear → what the implementation does →
+suggested wording for the next prompt version.</p>
+<ul>
+<li><strong><code>node --test tests/</code> fails on Node 24</strong> (a
+directory argument is treated as a module path, error
+<code>Cannot find module …/tests</code>) → the script is
+<code>"test": "node --test tests/*.test.js"</code> → "script
+<code>"test": "node --test tests/*.test.js"</code>".</li>
+<li><strong>Read queries are not in the service list</strong> (the UI
+needs week shifts, request lists, the approval comparison, payroll rows,
+…) → <code>services.js</code> also exports read-only queries
+(<code>getWorkplace</code>, <code>getSettings</code>,
+<code>getWorker</code>, <code>listWorkers</code>,
+<code>getFixedSchedules</code>, <code>getAvailability</code>,
+<code>getWeekShifts</code>, <code>listRequestableShifts</code>,
+<code>listMyRequests</code>, <code>listOwnerRequests</code>,
+<code>getApprovalPreview</code>, <code>listAttendance</code>,
+<code>getPayroll</code>, <code>unreadCount</code>,
+<code>defaultDeadline</code>) plus a <code>ServiceError</code> class
+carrying an error <code>code</code> → "services.js also exports
+read-only query functions for the screens (not wrapped in
+<code>tx</code>) and a <code>ServiceError(code, message, params)</code>
+that the UI translates by code."</li>
+<li><strong>Perfect attendance in a week that has not finished</strong>
+(BR-06 says every own shift "was WORKED") → only an <code>ABSENT</code>
+shift (or a given-away shift under policy <code>ABSENT</code>) breaks
+attendance; a still-<code>SCHEDULED</code> shift does not. Without this,
+the approval panel could never show Minho as "eligible" before the week
+ends, contradicting the worked example → "In BR-06, a shift that is
+still SCHEDULED does not break perfect attendance; only ABSENT does (the
+weekly result is a projection until the week is over)."</li>
+<li><strong>Which workers get a WeeklySummary, and which weeks count for
+holiday pay</strong> → <code>recomputeWeek</code> covers each worker
+with at least one shift (as current or original worker) in the week;
+payroll holiday pay sums only those weeks, so weeks that were never
+generated pay nothing → "A WeeklySummary exists only for workers who
+have a shift in that week."</li>
+<li><strong>No WeeklySummary rows in the seed</strong> (§10 does not
+list them) → none are seeded; they are computed when the owner opens the
+weekly summary, approves a swap, confirms attendance or generates
+payroll → "The seed contains no WeeklySummary/Payroll rows; they are
+derived."</li>
+<li><strong>Base hours for shifts without confirmed attendance</strong>
+(BR-11) → <code>WORKED</code> shifts use the recorded clock-in/out;
+<code>SCHEDULED</code> shifts in the month use scheduled hours and set
+<code>estimated = 1</code>; <code>ABSENT</code> shifts count 0 → state
+this explicitly in BR-11.</li>
+<li><strong>Premium pay at month level</strong> (BR-08 mixes daily,
+weekly and night rules) → computed over the month's worked intervals:
+daily excess over 8 h per work date, weekly excess over 40 h of the
+remaining regular hours per ISO week (only the part of the week inside
+the month), plus night minutes 22:00–06:00; premium pay = premium hours
+× wage × 0.5, rounded down → "Weekly overtime in a payroll month uses
+only the days of that week inside the month."</li>
+<li><strong>The date used for BR-10 in a monthly payroll</strong> → the
+first day of the month, or the contract start if later → "Evaluate BR-10
+on the first day of the payroll month (or the contract start if
+later)."</li>
+<li><strong>"Effective hourly wage" in BR-07</strong> → the worker's own
+<code>hourlyWage</code> (BR-09 says payroll computes with the worker's
+wage) → "effective hourly wage = Worker.hourlyWage."</li>
+<li><strong>Holiday pay rounding</strong> → rounded down per week, then
+summed (TC-113) → "Round holiday pay down per week, then sum."</li>
+<li><strong>Attendance time format</strong>
+(<code>clockIn</code>/<code>clockOut</code> are TEXT) → stored as
+<code>HH:MM</code> on the shift's date, end ≤ start meaning next day,
+like shift times → "Attendance.clockIn/clockOut are HH:MM on the shift
+date."</li>
+<li><strong>Who is notified on cancel and on expiry</strong> → cancel:
+every target that was PENDING or ACCEPTED gets
+<code>REQUEST_CANCELLED</code>; expiry: requester and owner get
+<code>REQUEST_EXPIRED</code>, pending targets are closed without a
+message; acceptance: the other pending targets get
+<code>TARGET_CLOSED</code>; a decline notifies no one → list the
+recipients of each Notification.kind in §8.</li>
+<li><strong>Seed request <code>createdAt</code> and notification
+times</strong> are not given → <code>2026-09-28T08:30</code> (before the
+demo clock) → give the value in §10.</li>
+<li><strong>Worker phone numbers</strong> are not in §10 but NFR-11
+needs them → fictional numbers <code>010-3827-1150</code>,
+<code>010-4172-2083</code>, <code>010-5290-3316</code>,
+<code>010-6631-4427</code>, <code>010-7748-5539</code> for ids 1–5 →
+list them in §10.</li>
+<li><strong>Names in the database</strong> (§10 gives English and Korean
+names, the schema has one <code>name</code>) → English names stored
+(<code>Park Jiyoung</code>, <code>Dalbit Café</code>, …); the Korean UI
+shows them unchanged → "Store the English names; the Korean UI does not
+translate names."</li>
+<li><strong>Deleting a shift that already has a request or
+attendance</strong> (FR-05) → refused with an explanatory message; the
+owner changes time or worker instead → state it in FR-05.</li>
+<li><strong>Deleting a fixed schedule row that already generated
+shifts</strong> → the row is removed and those shifts keep existing with
+<code>fixedScheduleId = NULL</code> → state it in FR-02.</li>
+<li><strong>Demo clock persistence</strong> → stored in
+<code>localStorage</code> under <code>shiftswap.clock.v1</code>; "Reset
+demo data" also resets the clock to <code>2026-09-28T09:00</code>; the
+language choice is stored under <code>shiftswap.lang</code> → name these
+keys in section 1.</li>
+<li><strong>Shared UI helpers</strong> (escaping, number/date
+formatting, form error box, week navigation, row editor) have no module
+in the layout → formatting and the form error box live in
+<code>ui/i18n.js</code>, week navigation in <code>ui/schedule.js</code>,
+the weekday/start/end row editor in <code>ui/availability.js</code>
+(reused by <code>workers.js</code>) → "Shared UI helpers may live in
+<code>i18n.js</code>."</li>
+<li><strong>Stripe pattern vs "no gradients"</strong> → the 45° amber
+stripe of the handed-over shift uses
+<code>repeating-linear-gradient</code>, the only gradient in the
+stylesheet → "the stripe may use <code>repeating-linear-gradient</code>;
+no other gradients."</li>
+<li><strong>Tables at 360 px</strong> (NFR-02, no horizontal scroll) →
+below 720 px each table row turns into a stacked card with the column
+name before each value → state the pattern in section 3.</li>
+</ul>
+<h4
+id="appendix-log-iteration-2--changes-from-v1-to-v2-and-result">Iteration
+2 — changes from v1 to v2 and result</h4>
+<p>v2 of the prompt (<code>prompts/prompt-v2.md</code>; v1 kept as
+<code>prompts/prompt-v1.md</code>) and the matching spec edits fold in
+the 21 build ambiguities of iteration 1 and the gaps found in the
+document review. The app was then brought to v2.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Source</th>
+<th>Change in prompt / spec</th>
+<th>Change in code</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Build ambiguity</td>
+<td>Prompt §1: test script <code>node --test tests/*.test.js</code></td>
+<td>none (already so)</td>
+<td><code>npm test</code> runs</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Build ambiguity</td>
+<td>Prompt §1: services.js also exports read-only queries and
+<code>ServiceError(code, message, params)</code></td>
+<td>none (already so)</td>
+<td>all service tests</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Build ambiguity</td>
+<td>BR-06: a still-SCHEDULED shift does not break perfect attendance
+(projection until the week ends)</td>
+<td>none (already so)</td>
+<td>TC-085, TC-063</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Build ambiguity</td>
+<td>§8 note: WeeklySummary only for workers with a shift that week; seed
+has no WeeklySummary/Payroll rows</td>
+<td>none (already so)</td>
+<td>TC-001, TC-088</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Build ambiguity + document review (BR-11 "estimated" semantics)</td>
+<td>BR-11: WORKED → recorded hours, SCHEDULED → scheduled hours +
+<code>estimated = 1</code>, ABSENT → 0</td>
+<td>none (already so)</td>
+<td>TC-114, TC-112</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Build ambiguity</td>
+<td>BR-08: monthly weekly overtime uses only the days of the ISO week
+inside the month; premium pay rounded down</td>
+<td>none (already so)</td>
+<td>TC-092–TC-094, TC-095</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Build ambiguity</td>
+<td>BR-10: evaluated on the first day of the month, or contractStart if
+later</td>
+<td>none (already so)</td>
+<td>TC-102, TC-104</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Build ambiguity</td>
+<td>BR-07: pay uses <code>Worker.hourlyWage</code>, rounded down per
+week, then summed</td>
+<td>none (already so)</td>
+<td>TC-111, TC-113</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Build ambiguity</td>
+<td>§8 note: Attendance clockIn/clockOut are <code>HH:MM</code> on the
+shift date</td>
+<td>none (already so)</td>
+<td>TC-071</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Build ambiguity + document review (UC-12 cancel recipients)</td>
+<td>§8 recipients table; FR-19 (cancel notifies every PENDING or
+ACCEPTED target); a decline notifies no one</td>
+<td>none needed (implementation already matched); recipients now
+asserted explicitly</td>
+<td>TC-133 (new), TC-052, TC-121, TC-123</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Build ambiguity + document review (seed request createdAt)</td>
+<td>§10: seed request <code>createdAt 2026-09-28T08:30</code>; fictional
+phone numbers; English names in DB</td>
+<td>none (already so)</td>
+<td>TC-001, TC-131</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Build ambiguity</td>
+<td>FR-05: deleting a shift with a request or attendance is refused</td>
+<td>none (already so)</td>
+<td>TC-01A (new)</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Build ambiguity</td>
+<td>FR-02: deleting a fixed-schedule row keeps its shifts
+(<code>fixedScheduleId = NULL</code>)</td>
+<td>none (already so)</td>
+<td>TC-01B (new)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Build ambiguity</td>
+<td>Prompt §1: keys <code>shiftswap.clock.v1</code>,
+<code>shiftswap.lang</code>; Reset also resets the clock</td>
+<td>none (already so)</td>
+<td>headless check (reset, reload)</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Build ambiguity</td>
+<td>Prompt §1: shared UI helpers (escaping, formatting, form error box)
+in <code>i18n.js</code></td>
+<td>none (already so)</td>
+<td>review</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Build ambiguity</td>
+<td>Prompt §3: stripe may use <code>repeating-linear-gradient</code>, no
+other gradient; tables become stacked cards below 720 px</td>
+<td>none (already so)</td>
+<td>headless check: 360 px, no overflow on any screen</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Document review</td>
+<td>Schema: <code>Payroll.minWageAck INTEGER NOT NULL DEFAULT 0</code>;
+BR-09: acknowledgement sets it; prompt: <code>acknowledgeMinWage</code>
+service, Acknowledge button on the warning row, Confirm disabled until
+every warning row is acknowledged, "Estimated" chip</td>
+<td><code>db.js</code> schema column; new
+<code>acknowledgeMinWage(yearMonth, workerId)</code>;
+<code>confirmPayroll(yearMonth)</code> now checks the persisted
+<code>minWageAck</code> (the v1 <code>acknowledgeWarnings</code> option
+was removed); payroll screen: per-row Acknowledge button →
+"Acknowledged" chip, Confirm disabled with a hint until all are
+acknowledged</td>
+<td>TC-104, TC-105 (new), TC-115; headless: Confirm disabled →
+Acknowledge → enabled → survives reload → confirmed</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Follows from #17 (schema change)</td>
+<td>Schema change vs. saved browser copies</td>
+<td><code>openDatabase</code> checks
+<code>PRAGMA table_info(Payroll)</code> for <code>minWageAck</code>; an
+older saved copy is replaced by the seed (key stays
+<code>shiftswap.db.v1</code>, a console warning explains it)</td>
+<td>TC-002 (new)</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Document review</td>
+<td>§10: demo walkthrough S7 (ABSENT policy, Minho's Sat 10-03
+12:00–18:00; Seoyeon and Hana eligible, Doyun excluded by overlap; Minho
+loses eligibility after approval); done criterion 2 requires a test</td>
+<td>none needed in the app; new test</td>
+<td>TC-08B (new)</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Document review (§14 calendar)</td>
+<td>NFR-07 date corrected to 2026-12-04; §14 course calendar</td>
+<td>none (not app behaviour)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Decisions made while building v2:</p>
+<ul>
+<li><strong>Regenerating a draft resets the acknowledgement.</strong>
+"Re-generating a month replaces DRAFT rows only", so the new row starts
+with <code>minWageAck = 0</code> and must be acknowledged again
+(TC-105). This rule has since been added to BR-09.</li>
+<li><strong>Old saved databases are replaced, not migrated.</strong>
+Replacing keeps the schema exactly as spec §8 (an
+<code>ALTER TABLE</code> would append the column at the end); the cost
+is that demo edits made before v2 are lost, which is acceptable for demo
+data.</li>
+</ul>
+<p>Result: <code>npm test</code> 58 tests, 58 pass, 0 fail (52 in v1,
+plus TC-002, TC-01A, TC-01B, TC-105, TC-08B, TC-133). Headless Chrome:
+70/70 checks pass, 0 console errors. The checks cover: sign-in; the
+done-criterion 4 walkthrough; the payroll acknowledgement flow including
+reload; and every screen for both roles in English and Korean at 1440 px
+and 360 px with no horizontal scroll.</p>
+<h4
+id="appendix-log-iteration-3--changes-from-v2-to-v3-and-result">Iteration
+3 — changes from v2 to v3 and result</h4>
+<p>Source for every row: UI review of the running v2 app (text too
+small, content in a narrow centred column with large empty areas, weekly
+board read as a list of cards rather than a schedule). All changes are
+in prompt §2/§3; spec.md is unchanged, so the service layer and tests
+did not change.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Source</th>
+<th>Change in prompt</th>
+<th>Change in code</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>UI review</td>
+<td>Sign-in rows show name, role and a one-line summary (owner: "Owner ·
+Dalbit Café · 4 workers"; worker: fixed shifts + weekly contract
+hours)</td>
+<td><code>ui/login.js</code>: summary built from
+<code>getFixedSchedules</code> and <code>contractHours</code>, days with
+the same time range grouped ("Tue, Thu 18:00–23:00, Sat 12:00–18:00 · 16
+h/week")</td>
+<td>headless: all five summaries read back as expected</td>
+</tr>
+<tr>
+<td>2</td>
+<td>UI review</td>
+<td>Every page starts with the title and one sentence on what the page
+is for</td>
+<td><code>pageHead(title, purpose, actions)</code> helper in
+<code>ui/i18n.js</code>, used by all 11 screens; <code>purpose.*</code>
+sentences in English and Korean (attendance has one per role)</td>
+<td>headless: every route for both roles has
+<code>.page-head .purpose</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>UI review</td>
+<td>Owner overview strip above the board: approvals waiting, open
+substitute requests, this week's shifts · hours, each linking to its
+page</td>
+<td><code>ui/schedule.js</code> <code>overviewStrip()</code>; counts
+from <code>listOwnerRequests</code>, hours from
+<code>getWeekShifts</code> of the demo-clock week; links to Approvals /
+Weekly summary</td>
+<td>headless: three figures ("This week 9 shifts · 50 h" in the
+seed)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>UI review</td>
+<td>Weekly board as a time grid: hour axis from the earliest start to
+the latest end (whole hours), 44 px/hour, hourly lines, hour labels in a
+left gutter, today's header marked, blocks positioned and sized by time;
+handover/pending markers unchanged</td>
+<td><code>ui/schedule.js</code> rewritten around <code>board()</code> +
+<code>layoutDay()</code>: blocks get <code>--top/--height</code> from
+their minutes; overlapping shifts of one day share the width in lanes;
+overnight ends extend past 24:00; today's header gets a "Today" chip and
+underline</td>
+<td>headless geometry: Sat 10:00–16:00 = 264 px (6 h) at the axis start,
+Sat 12:00–18:00 starts 88 px lower and sits beside it, Mon 18:00–23:00
+at 8 h, axis 10:00–23:00, today = Mon 09-28</td>
+</tr>
+<tr>
+<td>5</td>
+<td>UI review</td>
+<td>Empty states say what will appear and offer the next action as a
+button</td>
+<td><code>emptyState(text, action)</code> helper; board (owner:
+"Generate week of …"; worker: availability or "Go to this week"),
+payroll ("No payroll for September 2026 yet." + "Generate draft for
+September 2026"), approvals (+ "See open requests"), inbox, my requests,
+attendance, weekly summary</td>
+<td>manual review of each screen; unused v2 empty-text keys removed</td>
+</tr>
+<tr>
+<td>6</td>
+<td>UI review</td>
+<td>Type scale: base 15 px / 1.6; page title 28 px / 800 / −0.02em;
+section 18 px / 700; small 13 px (min 12 px); inputs 16 px on
+mobile</td>
+<td><code>styles.css</code> heading and body rules; inputs 16 px below
+900 px; no font size below 12 px</td>
+<td>headless: h1 computes to 28 px / 800</td>
+</tr>
+<tr>
+<td>7</td>
+<td>UI review</td>
+<td>Layout: nav 220 px; content starts right after the nav, 32 px
+padding, max-width 1200 px, left-aligned; gaps between groups at least
+twice the gaps inside a group</td>
+<td>nav column 220 px; content no longer centred; <code>#view</code> is
+a flex column with 32 px between groups, 8–12 px inside
+(<code>.group</code>)</td>
+<td>headless: nav width 220 px, content left edge 220 px</td>
+</tr>
+<tr>
+<td>8</td>
+<td>UI review (kept)</td>
+<td>&lt; 900 px day-by-day list; &lt; 720 px stacked-card tables</td>
+<td>below 900 px the grid drops its gutter and hour lines and blocks
+become static cards in day order; the table rule is unchanged</td>
+<td>headless: every screen for both roles, EN/KO, 1440 and 360 px, no
+horizontal scroll; at 360 px blocks are
+<code>position: static</code></td>
+</tr>
+</tbody>
+</table>
+<p>Found and fixed during verification: the 32 px group gap was first
+set on <code>.content</code>, but the screens render inside
+<code>#view</code>, so the header, overview strip and week navigation
+touched; the gap now sits on <code>#view</code>.</p>
+<p>Result: <code>npm test</code> 58 tests, 58 pass, 0 fail (no test
+changes needed). Headless Chrome: 82/82 checks pass, 0 console errors.
+Screenshots of the owner board:
+<code>/tmp/shiftswap-owner-board-1440.png</code>,
+<code>/tmp/shiftswap-owner-board-360.png</code>.</p>
+</div>

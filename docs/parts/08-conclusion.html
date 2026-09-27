@@ -1,0 +1,93 @@
+<h1 id="conclusion">8. Conclusion</h1>
+
+<p>This report has described ShiftSwap, a web application that replaces the telephone-and-spreadsheet handling of substitute shifts in a small part-time workplace. This chapter assesses the result against the objectives of Chapter 1, summarises the size of the system, states its limitations, proposes future work, and records what the team learned about requirements engineering and vibe coding.</p>
+
+<h2 id="conclusion-goals">8.1 Achievement of the Objectives</h2>
+
+<p>The table below assesses each objective G1–G6 against its measure. Only what can be verified from the tests of Chapter 6, the code or the deployed site is claimed. The objectives concern the behaviour of the system; whether that behaviour reduces the owner's work in a real store has not been measured, because no field trial took place (Section 8.3).</p>
+
+<table>
+  <caption>Table {{tab}}. Achievement of objectives G1–G6</caption>
+  <thead><tr><th style="width:6%">ID</th><th style="width:24%">Objective</th><th>Evidence</th><th style="width:14%">Assessment</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts</td><td><code>createSubRequest</code> notifies every eligible worker in the transaction that creates the request (TC-024, TC-016); with no candidate, the owner is told at once (TC-025). The owner's only action in the workflow is one approve or reject decision (TC-061, TC-062).</td><td>Achieved in the system; effect in a store not measured</td></tr>
+    <tr><td class="req-id">G2</td><td>Let a candidate answer quickly</td><td>Accept and Decline are on the inbox item: two clicks from opening the inbox (NFR-01). Only the first acceptance succeeds (TC-051).</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G3</td><td>Keep schedule and weekly hours of both workers correct after a swap</td><td>Approval reassigns the shift, keeps the original worker and recomputes both weekly summaries in one transaction (TC-061). The approval panel shows before and after values for both workers — Choi Minho 16 → 21 scheduled hours, eligibility unchanged (TC-063) — and highlights a change of eligibility (TC-08B).</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G4</td><td>Apply the legal pay rules and flag violations before payday</td><td>BR-06 to BR-11 are pure functions tested at their boundary values (Section 6.5), and every business rule BR-01 to BR-12 has at least one test (Section 6.8). The payroll warns for Kang Doyun's wage and blocks confirmation until the owner acknowledges it (TC-104, TC-105).</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires</td><td>13 use cases (9 core) against a minimum of 5; 12 database tables against a minimum of 4.</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly</td><td>The application is deployed at <code>https://keemlogan.github.io/shiftswap/app/</code> (NFR-07). The final prompt and the specification are in the repository (Chapter 5); the reproduction run of the final prompt in an empty folder and its test result are reported in Chapter 5.</td><td>Deployment achieved; reproduction see Chapter 5</td></tr>
+  </tbody>
+</table>
+
+<h2 id="conclusion-size">8.2 Size and Complexity of the System</h2>
+
+<p>The table below summarises the size of the specification, the models and the implementation. The counts of identifiers come from <code>spec/spec.md</code>; the line counts come from <code>wc -l</code> and exclude the vendored sql.js files.</p>
+
+<table>
+  <caption>Table {{tab}}. Size of the ShiftSwap specification, models and implementation</caption>
+  <thead><tr><th style="width:40%">Item</th><th style="width:14%">Count</th><th>Remark</th></tr></thead>
+  <tbody>
+    <tr><td>Actors</td><td class="num">3</td><td>Worker, Owner, System Clock</td></tr>
+    <tr><td>Use cases</td><td class="num">13</td><td>9 core (UC-01–UC-09), 4 supporting; 9 Must, 4 Should</td></tr>
+    <tr><td>Functional requirements</td><td class="num">21</td><td>FR-01–FR-21</td></tr>
+    <tr><td>Non-functional requirements</td><td class="num">12</td><td>6 product, 3 organisational, 3 external</td></tr>
+    <tr><td>Business rules</td><td class="num">12</td><td>5 of them derived from labour law (BR-06–BR-10)</td></tr>
+    <tr><td>Database tables</td><td class="num">12</td><td>SQLite schema of spec §8</td></tr>
+    <tr><td>State machines / states</td><td class="num">5 / 17</td><td>SubRequest (6), SubRequestTarget (4), Shift (3), Attendance (2), Payroll (2)</td></tr>
+    <tr><td>Notification kinds</td><td class="num">8</td><td>With a fixed recipients table (spec §8)</td></tr>
+    <tr><td>UML diagrams of the system</td><td class="num">15</td><td>2 use-case, 1 class, 1 ER, 1 component, 1 deployment, 4 sequence, 3 state, 2 activity</td></tr>
+    <tr><td>Screens</td><td class="num">11</td><td>Sign-in and ten working screens (Section 4.9)</td></tr>
+    <tr><td>Automated tests</td><td class="num">58</td><td>25 rule tests, 33 service tests; all pass</td></tr>
+    <tr><td>Lines of application code</td><td class="num">3,652</td><td>Core modules 1,271 (services 754, rules 257, db 219, clock 41); presentation 2,381 (router, eleven screen modules, translations and style sheet)</td></tr>
+    <tr><td>Lines of test code</td><td class="num">705</td><td><code>tests/rules.test.js</code> 214, <code>tests/services.test.js</code> 491</td></tr>
+  </tbody>
+</table>
+
+<p class="small">Line counts were taken with <code>wc -l</code> after the UI work of iteration 3 was finished.</p>
+
+<p>By the measures the course names — use cases and tables — the system is well above the minimum. Its complexity lies less in the number of screens than in the interaction of rules: a single approval changes a shift, two weekly summaries, possibly two holiday allowances and later a payroll, and each of these depends on settings that the owner can change. The 17 states and the 12 business rules are where most of the analysis and test effort went.</p>
+
+<h2 id="conclusion-limitations">8.3 Limitations</h2>
+
+<p>The system has the following limitations. Most follow from the decision to build a client-only demonstration system (design decision D1); they are listed so that the reader can judge what the results above do and do not show.</p>
+
+<ul>
+  <li><b>One database per browser.</b> The database lives in the browser in which the application is opened. An owner on one phone and a worker on another do not share data; the demonstration works because all accounts are used in the same browser. This is the most important limitation: in a real store, the substitute workflow requires a shared database.</li>
+  <li><b>No authentication.</b> Sign-in is the choice of a demo account without a password (FR-20). Anyone who opens the application can act as the owner. The role restriction and the privacy rule NFR-11 therefore protect against accidental, not deliberate, disclosure.</li>
+  <li><b>Browser storage.</b> Data is kept in <code>localStorage</code>, which the user or the browser can clear and which is limited to a few megabytes per site. A store would need backups and export, which the system does not provide.</li>
+  <li><b>Serialised concurrency.</b> The first-acceptance rule is enforced correctly within one database, but true parallel acceptances from different devices cannot occur in the current deployment and could not be tested (Section 6.6).</li>
+  <li><b>Demo clock.</b> Expiry is triggered by navigation and by changes of the demo clock, not by the passage of real time. A request can expire only when someone uses the application.</li>
+  <li><b>Legal scope.</b> The pay rules cover the minimum wage, the weekly holiday allowance, overtime and night premiums and the probation reduction. Holiday-work premium, annual leave, severance pay, tax and social insurance are outside the scope, and the four-week average of the 15-hour rule is simplified to the weekly contractual value (BR-06). The treatment of a handed-over shift is a setting because the law does not decide it. The system applies these rules consistently but is not legal advice.</li>
+  <li><b>Evaluation.</b> The requirements came from one reference store, and the interviews and prototype sessions were used to confirm requirements, not to measure them. No store has used the system in operation, so the effect on the number of contacts per request (problem P1) has not been measured.</li>
+  <li><b>Test gaps.</b> Registering a worker (FR-01) and the role menus (FR-20) have no automated test (Section 6.8), and the browser checks of NFR-06 are recorded only for Chrome.</li>
+</ul>
+
+<h2 id="conclusion-future">8.4 Future Work</h2>
+
+<p>The layered design makes the most important extension, a shared database, a change of one layer. The service functions already express each use-case step as one transaction, and the rules do not touch storage, so the data-access module could be replaced by calls to a small server with a shared SQL database while the rules and most of the services remain unchanged. With a server, the following become possible and would be the next increments:</p>
+
+<ol>
+  <li>a shared database and real accounts with passwords, so that owner and workers use their own devices, and NFR-11 is enforced on the server;</li>
+  <li>push or messenger notifications for new requests, in addition to the in-app inbox;</li>
+  <li>expiry driven by a scheduled job on the server instead of navigation;</li>
+  <li>a test of the first-acceptance rule with genuinely parallel transactions against the shared database;</li>
+  <li>a field trial in the reference store, measuring the number of contacts per request and the time to fill a shift before and after, which is the measurement G1 ultimately stands for;</li>
+  <li>automated tests for FR-01 and FR-20, and recorded checks in Edge, Safari and Firefox;</li>
+  <li>export of confirmed payroll as a payslip, and several stores per owner.</li>
+</ol>
+
+<h2 id="conclusion-lessons">8.5 Lessons Learned</h2>
+
+<p><b>The specification is the program's real source.</b> In vibe coding, the AI coding assistant writes the code, and the quality of the code is bounded by the precision of what it is told. The team's most useful decision was to keep one specification file with every identifier, rule, state and seed value, and to change it before changing anything else. When a question arose — who is notified when a request is cancelled, whether a week in progress can be "perfect" — the answer was written into the specification, and the next generated version had to follow it. This is requirements management as the lecture describes it [7]: individual requirements are tracked, their dependencies are recorded, and changes go through a defined procedure. Without it, three documents, a set of UML diagrams and the code would have drifted apart within a week.</p>
+
+<p><b>Generation exposes incompleteness.</b> The lecture states that in practice a complete and consistent requirements document is impossible [7]. The build iterations confirmed this concretely: in iteration 1 the AI coding assistant met more than twenty points where the specification was silent or ambiguous and had to choose. Recording each choice and turning it into specification text (Section 6.9) worked as a requirements review performed by the implementer. The lesson for vibe coding is that the log of the generator's decisions is as valuable as the code, because it shows where the requirements were weaker than the team believed.</p>
+
+<p><b>Testable rules make generated code checkable.</b> Code produced by an AI coding assistant cannot be trusted because it looks right. Placing every business rule in a pure function and deriving tests from the rules at their boundary values (14.99 and 15 hours, four and five employees, the last day of probation) gave the team an objective check that did not depend on reading every line. When the specification changed, the tests changed first. This is the test-first practice of extreme programming [6] applied to a prompt instead of to hand-written code.</p>
+
+<p><b>Models find what text hides.</b> The state diagram of the substitute request made it easy to see that every open state needs an exit by time and by the requester, and the traceability matrix showed which requirements had no test. The demonstration walkthrough S7 was added because the team noticed that no scenario ever changed a worker's eligibility, so the highlight required by FR-11 had never been exercised. Chapter 2 of the lecture presents models as a means of discussion, documentation and implementation [6]; in this project they served mostly as a means of checking.</p>
+
+<p><b>The incremental model suited the course.</b> Placing all Must use cases in the first increment meant that the substitute workflow, the core of the project, was working and testable before the payroll rules were built, as the lecture's description of the incremental model promises [6]. The weakness the lecture warns of, degradation of structure as increments are added, was contained by fixing the layered architecture before the first increment; the second increment added functions to the existing layers and did not change their boundaries.</p>
+
+<p><b>Documents need the same discipline as code.</b> Because code can be regenerated in hours, the documents became the slower part of the project, and they drifted more easily than the code. Several corrections in this report — the recipients of a cancelled request, the storage of the minimum-wage acknowledgement, the course calendar — were found by checking documents against the specification and the tests. A team using vibe coding should plan as much time for keeping the requirements, models and report consistent as for generating the software.</p>
+
+<p>ShiftSwap shows that a small team can take a real problem from a part-time job through problem definition, requirements, design, implementation by vibe coding and testing within one semester, and arrive at a system whose behaviour is specified, traceable and tested. What remains is to move it from one browser to a shared server and to measure its effect in a real store.</p>

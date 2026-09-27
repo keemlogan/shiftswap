@@ -16,10 +16,6 @@ import * as availability from './ui/availability.js';
 import * as settings from './ui/settings.js';
 
 const SCREENS = { schedule, requests, inbox, approvals, attendance, weekly, payroll, workers, availability, settings };
-const MENUS = {
-  WORKER: ['schedule', 'requests', 'inbox', 'attendance', 'availability'],
-  OWNER: ['schedule', 'approvals', 'inbox', 'attendance', 'weekly', 'payroll', 'workers', 'settings'],
-};
 const SESSION_KEY = 'shiftswap.user';
 
 const root = document.getElementById('app');
@@ -81,7 +77,7 @@ function render() {
     login.render(root.querySelector('#view'), { go, signIn });
     return;
   }
-  const allowed = MENUS[user.role];
+  const allowed = svc.menuFor(user.role);
   const route = allowed.includes(name) ? name : 'schedule';
   if (route !== name) history.replaceState(null, '', `#/${route}`);
   renderShell(user, route);
@@ -127,7 +123,7 @@ function updateBadge(n) {
 
 function navHtml(user, route) {
   const unread = svc.unreadCount(user.id);
-  return `<nav class="nav" aria-label="${esc(t('nav.label'))}"><ul>${MENUS[user.role].map((key) => `
+  return `<nav class="nav" aria-label="${esc(t('nav.label'))}"><ul>${svc.menuFor(user.role).map((key) => `
     <li><a href="#/${key}" ${key === route ? 'aria-current="page"' : ''}>${esc(t(`nav.${key}`))}${key === 'inbox' && unread ? ` <span class="nav-count num">${unread}</span>` : ''}</a></li>`).join('')}
   </ul></nav>`;
 }

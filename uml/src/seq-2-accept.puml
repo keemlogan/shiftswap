@@ -25,46 +25,58 @@ database "db.js\n(SQLite / localStorage)" as DB
 
 note over W1, W2 : both candidates see the same PENDING\nSubRequestTarget in their inbox (BR-01)
 
+note over Svc, DB
+  real code (services.js respondToRequest): SQLite has no SELECT ... FOR UPDATE.
+  "first acceptance wins" is enforced by a conditional UPDATE whose WHERE clause
+  re-checks status, plus db.getRowsModified() (returned here as changes) to see
+  whether this call's UPDATE actually won the row.
+end note
+
 par candidate 1 accepts
-  W1 -> UI : Accept (targetId=T1)
-  UI -> Svc : respondToRequest(T1, ACCEPTED)
+  W1 -> UI : Accept (requestId=R, workerId=W1)
+  UI -> Svc : respondToRequest(R, W1, 'ACCEPTED')
   activate Svc
   Svc -> DB : tx(fn) begin
   activate DB
-  Svc -> DB : select SubRequest for update (re-check status)
-  DB --> Svc : status = REQUESTED
-  Svc -> DB : update SubRequest set status=ACCEPTED, acceptorId=W1 (BR-02)
-  Svc -> DB : update target(T1).response = ACCEPTED
-  Svc -> DB : update other PENDING targets -> CLOSED
+  Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R, W1)
+  DB --> Svc : r.status = 'REQUESTED', target.response = 'PENDING'
+  Svc -> DB : UPDATE SubRequest SET status='ACCEPTED', acceptorId=W1\nWHERE id=R AND status='REQUESTED'
+  DB --> Svc : changes = 1
+  Svc -> DB : UPDATE target(W1).response = 'ACCEPTED'
+  Svc -> DB : UPDATE other PENDING targets -> 'CLOSED'
   Svc -> DB : insert Notification(REQUEST_ACCEPTED) to requester, owner
   Svc -> DB : insert Notification(TARGET_CLOSED) to other candidates
   Svc -> DB : commit + persist
   deactivate DB
-  Svc --> UI : accepted
+  Svc --> UI : {status: 'ACCEPTED'}
   deactivate Svc
   UI --> W1 : "You accepted the shift"
 else candidate 2 accepts (near-simultaneous)
-  W2 -> UI : Accept (targetId=T2)
-  UI -> Svc : respondToRequest(T2, ACCEPTED)
+  W2 -> UI : Accept (requestId=R, workerId=W2)
+  UI -> Svc : respondToRequest(R, W2, 'ACCEPTED')
   activate Svc
   Svc -> DB : tx(fn) begin
   activate DB
-  Svc -> DB : select SubRequest for update (re-check status)
-  DB --> Svc : status = ACCEPTED (already taken)
-  alt request no longer REQUESTED (BR-02, NFR-04)
-    Svc -> DB : rollback (no state change)
+  Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R, W2)
+  DB --> Svc : r.status still read as 'REQUESTED'
+  Svc -> DB : UPDATE SubRequest SET status='ACCEPTED', acceptorId=W2\nWHERE id=R AND status='REQUESTED'
+  DB --> Svc : changes = 0 (row no longer has status='REQUESTED')
+  alt updated.changes !== 1 (BR-02, NFR-04)
+    Svc -> DB : rollback (ServiceError thrown inside tx())
     deactivate DB
-    Svc --> UI : refused: "Already taken by <acceptor name>"
+    Svc --> UI : throw ServiceError('ALREADY_TAKEN',\n"Someone else accepted first.")
     deactivate Svc
-    UI --> W2 : show "Already taken by <name>"
+    UI --> W2 : show "Someone else accepted first."
   end
 end
 
 note over DB
-  the re-check of SubRequest.status happens
-  inside the same transaction as the update,
-  so only one of the two branches can commit
-  as ACCEPTED — the other always sees the
-  post-commit state and is refused (BR-02)
+  the WHERE status='REQUESTED' clause and the changes
+  check happen inside the same transaction as the update,
+  so only one of the two UPDATEs can affect a row — the
+  other always affects 0 rows and is refused (BR-02).
+  (a request already fully settled before this call even
+  starts is instead caught earlier as ALREADY_TAKEN /
+  REQUEST_CLOSED, by the initial status read above)
 end note
 @enduml

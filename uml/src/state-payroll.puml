@@ -16,11 +16,12 @@ title Payroll.status state machine (spec §7)
 [*] --> DRAFT : generatePayroll(yearMonth) (UC-09, FR-15, BR-11)
 
 state DRAFT {
-  DRAFT : minWageWarning must be acknowledged\nbefore Confirm is enabled (FR-16, BR-09)
-  DRAFT --> DRAFT : re-generate month\n[replaces DRAFT rows only] / generatePayroll (UC-09)
+  DRAFT : every row with minWageWarning must have\nminWageAck = 1 before Confirm is enabled (FR-16, BR-09)
+  DRAFT : internal: acknowledge minimum-wage warning\n[row has minWageWarning] / acknowledgeMinWage(yearMonth, workerId)\n-> minWageAck := 1 (BR-09)
+  DRAFT --> DRAFT : re-generate month\n[replaces DRAFT rows only, CONFIRMED rows kept] / generatePayroll(yearMonth) (UC-09)
 }
 
-DRAFT --> CONFIRMED : owner confirms\n[warning acknowledged if present] / confirmPayroll (UC-09, FR-15)
+DRAFT --> CONFIRMED : owner confirms\n[all minWageWarning rows have minWageAck = 1] / confirmPayroll(yearMonth) (UC-09, FR-15)
 
 CONFIRMED --> [*]
 

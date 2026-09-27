@@ -1,6 +1,6 @@
 // UC-10 Workplace settings and minimum wage table (FR-17). Owner only.
 import * as svc from '../core/services.js';
-import { t, esc, showFormError } from './i18n.js';
+import { t, esc, showFormError, pageHead } from './i18n.js';
 
 function wageRow(r = {}) {
   return `
@@ -14,7 +14,7 @@ function wageRow(r = {}) {
 export function render(view, ctx) {
   const { workplace, minimumWages } = svc.getSettings();
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('settings.title'))}</h1></div>
+    ${pageHead(t('settings.title'), t('purpose.settings'))}
     <form class="card form" id="settings-form" novalidate>
       <div class="fields">
         <label>${esc(t('settings.storeName'))}<input type="text" name="name" value="${esc(workplace.name)}" required autocomplete="off"></label>

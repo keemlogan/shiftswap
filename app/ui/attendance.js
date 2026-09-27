@@ -1,7 +1,7 @@
 // UC-07 Record (worker) and confirm or mark absent (owner).
 import * as svc from '../core/services.js';
 import { now } from '../core/clock.js';
-import { t, esc, fmtDay, num, showFormError } from './i18n.js';
+import { t, esc, fmtDay, num, showFormError, pageHead, emptyState } from './i18n.js';
 import { weekFromArgs, weekNavHtml } from './schedule.js';
 
 export function render(view, ctx) {
@@ -10,9 +10,11 @@ export function render(view, ctx) {
   const isOwner = user.role === 'OWNER';
   const shifts = svc.listAttendance(week, user);
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('attendance.title'))}</h1></div>
-    ${weekNavHtml('attendance', week)}
-    ${shifts.length ? `<ul class="stack plain">${shifts.map((s) => row(s, isOwner)).join('')}</ul>` : `<p class="empty">${esc(t('attendance.none'))}</p>`}`;
+    ${pageHead(t('attendance.title'), t(`purpose.attendance.${user.role}`))}
+    <section class="group">
+      ${weekNavHtml('attendance', week)}
+      ${shifts.length ? `<ul class="stack plain">${shifts.map((s) => row(s, isOwner)).join('')}</ul>` : emptyState(t('attendance.noneText'), `<a class="btn btn-primary" href="#/schedule/${week}">${esc(t('weekly.toSchedule'))}</a>`)}
+    </section>`;
 
   view.querySelectorAll('form[data-record]').forEach((form) => form.addEventListener('submit', (e) => {
     e.preventDefault();

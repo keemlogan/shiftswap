@@ -2,7 +2,7 @@
 import * as svc from '../core/services.js';
 import { now } from '../core/clock.js';
 import { minimumWageFor, probationApplies } from '../core/rules.js';
-import { t, esc, fmtHours, fmtWon } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, fmtMonth, pageHead, emptyState } from './i18n.js';
 
 export function render(view, ctx) {
   const month = /^\d{4}-\d{2}$/.test(ctx.args[0] || '') ? ctx.args[0] : now().slice(0, 7);
@@ -16,7 +16,7 @@ export function render(view, ctx) {
   const sum = rows.reduce((a, r) => a + r.total, 0);
 
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('payroll.title'))}</h1></div>
+    ${pageHead(t('payroll.title'), t('purpose.payroll'))}
     <form class="toolbar" id="month-form">
       <label>${esc(t('payroll.month'))} <input type="month" name="month" class="num" value="${esc(month)}" required></label>
       <button type="submit" class="btn btn-primary">${esc(t('payroll.generate'))}</button>
@@ -63,11 +63,9 @@ export function render(view, ctx) {
       ${unacknowledged.length ? `<p class="hint" id="confirm-hint">${esc(t('payroll.ackNeeded', { n: unacknowledged.length }))}</p>` : ''}
       <div class="actions"><button type="submit" class="btn btn-primary" ${unacknowledged.length ? 'disabled aria-describedby="confirm-hint"' : ''}>${esc(t('payroll.confirm'))}</button></div>
     </form>` : `<p class="notice notice-ok">${esc(t('payroll.allConfirmed'))}</p>`}`
-    : `<p class="empty">${esc(t('payroll.none'))}</p>`}`;
+    : emptyState(t('payroll.noneMonth', { month: fmtMonth(month) }), `<button type="button" class="btn btn-primary" data-generate>${esc(t('payroll.generateMonth', { month: fmtMonth(month) }))}</button>`)}`;
 
-  view.querySelector('#month-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const chosen = new FormData(e.target).get('month');
+  const generate = (chosen) => {
     try {
       svc.generatePayroll(chosen);
       ctx.flash(t('payroll.generated'));
@@ -75,7 +73,13 @@ export function render(view, ctx) {
     } catch (err) {
       ctx.fail(err);
     }
+  };
+  view.querySelector('#month-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    generate(new FormData(e.target).get('month'));
   });
+  const emptyGenerate = view.querySelector('[data-generate]');
+  if (emptyGenerate) emptyGenerate.addEventListener('click', () => generate(month));
   view.querySelector('input[name="month"]').addEventListener('change', (e) => {
     if (/^\d{4}-\d{2}$/.test(e.target.value)) ctx.go(`#/payroll/${e.target.value}`);
   });

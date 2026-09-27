@@ -1,6 +1,6 @@
 // UC-08 Weekly hours and holiday allowance (FR-14), with the reason when a worker is not eligible.
 import * as svc from '../core/services.js';
-import { t, esc, fmtDay, fmtHours } from './i18n.js';
+import { t, esc, fmtDay, fmtHours, pageHead, emptyState } from './i18n.js';
 import { weekFromArgs, weekNavHtml } from './schedule.js';
 
 export function render(view, ctx) {
@@ -9,7 +9,8 @@ export function render(view, ctx) {
   const policy = svc.getWorkplace().subAttendancePolicy;
   const cols = ['weekly.contract', 'weekly.scheduled', 'weekly.actual', 'weekly.perfect', 'weekly.eligible', 'weekly.holidayHours', 'weekly.reason'];
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('weekly.title'))}</h1></div>
+    ${pageHead(t('weekly.title'), t('purpose.weekly'))}
+    <section class="group">
     ${weekNavHtml('weekly', week)}
     <p class="muted">${esc(t('weekly.policy', { policy: t(`policy.${policy}`) }))}</p>
     ${rows.length ? `
@@ -27,7 +28,8 @@ export function render(view, ctx) {
           <td data-label="${esc(t(cols[6]))}">${esc(reasonText(r.reasons))}</td>
         </tr>`).join('')}
       </tbody>
-    </table>` : `<p class="empty">${esc(t('weekly.none'))}</p>`}`;
+    </table>` : emptyState(t('weekly.noneText'), `<a class="btn btn-primary" href="#/schedule/${week}">${esc(t('weekly.toSchedule'))}</a>`)}
+    </section>`;
 }
 
 export function reasonText(reasons) {

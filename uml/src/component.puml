@@ -62,15 +62,16 @@ Owner --> Main
 Main --> UI
 
 UI ..> AppServices : calls (one fn per UC step)
-AppServices ..> Rules : delegates every decision
+AppServices ..> Rules : imports 12 named functions\n(addDays, isoWeekday, weekStartOf,\ndurationHours, overlaps, isEligibleCandidate,\nvalidateRequest, contractHours, computeWeeklySummary,\nminimumWageFor, probationApplies, computePayrollRow)
 AppServices ..> DBModule : tx(), all(), get(), run()
-AppServices ..> Clock : now()
-Rules ..> Clock : now() (deadline / expiry checks)
+AppServices ..> Clock : now(), addMinutes()
 DBModule --> Storage : persist after commit / load on start
 
 note bottom of Rules
-  no DB access, no DOM;
-  unit-tested (tests/rules.test.js)
+  no DB access, no DOM, no Clock import;
+  now() and deadlines are passed in as plain
+  arguments by the caller; unit-tested
+  (tests/rules.test.js)
 end note
 
 note bottom of DBModule

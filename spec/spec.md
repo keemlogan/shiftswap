@@ -90,7 +90,7 @@ Relationships for the use case diagram:
 | FR-17 | The owner shall edit workplace settings: store name, number of regular employees, substitution-attendance policy (BR-06), and yearly minimum wage rows. | UC-10 |
 | FR-18 | When a request's deadline passes, or its shift starts, while it is still REQUESTED or ACCEPTED, the system shall mark it EXPIRED, close its targets and notify requester and owner. | UC-11 |
 | FR-19 | A requester shall cancel their own request while it is REQUESTED or ACCEPTED; all PENDING targets become CLOSED, and every target that was PENDING or ACCEPTED receives a REQUEST_CANCELLED notification. | UC-12 |
-| FR-20 | Users shall sign in by choosing a demo account; the UI shows only the menus of that role. | UC-13 |
+| FR-20 | Users shall sign in by choosing a demo account, either from a guided three-step demo tour or from the list of all accounts; the UI shows only the menus of that role. | UC-13 |
 | FR-21 | Every user shall have an in-app notification inbox listing notifications newest first with unread count. | UC-04–06, 11, 12 |
 
 ## 5. Non-functional requirements (classified as in Chapter 8: Product / Organisational / External)
@@ -109,6 +109,7 @@ Relationships for the use case diagram:
 | NFR-10 | External | Legislative | Pay rules follow the Minimum Wage Act (2026 minimum hourly wage KRW 10,320) and the Labor Standards Act (Art. 18 ③, Art. 55, Enforcement Decree Art. 30; Art. 11 / 56 premium threshold). | Unit tests TC-08x, TC-09x |
 | NFR-11 | External | Privacy | A worker's phone number and wage are visible only to the owner and that worker (Personal Information Protection Act principle of minimum disclosure). | Role test |
 | NFR-12 | External | Ethical | The system does not collect location data; attendance is self-reported and owner-confirmed. | Design review |
+| NFR-13 | Product | Usability | Task-first design: each role starts on a Home screen that lists the items waiting for that person with the action on the item; every screen has exactly one primary action; any action that changes hours or pay shows its effect (hours before → after, holiday-allowance amount) before the user commits; the default UI language is Korean with a complete English alternative. | Headless check counts one primary button per screen; walkthrough |
 
 ## 6. Business rules
 

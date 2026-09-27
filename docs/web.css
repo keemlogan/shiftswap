@@ -1,0 +1,26 @@
+/* Screen stylesheet for web-only pages (prompts, test report). */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+:root { --ink:#1C2230; --ink-2:#4A5163; --ink-3:#6B7282; --line:#DDE1E8; --surface:#F4F6F9; --shift:#2B5BD7; --ok:#2E7D4F; --alert:#C93A31; }
+* { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #fff; color: var(--ink); font: 15px/1.65 "Pretendard Variable", -apple-system, sans-serif; word-break: keep-all; overflow-wrap: break-word; }
+.doc { max-width: 880px; margin-inline: auto; padding: 40px 20px 64px; }
+h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 16px; }
+h2 { font-size: 21px; font-weight: 700; margin: 36px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+h3 { font-size: 17px; font-weight: 700; margin: 24px 0 8px; }
+p, li { max-width: 72ch; }
+.lead { font-size: 16px; }
+a { color: var(--shift); }
+code { font: 13px "JetBrains Mono", Menlo, monospace; background: var(--surface); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+blockquote { margin: 0 0 16px; padding: 8px 14px; border-inline-start: 4px solid var(--line); color: var(--ink-2); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 12px 0 20px; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: start; vertical-align: top; }
+th { background: var(--surface); }
+td.id { font-family: "JetBrains Mono", Menlo, monospace; white-space: nowrap; font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.pass td.st { color: var(--ok); font-weight: 700; }
+tr.fail td.st, tr.skip td.st { color: var(--alert); font-weight: 700; }
+.small { font-size: 13px; color: var(--ink-3); }

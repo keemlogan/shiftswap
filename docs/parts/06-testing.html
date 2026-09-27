@@ -1,0 +1,293 @@
+<h1 id="testing">6. Testing and Validation</h1>
+
+<p>This chapter shows how the team checked that ShiftSwap does what Chapter 3 requires. The lecture distinguishes unit testing, integration testing, system testing, acceptance testing and regression testing [6], and it defines validation as checking that the software is what the customer wants. Section 6.1 describes the test strategy and how these levels were applied. Section 6.2 gives the test environment. Section 6.3 lists every automated test with its expected result, and Section 6.4 reports the result of running them. Sections 6.5 and 6.6 explain the two families of tests that need the most care: boundary values of the legal rules and concurrent acceptance. Section 6.7 covers the non-functional requirements, Section 6.8 the traceability matrix, and Section 6.9 the defects and specification gaps found during the build iterations and how each was resolved.</p>
+
+<h2 id="testing-strategy">6.1 Test Strategy</h2>
+
+<p>The layered architecture of Chapter 4 decides where each kind of test belongs. The table below maps the lecture's test levels to what was done for ShiftSwap.</p>
+
+<table>
+  <caption>Table {{tab}}. Test levels and how they were applied</caption>
+  <thead><tr><th style="width:17%">Level</th><th style="width:28%">Target</th><th>Method</th></tr></thead>
+  <tbody>
+    <tr><td>Unit testing</td><td>Domain rules (<code>rules.js</code>)</td><td>25 tests in <code>tests/rules.test.js</code> call the pure rule functions with hand-built inputs, including the boundary values of Section 6.5. No database is involved.</td></tr>
+    <tr><td>Integration testing</td><td>Services with the real schema (<code>services.js</code> + <code>db.js</code> + <code>rules.js</code>)</td><td>33 tests in <code>tests/services.test.js</code> create a fresh in-memory SQLite database with the seed data before every test (<code>beforeEach</code>), reset the demo clock, call the service functions and assert on the resulting rows, notifications and error codes.</td></tr>
+    <tr><td>System testing</td><td>The running application in a browser</td><td>Scenario walkthroughs of Section 3.8 on the screens, for both roles, in English and Korean, at 1440 px and 360 px width (Section 6.7 and Chapter 7).</td></tr>
+    <tr><td>Acceptance testing</td><td>Done criteria of the final prompt</td><td>The four done criteria of the prompt (Chapter 5) serve as acceptance tests. Criterion 4, the walkthrough from acceptance to the handover marker, is also automated as TC-063.</td></tr>
+    <tr><td>Regression testing</td><td>Every change of prompt or code</td><td>The whole suite is run after every generation or modification of the code; a change is accepted only if all tests pass (the practice of continuous integration in the lecture's description of extreme programming [6]).</td></tr>
+  </tbody>
+</table>
+
+<p>Two principles guided the choice of test cases. First, the tests were derived from the requirements, not from the code: each test group corresponds to a business rule (spec §11), and each test is named with its identifier and a sentence stating the expected behaviour, for example <code>TC-082 no holiday allowance at 14.99 h</code>. This is the test-case generation technique of requirements validation described in Section 3.10.3. Second, the seed data of spec §10 doubles as the test fixture. The integration tests start from the same café, the same five people and the same open request that appear in the scenarios and in the screenshots, so a number checked in a test — 3.2 holiday hours, 33,024 won, 16 → 21 scheduled hours — is the number the reader sees in this report and on the screen.</p>
+
+<p>The identifiers extend the groups of spec §11 by three groups that are not tied to a business rule: TC-00x for the seed data and storage, TC-07x for attendance (UC-07), and TC-13x for privacy and notifications (NFR-11, FR-21). Within a group, the third character is a sequence number (1–9, then A, B), so TC-01A follows TC-019.</p>
+
+<h2 id="testing-environment">6.2 Test Environment</h2>
+
+<table>
+  <caption>Table {{tab}}. Test environment</caption>
+  <thead><tr><th style="width:28%">Item</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Test runner</td><td>Node.js built-in test runner <code>node:test</code> with <code>node:assert/strict</code> [12]; command <code>npm test</code>, which runs <code>node --test tests/*.test.js</code></td></tr>
+    <tr><td>Node.js version</td><td>v24.14.0 (<code>node -v</code>)</td></tr>
+    <tr><td>Database library</td><td>sql.js 1.14.2 (from <code>package-lock.json</code>), the same WebAssembly build as <code>app/vendor/</code></td></tr>
+    <tr><td>Machine</td><td>Apple M2, 24 GB memory, macOS 26.5</td></tr>
+    <tr><td>Test data</td><td>Seed data of spec §10, recreated in memory before each integration test; demo clock reset to 2026-09-28 09:00</td></tr>
+    <tr><td>Browser checks</td><td>Google Chrome (headless and desktop) at 1440 px and 360 px width</td></tr>
+  </tbody>
+</table>
+
+<p>The service tests import the application modules unchanged. <code>createDatabase(SQL, {seed: true})</code> builds the database without browser storage, and the demo clock is set with <code>setNow()</code> where a test needs a later time, for example one minute before and at a deadline. No test reads the real system time, which makes the results the same on every run and on every machine.</p>
+
+<h2 id="testing-cases">6.3 Test Cases</h2>
+
+<p>The table below lists all 58 automated tests in the order in which they appear in the two test files. The list was extracted from the files with a script, so it contains exactly the tests that run. The column "Covers" gives the business rules, requirements or specification sections each test checks; "Expected result" states what the assertions require.</p>
+
+<table>
+  <caption>Table {{tab}}. Automated test cases (tests/rules.test.js and tests/services.test.js)</caption>
+  <thead><tr><th style="width:8%">ID</th><th style="width:27%">Name</th><th style="width:8%">File</th><th style="width:13%">Covers</th><th>Expected result</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">TC-011</td><td>overlap is half-open: touching ranges do not overlap</td><td>rules</td><td>BR-01</td><td>Touching ranges 10:00–16:00 and 16:00–22:00 do not overlap; one extra minute does.</td></tr>
+    <tr><td class="req-id">TC-012</td><td>durationHours supports end &lt;= start as next day</td><td>rules</td><td>BR-01, BR-11</td><td>18:00–23:00 = 5 h; 22:00–06:00 = 8 h (next day); overnight ranges overlap correctly.</td></tr>
+    <tr><td class="req-id">TC-013</td><td>weekStartOf returns the ISO Monday</td><td>rules</td><td>BR-05</td><td>Wednesday 2026-09-30 and Sunday 2026-10-04 map to Monday 2026-09-28.</td></tr>
+    <tr><td class="req-id">TC-014</td><td>eligible when active, not requester, free and covered by availability</td><td>rules</td><td>BR-01</td><td>Choi Minho (active, free, available Wed 17–23) is eligible for Wed 18:00–23:00.</td></tr>
+    <tr><td class="req-id">TC-015</td><td>not eligible: requester, inactive, overlapping shift, or availability too short</td><td>rules</td><td>BR-01</td><td>Requester, inactive worker, overlapping shift, too-short slot and wrong weekday are each not eligible.</td></tr>
+    <tr><td class="req-id">TC-021</td><td>valid request passes</td><td>rules</td><td>BR-03, FR-06</td><td>Valid request returns no error, also with deadline equal to shift start.</td></tr>
+    <tr><td class="req-id">TC-022</td><td>only the current worker of a SCHEDULED future shift can request</td><td>rules</td><td>BR-03</td><td>NOT_OWN_SHIFT, NOT_SCHEDULED and SHIFT_STARTED are reported.</td></tr>
+    <tr><td class="req-id">TC-023</td><td>at most one open request, deadline after now and not after shift start</td><td>rules</td><td>BR-03</td><td>OPEN_REQUEST_EXISTS, DEADLINE_NOT_FUTURE (deadline = now) and DEADLINE_AFTER_START (one minute late).</td></tr>
+    <tr><td class="req-id">TC-081</td><td>holiday allowance at exactly 15 h</td><td>rules</td><td>BR-06, BR-07</td><td>15.00 contractual hours: eligible, 3 holiday hours.</td></tr>
+    <tr><td class="req-id">TC-082</td><td>no holiday allowance at 14.99 h</td><td>rules</td><td>BR-06</td><td>14.99 contractual hours: not eligible, 0 hours, reason CONTRACT_BELOW_15.</td></tr>
+    <tr><td class="req-id">TC-083</td><td>holiday hours are capped at 40 contractual hours</td><td>rules</td><td>BR-07</td><td>holidayHours(40) = holidayHours(52) = 8; holidayHours(16) = 3.2; contract hours of Minho = 16.</td></tr>
+    <tr><td class="req-id">TC-084</td><td>an ABSENT own shift breaks perfect attendance</td><td>rules</td><td>BR-06</td><td>An ABSENT own shift breaks perfect attendance (reason ABSENT on 09-29); actual hours 5.</td></tr>
+    <tr><td class="req-id">TC-085</td><td>given-away shift under policy EXCUSED keeps attendance</td><td>rules</td><td>BR-06</td><td>Shift given away under EXCUSED keeps eligibility; scheduled hours drop to 5.</td></tr>
+    <tr><td class="req-id">TC-086</td><td>given-away shift under policy ABSENT breaks attendance</td><td>rules</td><td>BR-06</td><td>Same shift under ABSENT policy: not eligible, reason GAVE_AWAY.</td></tr>
+    <tr><td class="req-id">TC-087</td><td>substitute shifts taken do not change contractual hours; absence on them does not count</td><td>rules</td><td>BR-06</td><td>A substitute shift taken does not change contractual hours (16); an absence on it does not remove eligibility.</td></tr>
+    <tr><td class="req-id">TC-091</td><td>premium is zero with 4 regular employees</td><td>rules</td><td>BR-08</td><td>Premium hours are all zero with 4 regular employees.</td></tr>
+    <tr><td class="req-id">TC-092</td><td>premium with 5 employees: daily overtime and night hours add up</td><td>rules</td><td>BR-08</td><td>10:00–23:00 with 5 employees: 5 daily overtime + 1 night hour = 6.</td></tr>
+    <tr><td class="req-id">TC-093</td><td>overnight shift night hours 22:00-06:00</td><td>rules</td><td>BR-08</td><td>Overnight 21:00–07:00: 8 night hours and 2 daily overtime hours.</td></tr>
+    <tr><td class="req-id">TC-094</td><td>weekly hours beyond 40 not already counted as daily overtime</td><td>rules</td><td>BR-08</td><td>Six days (8 h × 5 + 10 h): 2 daily and 8 weekly overtime hours, no double counting.</td></tr>
+    <tr><td class="req-id">TC-101</td><td>minimum wage by year</td><td>rules</td><td>BR-09</td><td>Minimum wage 2026 = 10,320; 2025 = 10,030; 2027 falls back to 10,320; 2024 = none.</td></tr>
+    <tr><td class="req-id">TC-102</td><td>probation applies only when all BR-10 conditions hold</td><td>rules</td><td>BR-10</td><td>Probation holds for Jung Hana on 09-15 and 11-30; fails on each missing condition separately.</td></tr>
+    <tr><td class="req-id">TC-103</td><td>minimum-wage warning uses 90 % only under probation</td><td>rules</td><td>BR-09, BR-10</td><td>Warning for 10,000 won without probation, none with probation (floor 9,288), warning for 9,000.</td></tr>
+    <tr><td class="req-id">TC-111</td><td>payroll totals: base + holiday + premium, rounded down</td><td>rules</td><td>BR-07, BR-11</td><td>16 h × 10,320 = 165,120 + 33,024 holiday = 198,144 won.</td></tr>
+    <tr><td class="req-id">TC-112</td><td>premium pay at 5 employees and estimated flag</td><td>rules</td><td>BR-08, BR-11</td><td>One 18:00–23:00 shift at 5 employees: premium 5,250 won; estimated flag set.</td></tr>
+    <tr><td class="req-id">TC-113</td><td>fractional amounts are rounded down to the won</td><td>rules</td><td>BR-07, BR-11</td><td>Fractions rounded down: 0.33 h → 3,300 won; 1.33 h holiday → 13,301 won.</td></tr>
+    <tr><td class="req-id">TC-001</td><td>seed reproduces spec §10</td><td>services</td><td>spec §10</td><td>Seed: Dalbit Café, 4 employees, EXCUSED, two minimum-wage rows, five accounts, 18 shifts, 9 confirmed attendances, the open request with two PENDING targets.</td></tr>
+    <tr><td class="req-id">TC-016</td><td>seed request candidates equal the BR-01 computation</td><td>services</td><td>BR-01, FR-07</td><td>Recreated seed request yields exactly Choi Minho and Kang Doyun.</td></tr>
+    <tr><td class="req-id">TC-017</td><td>fixed schedules of one worker must not overlap (FR-02)</td><td>services</td><td>FR-02</td><td>Overlapping fixed shifts on the same weekday are refused (FIXED_OVERLAP).</td></tr>
+    <tr><td class="req-id">TC-018</td><td>generating the same week twice creates no duplicates (FR-04)</td><td>services</td><td>FR-04</td><td>Seed week creates 0 new shifts; a new week creates 9; a second call creates 0.</td></tr>
+    <tr><td class="req-id">TC-019</td><td>owner edits a shift; overlap with the same worker is refused (FR-05)</td><td>services</td><td>FR-05</td><td>Owner adds, moves and deletes a shift; a move onto another shift of the same worker is refused.</td></tr>
+    <tr><td class="req-id">TC-01A</td><td>deleting a shift with a request or attendance is refused (FR-05)</td><td>services</td><td>FR-05</td><td>Deleting a shift with a request or an attendance record is refused (SHIFT_IN_USE).</td></tr>
+    <tr><td class="req-id">TC-01B</td><td>deleting a fixed-schedule row keeps the shifts it generated (FR-02)</td><td>services</td><td>FR-02</td><td>Removing a fixed-schedule row keeps its shifts with fixedScheduleId = NULL.</td></tr>
+    <tr><td class="req-id">TC-024</td><td>creating a request notifies each candidate (FR-07)</td><td>services</td><td>FR-07, BR-01</td><td>Kang Doyun’s Saturday request notifies Lee Seoyeon and Jung Hana (two REQUEST_RECEIVED).</td></tr>
+    <tr><td class="req-id">TC-025</td><td>no eligible worker still creates the request and notifies the owner (FR-08)</td><td>services</td><td>FR-08</td><td>Jung Hana’s Sunday request has no candidate, stays REQUESTED, owner gets NO_CANDIDATE.</td></tr>
+    <tr><td class="req-id">TC-026</td><td>invalid requests are refused (BR-03)</td><td>services</td><td>BR-03, FR-06</td><td>Open request, closed shift, foreign shift and late deadline are refused with their codes.</td></tr>
+    <tr><td class="req-id">TC-051</td><td>two acceptances of the same request: only the first succeeds</td><td>services</td><td>BR-02, NFR-04</td><td>Minho’s acceptance succeeds; Doyun’s later acceptance fails with ALREADY_TAKEN naming Choi Minho; targets ACCEPTED / CLOSED.</td></tr>
+    <tr><td class="req-id">TC-052</td><td>acceptance notifies requester and owner, closed target is told (FR-10)</td><td>services</td><td>FR-10</td><td>REQUEST_ACCEPTED to owner and requester; TARGET_CLOSED to Doyun.</td></tr>
+    <tr><td class="req-id">TC-053</td><td>a decline keeps the request open for other candidates</td><td>services</td><td>FR-09</td><td>A decline leaves the request REQUESTED; another candidate can still accept.</td></tr>
+    <tr><td class="req-id">TC-061</td><td>approval reassigns the shift and keeps the original worker; weekly summaries recomputed</td><td>services</td><td>BR-04, FR-12</td><td>Shift reassigned to Minho, original worker Seoyeon, status SCHEDULED; summaries 21 h / 5 h; two REQUEST_APPROVED.</td></tr>
+    <tr><td class="req-id">TC-062</td><td>rejection leaves the shift unchanged; only ACCEPTED can be decided</td><td>services</td><td>BR-04, FR-12</td><td>Approval of a REQUESTED request refused; rejection leaves the shift unchanged; two REQUEST_REJECTED.</td></tr>
+    <tr><td class="req-id">TC-063</td><td>done-criterion 4 walkthrough: accept, already taken, approval panel, approve, handover on board</td><td>services</td><td>FR-09, FR-11, FR-12, NFR-01</td><td>Done-criterion 4: accept, &quot;already taken&quot;, preview 16 → 21 h with eligibility unchanged, approve, handover on the board.</td></tr>
+    <tr><td class="req-id">TC-088</td><td>worked example: Minho 3.2 h holiday allowance, 33,024 KRW in September payroll</td><td>services</td><td>BR-06, BR-07, BR-11</td><td>Week of 09-21: Minho 3.2 h; Seoyeon not eligible; September holiday pay 33,024 won.</td></tr>
+    <tr><td class="req-id">TC-089</td><td>marking a shift absent removes holiday eligibility for that week</td><td>services</td><td>BR-06, FR-13</td><td>Marking Minho’s Tuesday 09-22 absent removes eligibility (reason ABSENT on 09-22).</td></tr>
+    <tr><td class="req-id">TC-08A</td><td>both substitution-attendance policies through approval</td><td>services</td><td>BR-06, FR-17</td><td>After an approved swap Minho stays eligible under EXCUSED and loses eligibility under ABSENT.</td></tr>
+    <tr><td class="req-id">TC-08B</td><td>demo walkthrough S7: ABSENT policy, Minho gives away Sat 10-03 and loses holiday allowance</td><td>services</td><td>BR-06, FR-11</td><td>Walkthrough S7: candidates Seoyeon and Hana, Doyun excluded; preview shows eligibility change; after approval not eligible.</td></tr>
+    <tr><td class="req-id">TC-095</td><td>payroll premium is zero at 4 employees and non-zero at 5</td><td>services</td><td>BR-08</td><td>September premium 0 at 4 employees; Seoyeon 21,000 won at 5 (4 night hours × 10,500 × 0.5).</td></tr>
+    <tr><td class="req-id">TC-104</td><td>payroll warns for Kang Doyun and blocks confirmation until acknowledged</td><td>services</td><td>BR-09, BR-10, FR-16</td><td>Warning for Doyun, none for Hana (probation); confirmation blocked until acknowledged.</td></tr>
+    <tr><td class="req-id">TC-105</td><td>minimum-wage acknowledgement is persisted and a regenerated draft needs a new one</td><td>services</td><td>BR-09, NFR-05</td><td>Acknowledgement survives a reload from storage; a regenerated draft resets it and blocks confirmation again.</td></tr>
+    <tr><td class="req-id">TC-114</td><td>September payroll for Choi Minho: worked + estimated hours, holiday week of 09-21</td><td>services</td><td>BR-11</td><td>Minho September: 21 h (16 worked + 5 estimated), 216,720 + 33,024 = 249,744 won, estimated.</td></tr>
+    <tr><td class="req-id">TC-115</td><td>confirmed payroll is read-only; regenerating replaces drafts only</td><td>services</td><td>FR-15, BR-11</td><td>After confirmation, marking a shift absent and regenerating leaves the confirmed totals unchanged.</td></tr>
+    <tr><td class="req-id">TC-121</td><td>request expires at its deadline; requester and owner notified</td><td>services</td><td>BR-12, FR-18</td><td>No expiry at 20:59; expiry at 21:00; targets CLOSED; REQUEST_EXPIRED to owner and requester.</td></tr>
+    <tr><td class="req-id">TC-122</td><td>an ACCEPTED request expires when the shift starts without approval</td><td>services</td><td>BR-12</td><td>An ACCEPTED request expires at the shift start and can no longer be approved.</td></tr>
+    <tr><td class="req-id">TC-123</td><td>cancel closes and notifies all targets (UC-12)</td><td>services</td><td>FR-19</td><td>Cancel sets CANCELLED, notifies both targets, and a second cancel is refused.</td></tr>
+    <tr><td class="req-id">TC-071</td><td>worker records attendance for a past shift; owner confirms it</td><td>services</td><td>FR-13</td><td>Recording before the shift starts or on a foreign shift is refused; record + confirm gives WORKED and 4.92 actual hours.</td></tr>
+    <tr><td class="req-id">TC-131</td><td>a worker never receives other workers&#x27; phone or wage (NFR-11)</td><td>services</td><td>NFR-11</td><td>A worker sees null phone and wage for everyone else, own wage visible; the owner sees all phones.</td></tr>
+    <tr><td class="req-id">TC-132</td><td>inbox lists newest first with unread count; mark read clears it (FR-21)</td><td>services</td><td>FR-21</td><td>Newest notification first, unread count 1, zero after marking read.</td></tr>
+    <tr><td class="req-id">TC-133</td><td>notification recipients follow the spec §8 table</td><td>services</td><td>FR-19, FR-21, spec §8</td><td>Every notification kind reaches exactly the recipients of the spec §8 table; a decline notifies no one.</td></tr>
+    <tr><td class="req-id">TC-002</td><td>a saved database from before spec v2 (no Payroll.minWageAck) is replaced by the seed</td><td>services</td><td>NFR-05</td><td>A saved database without Payroll.minWageAck is replaced by the seed.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="testing-results">6.4 Test Results</h2>
+
+<p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the application built from prompt version 2 (Chapter 5).</p>
+
+<table>
+  <caption>Table {{tab}}. Test results by group (npm test, 2026-09-27)</caption>
+  <thead><tr><th style="width:10%">Group</th><th>Subject</th><th style="width:9%">Tests</th><th style="width:9%">Passed</th><th style="width:9%">Failed</th></tr></thead>
+  <tbody>
+    <tr><td>TC-00x</td><td>Seed data and storage (spec §10, NFR-05)</td><td class="num">2</td><td class="num">2</td><td class="num">0</td></tr>
+    <tr><td>TC-01x</td><td>Overlap, eligibility, schedule editing (BR-01, FR-02, FR-04, FR-05)</td><td class="num">11</td><td class="num">11</td><td class="num">0</td></tr>
+    <tr><td>TC-02x</td><td>Request validity and creation (BR-03, FR-06–FR-08)</td><td class="num">6</td><td class="num">6</td><td class="num">0</td></tr>
+    <tr><td>TC-05x</td><td>First acceptance wins (BR-02, NFR-04)</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr>
+    <tr><td>TC-06x</td><td>Approval effect (BR-04)</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr>
+    <tr><td>TC-07x</td><td>Attendance (UC-07)</td><td class="num">1</td><td class="num">1</td><td class="num">0</td></tr>
+    <tr><td>TC-08x</td><td>Holiday allowance (BR-06, BR-07)</td><td class="num">11</td><td class="num">11</td><td class="num">0</td></tr>
+    <tr><td>TC-09x</td><td>Premium pay (BR-08)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
+    <tr><td>TC-10x</td><td>Minimum wage and probation (BR-09, BR-10)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
+    <tr><td>TC-11x</td><td>Monthly payroll (BR-11)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
+    <tr><td>TC-12x</td><td>Expiry and cancellation (BR-12, FR-19)</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr>
+    <tr><td>TC-13x</td><td>Privacy and notifications (NFR-11, FR-21)</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr>
+    <tr><th colspan="2">Total (rules: 25, services: 33)</th><th class="num">58</th><th class="num">58</th><th class="num">0</th></tr>
+  </tbody>
+</table>
+
+<p>All 58 tests passed. The summary lines of the runner were:</p>
+
+<pre>ℹ tests 58
+ℹ suites 0
+ℹ pass 58
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 270.204667</pre>
+
+<p>The suite contains no skipped, pending or "todo" tests. The whole run takes well under a second, which made it practical to run the suite after every change, as the regression strategy of Section 6.1 requires. The prompt log records the same count after iteration 2: 52 tests in version 1 of the build, plus six tests added in version 2 (TC-002, TC-01A, TC-01B, TC-105, TC-08B and TC-133), each introduced together with the specification change it verifies (Section 6.9).</p>
+
+<h2 id="testing-boundary">6.5 Boundary-Value Analysis</h2>
+
+<p>The legal rules of ShiftSwap are threshold rules: a worker is either above or below 15 hours, a workplace either has five employees or not, a date is either inside or outside the probation period. Errors in such rules typically occur exactly at the threshold — a <code>&gt;</code> written for <code>≥</code>, or a date compared inclusively instead of exclusively. The tests therefore place inputs on both sides of every threshold, as the table below shows.</p>
+
+<table>
+  <caption>Table {{tab}}. Boundary values tested for the legal and workflow rules</caption>
+  <thead><tr><th style="width:15%">Rule</th><th style="width:22%">Threshold</th><th>Values below / at / above</th><th style="width:15%">Tests</th></tr></thead>
+  <tbody>
+    <tr><td>BR-06 contractual hours</td><td>≥ 15 h</td><td>14.99 h → not eligible; 15.00 h → eligible (3 holiday hours); 16 h → eligible (3.2 h)</td><td>TC-082, TC-081, TC-083</td></tr>
+    <tr><td>BR-07 holiday-hours cap</td><td>min(h, 40)</td><td>16 h → 3.2; 40 h → 8; 52 h → 8 (capped)</td><td>TC-083</td></tr>
+    <tr><td>BR-08 employees</td><td>≥ 5 regular employees</td><td>4 → premium 0; 5 → premium paid</td><td>TC-091, TC-092, TC-095</td></tr>
+    <tr><td>BR-08 daily hours</td><td>&gt; 8 h per day</td><td>8 h days → no daily overtime; 10 h and 13 h days → 2 h and 5 h</td><td>TC-092, TC-094</td></tr>
+    <tr><td>BR-08 weekly hours</td><td>&gt; 40 regular h per week</td><td>48 regular hours in a week → 8 weekly overtime hours, excluding the 2 daily ones</td><td>TC-094</td></tr>
+    <tr><td>BR-08 night window</td><td>22:00–06:00</td><td>18:00–23:00 → 1 night hour; 21:00–07:00 → 8 night hours</td><td>TC-092, TC-093, TC-112</td></tr>
+    <tr><td>BR-10 contract length</td><td>≥ 365 days</td><td>2026-09-01 to 2027-08-30 (363 days) → no reduction; to 2027-09-01 (365 days) → reduction; open-ended → reduction</td><td>TC-102</td></tr>
+    <tr><td>BR-10 three months</td><td>date &lt; contractStart + 3 months</td><td>2026-11-30 → applies (with probation end 11-30); 2026-12-01 → does not, even with a later probation end</td><td>TC-102</td></tr>
+    <tr><td>BR-10 probation end</td><td>date ≤ probationEnd</td><td>probation end 10-15, date 10-16 → does not apply; no probation end → does not apply</td><td>TC-102</td></tr>
+    <tr><td>BR-09 minimum wage</td><td>wage &lt; floor</td><td>10,320 at minimum 10,320 → no warning; 10,000 → warning; 10,000 under probation (floor 9,288) → no warning; 9,000 → warning</td><td>TC-103</td></tr>
+    <tr><td>BR-01 overlap</td><td>half-open [s, e)</td><td>10:00–16:00 vs 16:00–22:00 → no overlap; 10:00–16:01 → overlap</td><td>TC-011</td></tr>
+    <tr><td>BR-03 deadline</td><td>now &lt; deadline ≤ shift start</td><td>deadline = now → refused; = shift start → accepted; shift start + 1 min → refused</td><td>TC-021, TC-023</td></tr>
+    <tr><td>BR-12 expiry</td><td>deadline ≤ now</td><td>now 20:59 with deadline 21:00 → open; now 21:00 → expired</td><td>TC-121</td></tr>
+  </tbody>
+</table>
+
+<p>The probation dates deserve a comment. For Jung Hana, whose contract starts on 2026-09-01, the three-month limit is 2026-12-01, computed by adding calendar months rather than 90 days. The test checks 2026-11-30, the last day on which the reduction may apply, and 2026-12-01, the first day on which it may not; it also checks 2026-12-01 with a probation end deliberately set later (2027-03-01), to prove that the three-month limit is applied independently of the probation end written in the contract. The contract-length tests use two end dates two days apart around the 365-day threshold.</p>
+
+<h2 id="testing-concurrency">6.6 Concurrency Test</h2>
+
+<p>NFR-04 requires that two acceptances of the same request can never both succeed. TC-051 tests this directly with the seed request: Choi Minho accepts, and then Kang Doyun accepts the same request. The expected result has four parts: the first call returns ACCEPTED; the second throws a <code>ServiceError</code> with the code ALREADY_TAKEN and the parameter <code>name = 'Choi Minho'</code>, which is what the inbox displays; the request's acceptor is Minho; and the targets are ACCEPTED for Minho and CLOSED for Doyun. TC-052 checks the notifications of the same situation, and TC-063 checks the state the second candidate sees in the inbox (TAKEN, with the acceptor's name).</p>
+
+<p>The test calls the two acceptances one after the other. This models the situation of SD-2 faithfully for the deployed system, in which one JavaScript thread executes one transaction at a time, so the second acceptance always begins after the first has committed. What the test verifies is the design property that makes the outcome independent of timing: the service re-reads the request inside the transaction, and the update is conditional on <code>status = 'REQUESTED'</code>, with the number of changed rows checked. A test with truly parallel transactions would require a shared database server, which the client-only architecture does not have; Sections 8.3 and 8.4 discuss this limitation.</p>
+
+<h2 id="testing-nfr">6.7 Verification of Non-Functional Requirements</h2>
+
+<p>The non-functional requirements were verified with the methods named in their specification. The table below gives the evidence and the status for each. Where a check has not been carried out, the table says so.</p>
+
+<table>
+  <caption>Table {{tab}}. Verification of the non-functional requirements</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:24%">Method</th><th>Evidence</th><th style="width:13%">Status</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">NFR-01</td><td>UI walkthrough</td><td>The inbox item of a pending request has Accept and Decline buttons on the item itself: one click opens the inbox, the second accepts. Recorded in the headless walkthrough of the prompt log; the state logic is covered by TC-063.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-02</td><td>Browser check at 360 px and 1440 px</td><td>The prompt log records a headless Chrome check of every screen for both roles in English and Korean at 1440 px and 360 px with no horizontal scroll (70 of 70 checks passed, 0 console errors) for the version 2 build. The screens are re-checked after the UI review of iteration 3 (Chapter 7).</td><td>Met (v2); re-check for v3</td></tr>
+    <tr><td class="req-id">NFR-03</td><td>Timed load with 20 workers and 12 weeks</td><td>Service-level measurement in Node on the machine of Section 6.2, with 16 extra workers (20 in total) and 12 generated weeks (492 shifts): <code>getWeekShifts</code> 1.2 ms, <code>recomputeWeek</code> for all workers 16.9 ms, <code>generatePayroll</code> 22.1 ms, <code>createSubRequest</code> 2.5 ms, <code>getApprovalPreview</code> 1.7 ms. The database work of any screen is therefore far below 1 second; a browser rendering measurement with the same data has not been recorded.</td><td>Data layer met; screen timing not measured</td></tr>
+    <tr><td class="req-id">NFR-04</td><td>Unit test TC-05x</td><td>TC-051, TC-052, TC-053, TC-063 pass (Section 6.6).</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-05</td><td>Manual test</td><td>TC-105 reloads the database from a storage object and finds the acknowledgement kept; TC-002 checks the replacement of an outdated copy; the prompt log records a headless reload and reset check.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-06</td><td>Manual test in four browsers</td><td>Chrome checked (headless and desktop). The code uses only standard ES modules, <code>localStorage</code>, <code>sessionStorage</code> and WebAssembly. Checks in Edge, Safari and Firefox are not recorded at the time of writing.</td><td>Chrome met; others pending</td></tr>
+    <tr><td class="req-id">NFR-07</td><td>Deployed URL</td><td><code>https://keemlogan.github.io/shiftswap/app/</code> returned HTTP 200 with the application's <code>index.html</code> when checked on 2026-09-27.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-08</td><td>Repository</td><td>Static HTML, CSS and ES modules; no build step; sql.js vendored in <code>app/vendor/</code>; hosted on GitHub Pages.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-09</td><td>Review</td><td>UML models drawn with PlantUML [14] in UML 2.5 notation [8]; all code identifiers, table and column names in English.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-10</td><td>Unit tests TC-08x, TC-09x</td><td>All TC-08x, TC-09x and TC-10x tests pass, including the boundary values of Section 6.5.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-11</td><td>Role test</td><td>TC-131: a worker receives <code>null</code> for other people's phone and wage; the worker menus contain no screen with such data.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-12</td><td>Design review</td><td>A search of the application code finds no use of the geolocation interface; attendance is entered by the worker and confirmed by the owner (TC-071).</td><td>Met</td></tr>
+  </tbody>
+</table>
+
+<h2 id="testing-traceability">6.8 Traceability Matrix</h2>
+
+<div id="traceability">
+<p>The specification requires that every functional requirement maps to at least one use case, every use case to at least one screen and service function, and every business rule to at least one test case (spec §12). The matrix below was derived from the code, not from the design documents: the screen column lists the UI modules that call the service functions, found by searching each module in <code>app/ui/</code> for its calls to <code>services.js</code>, and the test column lists the tests that call those functions or the rule functions behind them and assert the requirement's behaviour.</p>
+
+<table>
+  <caption>Table {{tab}}. Traceability matrix: functional requirement → use case → screen → service → business rule → tests</caption>
+  <thead><tr><th style="width:7%">FR</th><th style="width:9%">UC</th><th style="width:14%">Screen (app/ui)</th><th style="width:27%">Service function(s)</th><th style="width:14%">BR</th><th>Tests</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">FR-01</td><td>UC-01</td><td><code>workers.js</code></td><td><code>registerWorker</code></td><td>BR-09, BR-10 (data)</td><td>— (walkthrough only)</td></tr>
+    <tr><td class="req-id">FR-02</td><td>UC-01</td><td><code>workers.js</code></td><td><code>saveFixedSchedule</code></td><td>BR-06</td><td>TC-017, TC-01B, TC-083</td></tr>
+    <tr><td class="req-id">FR-03</td><td>UC-02</td><td><code>availability.js</code></td><td><code>saveAvailability</code></td><td>BR-01</td><td>TC-08A, TC-122 (setup), TC-014, TC-015</td></tr>
+    <tr><td class="req-id">FR-04</td><td>UC-03</td><td><code>schedule.js</code></td><td><code>generateWeek</code></td><td>BR-05</td><td>TC-018, TC-013</td></tr>
+    <tr><td class="req-id">FR-05</td><td>UC-03</td><td><code>schedule.js</code></td><td><code>editShift</code></td><td>BR-01 (overlap)</td><td>TC-019, TC-01A</td></tr>
+    <tr><td class="req-id">FR-06</td><td>UC-04</td><td><code>requests.js</code></td><td><code>createSubRequest, listRequestableShifts, defaultDeadline</code></td><td>BR-03</td><td>TC-021, TC-022, TC-023, TC-026</td></tr>
+    <tr><td class="req-id">FR-07</td><td>UC-04</td><td><code>requests.js</code></td><td><code>createSubRequest</code></td><td>BR-01</td><td>TC-014, TC-015, TC-016, TC-024, TC-133</td></tr>
+    <tr><td class="req-id">FR-08</td><td>UC-04</td><td><code>requests.js</code></td><td><code>createSubRequest</code></td><td>BR-01</td><td>TC-025, TC-133</td></tr>
+    <tr><td class="req-id">FR-09</td><td>UC-05</td><td><code>inbox.js</code></td><td><code>respondToRequest, listNotifications</code></td><td>BR-02</td><td>TC-051, TC-053, TC-063</td></tr>
+    <tr><td class="req-id">FR-10</td><td>UC-05</td><td><code>inbox.js</code></td><td><code>respondToRequest</code></td><td>BR-02</td><td>TC-052, TC-133</td></tr>
+    <tr><td class="req-id">FR-11</td><td>UC-06</td><td><code>approvals.js</code></td><td><code>getApprovalPreview, listOwnerRequests</code></td><td>BR-06, BR-07</td><td>TC-063, TC-08B</td></tr>
+    <tr><td class="req-id">FR-12</td><td>UC-06</td><td><code>approvals.js</code></td><td><code>decideRequest, recomputeWeek</code></td><td>BR-04</td><td>TC-061, TC-062, TC-133</td></tr>
+    <tr><td class="req-id">FR-13</td><td>UC-07</td><td><code>attendance.js</code></td><td><code>recordAttendance, confirmAttendance, markAbsent</code></td><td>BR-06</td><td>TC-071, TC-089</td></tr>
+    <tr><td class="req-id">FR-14</td><td>UC-08</td><td><code>weekly.js</code></td><td><code>recomputeWeek</code></td><td>BR-05, BR-06, BR-07</td><td>TC-081–TC-089, TC-08A</td></tr>
+    <tr><td class="req-id">FR-15</td><td>UC-09</td><td><code>payroll.js</code></td><td><code>generatePayroll, confirmPayroll, getPayroll</code></td><td>BR-07, BR-08, BR-11</td><td>TC-111–TC-115, TC-095</td></tr>
+    <tr><td class="req-id">FR-16</td><td>UC-09</td><td><code>payroll.js</code></td><td><code>generatePayroll, acknowledgeMinWage, confirmPayroll</code></td><td>BR-09, BR-10</td><td>TC-101–TC-105</td></tr>
+    <tr><td class="req-id">FR-17</td><td>UC-10</td><td><code>settings.js</code></td><td><code>updateSettings, getSettings</code></td><td>BR-06, BR-08, BR-09</td><td>TC-08A, TC-08B, TC-095</td></tr>
+    <tr><td class="req-id">FR-18</td><td>UC-11</td><td><code>(router main.js)</code></td><td><code>expireOverdue</code></td><td>BR-12</td><td>TC-121, TC-122, TC-133</td></tr>
+    <tr><td class="req-id">FR-19</td><td>UC-12</td><td><code>requests.js</code></td><td><code>cancelRequest</code></td><td>—</td><td>TC-123, TC-133</td></tr>
+    <tr><td class="req-id">FR-20</td><td>UC-13</td><td><code>login.js, main.js</code></td><td><code>listWorkers, getWorker</code></td><td>NFR-11</td><td>TC-131 (privacy); menus by walkthrough</td></tr>
+    <tr><td class="req-id">FR-21</td><td>UC-04–06, 11, 12</td><td><code>inbox.js, main.js</code></td><td><code>listNotifications, markNotificationsRead, unreadCount</code></td><td>—</td><td>TC-132, TC-133</td></tr>
+  </tbody>
+</table>
+
+<p>Two gaps are visible in the matrix and are stated here rather than hidden. FR-01 (registering a worker) has no automated test of its own: <code>registerWorker</code> is exercised only through the screens, and its validation messages were checked in the walkthrough. FR-20 (role menus) is enforced by the router in <code>main.js</code>, which is not loaded by the Node tests; the privacy part of the requirement is covered by TC-131, and the menus by the walkthrough. Both gaps are candidates for additional tests (Section 8.4).</p>
+
+<p>The table below summarises coverage from the other direction. Every business rule has at least one test, as spec §12 requires; most have several, at the rule level and through the services.</p>
+
+<table>
+  <caption>Table {{tab}}. Business-rule coverage by test cases</caption>
+  <thead><tr><th style="width:8%">BR</th><th style="width:22%">Rule</th><th style="width:28%">Implementing functions</th><th>Tests</th><th style="width:8%">Count</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">BR-01</td><td>Eligible candidates</td><td><code>isEligibleCandidate, overlaps</code></td><td>TC-011, TC-012, TC-014, TC-015, TC-016, TC-024, TC-08B</td><td class="num">7</td></tr>
+    <tr><td class="req-id">BR-02</td><td>First acceptance wins</td><td><code>respondToRequest</code></td><td>TC-051, TC-052, TC-053, TC-063</td><td class="num">4</td></tr>
+    <tr><td class="req-id">BR-03</td><td>Request validity</td><td><code>validateRequest</code></td><td>TC-021, TC-022, TC-023, TC-026</td><td class="num">4</td></tr>
+    <tr><td class="req-id">BR-04</td><td>Approval effect</td><td><code>decideRequest</code></td><td>TC-061, TC-062</td><td class="num">2</td></tr>
+    <tr><td class="req-id">BR-05</td><td>Week</td><td><code>weekStartOf</code></td><td>TC-013, TC-018</td><td class="num">2</td></tr>
+    <tr><td class="req-id">BR-06</td><td>Holiday-allowance eligibility</td><td><code>computeWeeklySummary, contractHours</code></td><td>TC-081, TC-082, TC-084–TC-089, TC-08A, TC-08B</td><td class="num">10</td></tr>
+    <tr><td class="req-id">BR-07</td><td>Holiday-allowance hours and pay</td><td><code>holidayHours, computePayrollRow</code></td><td>TC-081, TC-083, TC-088, TC-111, TC-113</td><td class="num">5</td></tr>
+    <tr><td class="req-id">BR-08</td><td>Premium pay</td><td><code>premiumHours</code></td><td>TC-091–TC-095, TC-112</td><td class="num">6</td></tr>
+    <tr><td class="req-id">BR-09</td><td>Minimum-wage check</td><td><code>minimumWageFor, computePayrollRow, acknowledgeMinWage, confirmPayroll</code></td><td>TC-101, TC-103, TC-104, TC-105</td><td class="num">4</td></tr>
+    <tr><td class="req-id">BR-10</td><td>Probation reduction</td><td><code>probationApplies</code></td><td>TC-102, TC-103, TC-104</td><td class="num">3</td></tr>
+    <tr><td class="req-id">BR-11</td><td>Monthly payroll</td><td><code>computePayrollRow, generatePayroll</code></td><td>TC-111–TC-115, TC-088</td><td class="num">6</td></tr>
+    <tr><td class="req-id">BR-12</td><td>Expiry</td><td><code>expireOverdue</code></td><td>TC-121, TC-122, TC-133</td><td class="num">3</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="testing-defects">6.9 Defects and Specification Gaps Resolved During the Iterations</h2>
+
+<p>The build iterations are described in Chapter 5; this section lists what they found and how each finding was verified. In iteration 1, the AI coding assistant built the system from prompt version 1 and recorded every point at which the specification was ambiguous or silent, together with the choice it made. A document review of the proposal and interim report against the specification found further gaps. In iteration 2 each finding was resolved by changing the specification or the prompt, and where necessary the code, and each resolution was tied to a test. The table below lists the findings. Most of them were gaps in the specification rather than errors in the code: the implementation had already made a reasonable choice, and the change made that choice part of the contract, so that a regenerated system must make the same choice.</p>
+
+<table>
+  <caption>Table {{tab}}. Findings of iterations 1 and 2, their resolution and verification</caption>
+  <thead><tr><th style="width:4%">#</th><th style="width:30%">Finding</th><th style="width:36%">Resolution (specification / prompt / code)</th><th>Verified by</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>node --test tests/</code> fails on Node 24 (directory argument read as a module path)</td><td>Prompt: test script <code>node --test tests/*.test.js</code></td><td><code>npm test</code> runs</td></tr>
+    <tr><td>2</td><td>Read-only queries for the screens and an error type were not in the service list</td><td>Prompt: read-only query functions and <code>ServiceError(code, message, params)</code></td><td>All service tests</td></tr>
+    <tr><td>3</td><td>BR-06 required every shift to be WORKED, so a week in progress could never be eligible, contradicting the worked example</td><td>BR-06: a SCHEDULED shift does not break attendance; the weekly result is a projection</td><td>TC-085, TC-063</td></tr>
+    <tr><td>4</td><td>Unclear which workers have a weekly summary, and whether the seed contains derived rows</td><td>Spec §8: a summary exists only for workers with a shift in the week; the seed has no WeeklySummary or Payroll rows</td><td>TC-001, TC-088</td></tr>
+    <tr><td>5</td><td>Meaning of "estimated" and of shifts without attendance in the payroll</td><td>BR-11: WORKED → recorded hours; SCHEDULED → scheduled hours and <code>estimated = 1</code>; ABSENT → 0</td><td>TC-114, TC-112</td></tr>
+    <tr><td>6</td><td>Premium pay at month level mixed daily, weekly and night rules without saying how a week split by the month end is treated</td><td>BR-08: weekly overtime uses only the days of the week inside the month; premium pay rounded down</td><td>TC-092–TC-095</td></tr>
+    <tr><td>7</td><td>Date on which BR-10 is evaluated for a monthly payroll</td><td>BR-10: first day of the month, or contract start if later</td><td>TC-102, TC-104</td></tr>
+    <tr><td>8</td><td>"Effective hourly wage" in BR-07 undefined; rounding of holiday pay unclear</td><td>BR-07: <code>Worker.hourlyWage</code>; rounded down per week, then summed</td><td>TC-111, TC-113</td></tr>
+    <tr><td>9</td><td>Format of attendance times</td><td>Spec §8: <code>HH:MM</code> on the shift date; end ≤ start means next day</td><td>TC-071</td></tr>
+    <tr><td>10</td><td>Recipients of cancel and expiry notifications not specified (also found in the review of UC-12)</td><td>Spec §8 recipients table; FR-19; a decline notifies no one</td><td>TC-133 (new), TC-052, TC-121, TC-123</td></tr>
+    <tr><td>11</td><td>Seed request creation time, phone numbers and stored name language not given</td><td>Spec §10: <code>createdAt 2026-09-28T08:30</code>, fictional phone numbers, English names</td><td>TC-001, TC-131</td></tr>
+    <tr><td>12</td><td>Deleting a shift that already has a request or attendance</td><td>FR-05: refused with an explanatory message</td><td>TC-01A (new)</td></tr>
+    <tr><td>13</td><td>Deleting a fixed-schedule row that already generated shifts</td><td>FR-02: shifts kept with <code>fixedScheduleId = NULL</code></td><td>TC-01B (new)</td></tr>
+    <tr><td>14</td><td>Storage of the demo clock and language; effect of reset on the clock</td><td>Prompt: keys <code>shiftswap.clock.v1</code>, <code>shiftswap.lang</code>; reset also resets the clock</td><td>Headless reset and reload check</td></tr>
+    <tr><td>15</td><td>No module for shared UI helpers</td><td>Prompt: escaping, formatting and the form error box in <code>i18n.js</code></td><td>Review</td></tr>
+    <tr><td>16</td><td>Stripe pattern conflicted with "no gradients"; tables did not fit 360 px</td><td>Prompt: the stripe may use <code>repeating-linear-gradient</code>; tables become stacked cards below 720 px</td><td>Headless check at 360 px</td></tr>
+    <tr><td>17</td><td>The minimum-wage acknowledgement was not stored, so it was lost on reload (document review)</td><td>Schema: <code>Payroll.minWageAck</code>; BR-09; new service <code>acknowledgeMinWage</code>; Confirm disabled until every warning is acknowledged</td><td>TC-104, TC-105 (new), TC-115</td></tr>
+    <tr><td>18</td><td>Saved databases from before the schema change lacked the new column</td><td><code>openDatabase</code> checks the schema and replaces an outdated copy with the seed</td><td>TC-002 (new)</td></tr>
+    <tr><td>19</td><td>No scenario in which a swap changes eligibility, so FR-11's highlight was never exercised</td><td>Spec §10: demonstration walkthrough S7 with the ABSENT policy</td><td>TC-08B (new)</td></tr>
+    <tr><td>20</td><td>Date of Week 14 in NFR-07 inconsistent with the course calendar</td><td>NFR-07 corrected to 2026-12-04; spec §14 calendar</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>Two findings changed the code; the others changed only the specification and the prompt. Finding 17 is the most instructive. The original requirement said that a minimum-wage warning "blocks confirmation until acknowledged", but the data model had no place to store an acknowledgement, and the version 1 build handled it as a parameter of the confirm call. The review of the interim report noticed that an owner who acknowledged a warning and then reloaded the page would find the acknowledgement gone. The fix touched every level at once — a new column in the schema, a new clause in BR-09, a new service function, a new button, and two tests — which shows why the change procedure of Section 3.11.3 starts with the specification.</p>
+
+<p>Findings from the UI review of the running application in iteration 3 (prompt version 3) concern layout and presentation rather than rules; they are listed with the prompt changes in Chapter 5, and the screens that result from them are shown in Chapter 7.</p>

@@ -85,6 +85,41 @@ test('TC-01B deleting a fixed-schedule row keeps the shifts it generated (FR-02)
   assert.ok(shifts.every((s) => s.fixedScheduleId === null));
 });
 
+test('TC-01C owner registers and edits a worker with all FR-01 fields', () => {
+  const id = svc.registerWorker({
+    name: '  Yoon Jisu ', phone: '010-1234-5678', hourlyWage: 10500, contractStart: '2026-10-01',
+    contractEnd: '', probationEnd: '2026-12-31', simpleLabor: false, active: true,
+  });
+  const w = svc.getWorker(id);
+  assert.deepEqual(
+    [w.role, w.name, w.phone, w.hourlyWage, w.contractStart, w.contractEnd, w.probationEnd, w.simpleLabor, w.active, w.workplaceId],
+    ['WORKER', 'Yoon Jisu', '010-1234-5678', 10500, '2026-10-01', null, '2026-12-31', 0, 1, 1]);
+  svc.registerWorker({ ...w, id, hourlyWage: 10800, simpleLabor: true, active: false });
+  const edited = svc.getWorker(id);
+  assert.deepEqual([edited.hourlyWage, edited.simpleLabor, edited.active], [10800, 1, 0]);
+  // An inactive worker's fixed shifts are not generated (FR-04): only the 9 seed shifts are created.
+  svc.saveFixedSchedule(id, [{ weekday: 1, startTime: '10:00', endTime: '14:00' }]);
+  assert.equal(svc.generateWeek('2026-10-05').created, 9);
+});
+
+test('TC-01D worker registration refuses invalid input with a message that says how to fix it (FR-01)', () => {
+  const ok = { name: 'Yoon Jisu', hourlyWage: 10500, contractStart: '2026-10-01' };
+  const cases = [
+    [{ ...ok, name: '   ' }, 'NAME_REQUIRED'],
+    [{ ...ok, hourlyWage: 0 }, 'WAGE_INVALID'],
+    [{ ...ok, hourlyWage: 10320.5 }, 'WAGE_INVALID'],
+    [{ ...ok, hourlyWage: NaN }, 'WAGE_INVALID'],
+    [{ ...ok, contractStart: '' }, 'CONTRACT_START_REQUIRED'],
+    [{ ...ok, contractEnd: '2026-09-30' }, 'CONTRACT_END_BEFORE_START'],
+    [{ ...ok, probationEnd: '2026-09-01' }, 'PROBATION_BEFORE_START'],
+  ];
+  const before = get("SELECT count(*) AS n FROM Worker").n;
+  for (const [data, code] of cases) {
+    assert.throws(() => svc.registerWorker(data), (err) => err.code === code && err.message.length > 10, code);
+  }
+  assert.equal(get("SELECT count(*) AS n FROM Worker").n, before);
+});
+
 // ---- TC-02x request creation ----
 
 test('TC-024 creating a request notifies each candidate (FR-07)', () => {
@@ -433,4 +468,24 @@ test('TC-002 a saved database from before spec v2 (no Payroll.minWageAck) is rep
   assert.equal(svc.getWorkplace().name, 'Dalbit Café');
   assert.ok(all('PRAGMA table_info(Payroll)').some((c) => c.name === 'minWageAck'));
   assert.notEqual(store.get(DB_KEY), Buffer.from(bytes).toString('base64'));
+});
+
+test('TC-134 each role sees only its own menus; other routes are not offered (FR-20)', () => {
+  assert.deepEqual(svc.menuFor('WORKER'), ['schedule', 'requests', 'inbox', 'attendance', 'availability']);
+  assert.deepEqual(svc.menuFor('OWNER'), ['schedule', 'approvals', 'inbox', 'attendance', 'weekly', 'payroll', 'workers', 'settings']);
+  for (const ownerOnly of ['approvals', 'weekly', 'payroll', 'workers', 'settings']) assert.ok(!svc.menuFor('WORKER').includes(ownerOnly), ownerOnly);
+  for (const workerOnly of ['requests', 'availability']) assert.ok(!svc.menuFor('OWNER').includes(workerOnly), workerOnly);
+  assert.deepEqual(svc.menuFor('GUEST'), []);
+  svc.menuFor('WORKER').push('payroll');
+  assert.ok(!svc.menuFor('WORKER').includes('payroll'), 'callers cannot widen the menu');
+});
+
+test('TC-135 a worker sees only their own attendance rows and no one else\'s phone or wage (NFR-11)', () => {
+  const seoyeon = svc.getWorker(2);
+  const rows = svc.listAttendance('2026-09-21', seoyeon);
+  assert.ok(rows.length > 0 && rows.every((s) => s.workerId === 2));
+  assert.equal(svc.listAttendance('2026-09-21', svc.getWorker(1)).length, 9);
+  const seen = svc.listWorkers(seoyeon);
+  assert.deepEqual(seen.filter((w) => w.id !== 2).map((w) => [w.phone, w.hourlyWage]), [[null, null], [null, null], [null, null], [null, null]]);
+  assert.deepEqual([seen.find((w) => w.id === 2).phone, seen.find((w) => w.id === 2).hourlyWage], ['010-4172-2083', 10500]);
 });

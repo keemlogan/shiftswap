@@ -1,6 +1,6 @@
 // UC-04 Request substitute (form) and UC-12 My requests (list with Cancel).
 import * as svc from '../core/services.js';
-import { t, esc, fmtShift, fmtDateTime, showFormError } from './i18n.js';
+import { t, esc, fmtShift, fmtDateTime, showFormError, pageHead, emptyState } from './i18n.js';
 
 let lastResult = null;
 
@@ -14,7 +14,7 @@ export function render(view, ctx) {
   lastResult = null;
 
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('requests.title'))}</h1></div>
+    ${pageHead(t('requests.title'), t('purpose.requests'))}
     ${result ? resultPanel(result) : ''}
     <form class="card form" id="request-form">
       <h2>${esc(t('requests.newTitle'))}</h2>
@@ -34,11 +34,11 @@ export function render(view, ctx) {
       </div>
       <p class="hint" id="deadline-hint">${esc(t('requests.deadlineHint'))}</p>
       <div class="actions"><button type="submit" class="btn btn-primary">${esc(t('requests.submit'))}</button></div>`
-      : `<p class="empty">${esc(t('requests.noShifts'))}</p>`}
+      : emptyState(t('requests.noShiftsText'), `<a class="btn btn-primary" href="#/schedule">${esc(t('requests.toSchedule'))}</a>`)}
     </form>
-    <section class="stack" aria-labelledby="mine-title">
+    <section class="group stack" aria-labelledby="mine-title">
       <h2 id="mine-title">${esc(t('requests.title'))}</h2>
-      ${mine.length ? mine.map(requestCard).join('') : `<p class="empty">${esc(t('requests.none'))}</p>`}
+      ${mine.length ? mine.map(requestCard).join('') : emptyState(t('requests.noneText'), shifts.length ? '' : `<a class="btn" href="#/schedule">${esc(t('requests.toSchedule'))}</a>`)}
     </section>`;
 
   const form = view.querySelector('#request-form');

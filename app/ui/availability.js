@@ -1,6 +1,6 @@
 // UC-02 Register availability (FR-03). Also exports the weekday/start/end row editor used for fixed schedules.
 import * as svc from '../core/services.js';
-import { t, esc, dayName, showFormError } from './i18n.js';
+import { t, esc, dayName, showFormError, pageHead } from './i18n.js';
 
 function slotRow(slot = {}) {
   return `
@@ -51,9 +51,8 @@ export function readSlots(form) {
 export function render(view, ctx) {
   const { user } = ctx;
   view.innerHTML = `
-    <div class="page-head"><h1>${esc(t('availability.title'))}</h1></div>
+    ${pageHead(t('availability.title'), t('purpose.availability'))}
     <form class="card form" id="avail-form" novalidate>
-      <p class="muted">${esc(t('availability.intro'))}</p>
       ${slotEditorHtml(svc.getAvailability(user.id), 'availability.empty')}
       <div class="actions"><button type="submit" class="btn btn-primary">${esc(t('availability.save'))}</button></div>
     </form>`;

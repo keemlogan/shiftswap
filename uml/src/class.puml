@@ -159,6 +159,7 @@ class Payroll {
   premiumPay : int
   total : int
   minWageWarning : boolean
+  minWageAck : boolean
   estimated : boolean
   status : PayrollStatus
 }
@@ -178,54 +179,57 @@ class Notification {
   readAt : datetime
 }
 
-' ===== services (app/core/services.js) =====
+' ===== services (app/core/services.js) — real exported signatures =====
 class ScheduleService <<service>> {
-  +registerWorker(data) : Worker
-  +saveFixedSchedule(workerId, slots) : void
-  +saveAvailability(workerId, slots) : void
-  +generateWeek(weekStart) : Shift[]
-  +editShift(shiftId, changes) : Shift
-  +updateSettings(settings) : Workplace
+  +registerWorker(data) : int
+  +saveFixedSchedule(workerId, slots) : FixedSchedule[]
+  +saveAvailability(workerId, slots) : Availability[]
+  +generateWeek(weekStart) : {weekStart, created}
+  +editShift(shiftId, changes) : int
+  +updateSettings({name, regularEmployees,\n  subAttendancePolicy, minimumWages}) : {workplace, minimumWages}
 }
 
 class SubstituteService <<service>> {
-  +createSubRequest(shiftId, reason, deadline) : SubRequest
-  +respondToRequest(targetId, response) : SubRequestTarget
-  +decideRequest(requestId, decision) : SubRequest
-  +cancelRequest(requestId) : SubRequest
-  +expireOverdue(now) : SubRequest[]
+  +defaultDeadline(shift) : string
+  +createSubRequest({shiftId, requesterId,\n  reason, deadline}) : {id, candidates}
+  +respondToRequest(requestId, workerId, response) : {status}
+  +decideRequest(requestId, decision) : {status}
+  +cancelRequest(requestId, requesterId) : {status}
+  +expireOverdue() : int
+  +getApprovalPreview(requestId) : {request, weekStart, rows}
 }
 
 class AttendanceService <<service>> {
-  +recordAttendance(shiftId, clockIn, clockOut) : Attendance
-  +confirmAttendance(shiftId) : Attendance
-  +markAbsent(shiftId) : Shift
-  +recomputeWeek(workerId, weekStart) : WeeklySummary
+  +recordAttendance(shiftId, workerId,\n  clockIn, clockOut) : {shiftId, hours}
+  +confirmAttendance(shiftId) : {status}
+  +markAbsent(shiftId) : {status}
+  +recomputeWeek(weekStart, workerIds) : WeeklySummary[]
 }
 
 class PayrollService <<service>> {
   +generatePayroll(yearMonth) : Payroll[]
-  +confirmPayroll(payrollId) : Payroll
+  +acknowledgeMinWage(yearMonth, workerId) : {workerId, minWageAck}
+  +confirmPayroll(yearMonth) : {confirmed}
 }
 
 class NotificationService <<service>> {
-  +listNotifications(workerId) : Notification[]
-  +markNotificationsRead(workerId) : void
+  +listNotifications(workerId) : {items, unread}
+  +markNotificationsRead(workerId) : int
 }
 
 class LaborRules <<service>> {
-  +{static} overlaps(a, b) : boolean
+  +{static} overlaps(aStart, aEnd, bStart, bEnd) : boolean
   +{static} durationHours(start, end) : float
   +{static} weekStartOf(date) : date
-  +{static} isEligibleCandidate(worker, shift) : boolean
-  +{static} validateRequest(shift, requester, deadline) : boolean
-  +{static} contractHours(worker) : float
-  +{static} computeWeeklySummary(worker, weekStart) : WeeklySummary
+  +{static} isEligibleCandidate({worker, requesterId,\n  shift, workerShifts, availability}) : boolean
+  +{static} validateRequest({shift, requesterId,\n  now, deadline, openRequests}) : string[]
+  +{static} contractHours(fixedSchedules) : float
+  +{static} computeWeeklySummary({workerId,\n  contractHours, shifts, policy}) : WeeklySummary
   +{static} holidayHours(contractHours) : float
-  +{static} premiumHours(worker, shifts) : float
-  +{static} minimumWageFor(year) : int
+  +{static} premiumHours(shifts, regularEmployees) : {daily, weekly, night, total}
+  +{static} minimumWageFor(year, rows) : int
   +{static} probationApplies(worker, date) : boolean
-  +{static} computePayrollRow(worker, yearMonth) : Payroll
+  +{static} computePayrollRow({hourlyWage, shifts,\n  holidayWeeks, regularEmployees,\n  minimumHourly, probation}) : Payroll
 }
 
 ' ===== relationships =====
@@ -259,6 +263,7 @@ ScheduleService ..> FixedSchedule
 ScheduleService ..> Availability
 ScheduleService ..> Shift
 ScheduleService ..> Workplace
+ScheduleService ..> LaborRules : overlaps(), addDays()
 SubstituteService ..> SubRequest
 SubstituteService ..> SubRequestTarget
 SubstituteService ..> LaborRules

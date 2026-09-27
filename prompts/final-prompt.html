@@ -1,0 +1,245 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>ShiftSwap — Final prompt</title>
+<link rel="stylesheet" href="../docs/web.css"></head><body><main class="doc"><h1 id="shiftswap--final-vibe-coding-prompt-v3">ShiftSwap — Final
+Vibe-Coding Prompt (v3)</h1>
+<blockquote>
+<p>Version history: v1 → v2 after iteration 1 (build ambiguities and
+document review), v2 → v3 after iteration 2 (UI review of the running
+app). Earlier versions are kept as <code>prompts/prompt-v1.md</code> and
+<code>prompts/prompt-v2.md</code>; the reasons for every change are in
+<code>prompts/prompt-log.md</code>.</p>
+<p>How to use: paste this whole prompt, followed by the complete
+contents of <code>spec/spec.md</code>, into a coding agent that can
+create files and run shell commands, in an empty folder. The agent must
+produce the same system that is deployed at <a
+href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/shiftswap/app/</a>.</p>
+</blockquote>
+<hr />
+<p>You are building <strong>ShiftSwap</strong>, a shift schedule and
+substitute management web application for a small café with part-time
+workers. The complete specification (actors, use cases UC-01…UC-13,
+functional requirements FR-01…FR-21, non-functional requirements
+NFR-01…NFR-12, business rules BR-01…BR-12, states, SQLite schema, seed
+data, test IDs) follows this prompt. Treat the specification as the
+contract: use its identifiers, table and column names, state names and
+seed data exactly. Do not add features that are not in it.</p>
+<h2 id="1-technology-constraints">1. Technology constraints</h2>
+<ul>
+<li>Static site only: <code>index.html</code>, CSS, and JavaScript ES
+modules. No build step, no framework, no server. It must work when the
+folder is served by GitHub Pages under the sub-path
+<code>/shiftswap/app/</code> (use only relative URLs).</li>
+<li>Database: SQLite in the browser with <strong>sql.js</strong>
+(WebAssembly). Vendor <code>sql-wasm.js</code> and
+<code>sql-wasm.wasm</code> into <code>app/vendor/</code> (copy them from
+the <code>sql.js</code> npm package) so the app does not depend on a CDN
+at runtime.</li>
+<li>Persistence: after every committed transaction, export the database
+and save it to <code>localStorage</code> under the key
+<code>shiftswap.db.v1</code> (base64). The demo clock is stored under
+<code>shiftswap.clock.v1</code> and the language under
+<code>shiftswap.lang</code>. On start, load them if present, otherwise
+create the schema and insert the seed data. Provide "Reset demo data" in
+the header menu; it also resets the clock to
+<code>2026-09-28T09:00</code>.</li>
+<li>Folder layout:
+<ul>
+<li><code>app/index.html</code>, <code>app/styles.css</code>,
+<code>app/main.js</code> (router + bootstrap)</li>
+<li><code>app/core/db.js</code> — init, schema (exactly the SQL of spec
+§8), seed (spec §10), <code>tx(fn)</code> helper that runs
+<code>BEGIN</code>…<code>COMMIT</code> / <code>ROLLBACK</code> and
+persists after commit, <code>all(sql, params)</code>,
+<code>get(sql, params)</code>, <code>run(sql, params)</code>.</li>
+<li><code>app/core/clock.js</code> — demo clock: <code>now()</code>
+returns the stored demo datetime (default
+<code>2026-09-28T09:00</code>), <code>setNow(iso)</code>,
+<code>advance(minutes)</code>.</li>
+<li><code>app/core/rules.js</code> — pure functions only (no DB, no
+DOM): <code>overlaps</code>, <code>durationHours</code> (supports end ≤
+start as next day), <code>weekStartOf</code>,
+<code>isEligibleCandidate</code>, <code>validateRequest</code>,
+<code>contractHours</code>, <code>computeWeeklySummary</code>,
+<code>holidayHours</code>, <code>premiumHours</code>,
+<code>minimumWageFor</code>, <code>probationApplies</code>,
+<code>computePayrollRow</code>. Each function has a JSDoc comment citing
+the BR it implements.</li>
+<li><code>app/core/services.js</code> — one exported function per
+use-case step, each running inside <code>tx()</code>:
+<code>registerWorker</code>, <code>saveFixedSchedule</code>,
+<code>saveAvailability</code>, <code>generateWeek</code>,
+<code>editShift</code>, <code>createSubRequest</code>,
+<code>respondToRequest</code>, <code>decideRequest</code>,
+<code>cancelRequest</code>, <code>expireOverdue</code>,
+<code>recordAttendance</code>, <code>confirmAttendance</code>,
+<code>markAbsent</code>, <code>recomputeWeek</code>,
+<code>generatePayroll</code>, <code>confirmPayroll</code>,
+<code>updateSettings</code>, <code>listNotifications</code>,
+<code>markNotificationsRead</code>, <code>acknowledgeMinWage</code>.
+Services call rules for every decision and write Notification rows
+exactly as the recipients table in spec §8 says.
+<code>services.js</code> also exports read-only query functions for the
+screens (not wrapped in <code>tx</code>), e.g.
+<code>getWeekShifts</code>, <code>listMyRequests</code>,
+<code>listOwnerRequests</code>, <code>getApprovalPreview</code>,
+<code>getPayroll</code>, <code>unreadCount</code>,
+<code>defaultDeadline</code>, and a
+<code>ServiceError(code, message, params)</code> class that the UI
+translates by <code>code</code>.</li>
+<li><code>app/ui/</code> — one module per screen: <code>login.js</code>,
+<code>schedule.js</code> (weekly board, both roles),
+<code>requests.js</code> (worker: my requests + new request form),
+<code>inbox.js</code>, <code>approvals.js</code> (owner),
+<code>attendance.js</code>, <code>weekly.js</code> (owner weekly
+summary), <code>payroll.js</code>, <code>workers.js</code> (owner:
+workers, fixed schedules), <code>availability.js</code> (worker),
+<code>settings.js</code> (owner: workplace + minimum wage),
+<code>i18n.js</code> (translations plus shared helpers: HTML escaping,
+number/date/money formatting, the form error box).</li>
+<li><code>tests/rules.test.js</code> and
+<code>tests/services.test.js</code> run with <code>node --test</code>
+(use the <code>sql.js</code> npm package in Node for service tests).
+Name each test with its spec test ID (e.g.
+<code>TC-081 holiday allowance at exactly 15 h</code>).</li>
+<li><code>package.json</code> with <code>"type": "module"</code> and
+script <code>"test": "node --test tests/*.test.js"</code> (a bare
+directory argument fails on Node 24).</li>
+</ul></li>
+<li><code>expireOverdue()</code> (the System Clock actor, UC-11) runs on
+app start, on every route change, and after the demo clock changes.</li>
+</ul>
+<h2 id="2-screens-and-behaviour">2. Screens and behaviour</h2>
+<ul>
+<li><strong>Sign-in (UC-13)</strong>: list of demo accounts (owner +
+four workers). Each row shows the name, the role, and a one-line summary
+of what that person has in the seed: for the owner "Owner · Dalbit Café
+· 4 workers", for a worker their fixed shifts and weekly contract hours,
+e.g. "Mon, Wed 18:00–23:00 · 10 h/week". Choosing one enters the app.
+Show a note that this is a demo without passwords. The chosen account is
+kept in <code>sessionStorage</code>.</li>
+<li><strong>Header</strong>: store name, signed-in user, unread
+notification count linking to the inbox, the demo clock (date-time input
++ "+1 hour" and "+1 day" buttons), language switch (English / 한국어),
+menu with "Reset demo data" and "Sign out".</li>
+<li><strong>Every page</strong> starts with a header: the page title and
+one sentence saying what the page is for (e.g. Payroll: "Monthly pay per
+worker, computed from worked hours, holiday allowance and
+premiums.").</li>
+<li><strong>Owner overview strip</strong> above the owner's weekly
+board: three figures that link to their pages — approvals waiting, open
+substitute requests, and this week's total scheduled shifts and hours
+(e.g. "11 shifts · 60 h").</li>
+<li><strong>Weekly board (UC-03)</strong>: a time grid. Seven day
+columns Monday–Sunday; a vertical hour axis from the earliest shift
+start to the latest shift end of the displayed week, rounded to whole
+hours (seed: 10:00–23:00), 44 px per hour, with a thin line every hour
+and the hour label in the left gutter; today's column header is marked.
+Each shift is a block positioned and sized by its start and end time,
+showing time range and worker name; the signed-in worker's shifts are
+emphasised. A shift that was handed over shows the new worker, and the
+original worker struck through, with the handover marker (see design).
+Owner can generate the displayed week (FR-04) and edit/delete a shift
+(FR-05). Week navigation with previous / next.</li>
+<li><strong>Request substitute (UC-04)</strong>: from one of the
+worker's own future shifts, open a form: reason (optional), deadline
+(default: the earlier of now + 24 h and shift start). On submit show the
+list of candidates who were notified, or the "no eligible worker"
+message (FR-08).</li>
+<li><strong>Inbox (UC-05, FR-21)</strong>: notifications newest first; a
+<code>REQUEST_RECEIVED</code> item for a PENDING target has
+<strong>Accept</strong> and <strong>Decline</strong> buttons directly on
+the item (NFR-01: at most 2 clicks). If someone else accepted first,
+show "Already taken by <name>".</li>
+<li><strong>Approvals (UC-06)</strong>: owner list of ACCEPTED requests.
+Each opens a comparison panel with a before/after table for requester
+and acceptor (contract hours, scheduled hours this week,
+holiday-allowance eligibility, holiday hours) and a highlighted line
+when eligibility changes (FR-11); buttons <strong>Approve</strong> /
+<strong>Reject</strong>. Also show open REQUESTED requests read-only
+with their candidates' responses.</li>
+<li><strong>My requests (UC-12)</strong>: worker's requests with status
+chips; Cancel for REQUESTED/ACCEPTED.</li>
+<li><strong>Attendance (UC-07)</strong>: worker records clock-in/out for
+own past shifts; owner confirms or marks absent.</li>
+<li><strong>Weekly summary (UC-08)</strong>: owner picks a week; table
+per worker with the FR-14 columns and a short reason text when not
+eligible ("contract hours below 15", "absent on Tue 09-29").</li>
+<li><strong>Payroll (UC-09)</strong>: owner picks a month; "Generate
+draft", table per worker (base hours, base pay, holiday pay, premium
+pay, total, flags), minimum-wage warning on the row with an
+<strong>Acknowledge</strong> button (<code>acknowledgeMinWage</code>
+sets <code>Payroll.minWageAck = 1</code>, persisted); "Confirm" is
+disabled until every warning row is acknowledged; confirmed rows
+read-only; rows with <code>estimated = 1</code> carry an "Estimated"
+chip.</li>
+<li><strong>Workers &amp; schedules (UC-01)</strong>,
+<strong>Availability (UC-02)</strong>, <strong>Settings
+(UC-10)</strong>: simple forms with validation messages that say what is
+wrong and how to fix it.</li>
+<li><strong>Empty states</strong> say what will appear there and offer
+the next action as a button, e.g. Payroll with no draft: "No payroll for
+September 2026 yet." + primary button "Generate draft for September
+2026"; Approvals with nothing waiting: "No swaps are waiting for
+approval." + link to open requests.</li>
+<li>Role guard: worker never sees other workers' phone numbers or wages
+(NFR-11).</li>
+</ul>
+<h2 id="3-visual-design-do-not-deviate">3. Visual design (do not
+deviate)</h2>
+<ul>
+<li>Fonts: Pretendard Variable for all text
+(<code>https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css</code>),
+JetBrains Mono (Google Fonts) for times, hours and money with
+<code>font-variant-numeric: tabular-nums</code>. Korean text:
+<code>word-break: keep-all</code>, line-height 1.6.</li>
+<li>Type scale: base 15 px / line-height 1.6; page title 28 px weight
+800 letter-spacing −0.02em; section title 18 px weight 700; small text
+13 px (never smaller than 12 px); inputs 16 px on mobile.</li>
+<li>Colors (CSS custom properties): <code>--ink #1C2230</code>,
+<code>--ink-2 #4A5163</code>, <code>--line #DDE1E8</code>,
+<code>--surface #F4F6F9</code>, <code>--paper #FFFFFF</code>,
+<code>--shift #2B5BD7</code> (primary, own shifts),
+<code>--handover #E9A23B</code> (substitution),
+<code>--alert #C93A31</code>, <code>--ok #2E7D4F</code>.</li>
+<li>Signature element: on the weekly board, a handed-over shift has a 6
+px amber left edge and a subtle 45° amber stripe pattern, the new
+worker's name in bold and the original worker struck through beneath it.
+Pending requests show a dashed amber outline on the shift. This is the
+only decorative element; everything else is quiet: white cards on the
+surface color, 8 px radius, 1 px borders, no gradients (the stripe may
+use <code>repeating-linear-gradient</code>; no other gradient), no
+emoji, no drop shadows larger than
+<code>0 1px 2px rgba(28,34,48,.06)</code>.</li>
+<li>Layout: left navigation 220 px wide on ≥ 900 px, bottom tab bar on
+&lt; 900 px; the content column starts right after the navigation with
+32 px padding and a max-width of 1200 px (left-aligned, not centred in
+the remaining space); gaps between groups are at least twice the gaps
+inside a group; at 360 px width no horizontal scroll (the weekly board
+becomes a day-by-day list; below 720 px every data table turns each row
+into a stacked card with the column name before each value).</li>
+<li>Copy: sentence case, plain verbs ("Request substitute", "Approve
+swap"), errors explain the cause and the fix.</li>
+<li>Accessibility: visible focus rings, buttons are
+<code>&lt;button&gt;</code>, form labels, status chips have text not
+only color, <code>prefers-reduced-motion</code> respected.</li>
+</ul>
+<h2 id="4-done-criteria">4. Done criteria</h2>
+<ol type="1">
+<li><code>npm test</code> passes and covers every test ID group listed
+in spec §11 with at least one test each, including: two acceptances of
+the same request where only the first succeeds; holiday eligibility at
+14.99 h vs 15 h; the 40 h cap; both substitution-attendance policies;
+premium zero at 4 employees and non-zero at 5; probation applies only
+when all BR-10 conditions hold; the worked example of spec §10 (Choi
+Minho 3.2 h, 33,024 KRW).</li>
+<li>The seed state reproduces spec §10 exactly, including the open
+request with two candidates, and the S7 walkthrough of §10 works (a test
+proves it).</li>
+<li>Serving the repository root with any static server and opening
+<code>/app/</code> shows the sign-in screen with no console errors.</li>
+<li>Walking through: sign in as Choi Minho → accept → sign in as Kang
+Doyun → sees "Already taken" → sign in as owner → approval panel shows
+Minho scheduled 16 → 21 h and eligibility unchanged → approve → weekly
+board shows the handover marker.</li>
+</ol>
+</main></body></html>

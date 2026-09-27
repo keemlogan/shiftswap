@@ -21,50 +21,62 @@ actor "A2 Owner" as Owner
 boundary "payroll.js" as UI
 control "PayrollService" as Svc
 control "LaborRules" as Rules
-database "db.js\n(SQLite / localStorage)" as DB
+database "db.js" as DB
 
 Owner -> UI : pick month, "Generate draft"
 UI -> Svc : generatePayroll(yearMonth)
 activate Svc
 Svc -> DB : tx(fn) begin
 activate DB
-Svc -> DB : all active Worker, WeeklySummary of month, MinimumWage(year)
-DB --> Svc : workers, summaries, minWage
+Svc -> DB : get Workplace, all MinimumWage rows
+DB --> Svc : workplace, minimumWages
 
-loop for each Worker W
-  Svc -> Rules : computePayrollRow(W, yearMonth) (BR-11)
+Svc -> Rules : minimumWageFor(year, minimumWages)
+Rules --> Svc : minimumHourly
+
+Svc -> Svc : recomputeWeek(monday) for each week\nwhose Sunday falls in the month (BR-11)
+Svc -> DB : delete DRAFT Payroll rows of yearMonth
+
+loop for each Worker W (skip if a CONFIRMED row exists)
+  Svc -> DB : get W's shifts of the month (WORKED actual\ntimes, else SCHEDULED "estimated"),\nholidayWeeks = WeeklySummary.holidayHours
+  Svc -> Rules : probationApplies(W, payrollDate) (BR-10)
+  Rules --> Svc : probation
+  Svc -> Rules : computePayrollRow({hourlyWage, shifts,\nholidayWeeks, regularEmployees,\nminimumHourly, probation})
   activate Rules
-  Rules -> Rules : baseHours/basePay from WORKED (or scheduled, "estimated")
-  Rules -> Rules : holidayPay = sum of holiday pay for weeks ending in month (BR-06/07)
-  Rules -> Rules : premiumHours(W, shifts) (BR-08: only if regularEmployees >= 5)
-  Rules -> Rules : probationApplies(W, date) (BR-10)
-  Rules -> Rules : minimumWageFor(year) x (0.9 if probation else 1)
-  Rules --> Svc : payrollRow, minWageWarning?
+  Rules -> Rules : premiumHours(shifts, regularEmployees)\n(BR-08: only if regularEmployees >= 5)
+  Rules --> Svc : {baseHours, basePay, holidayPay,\npremiumPay, total, minWageWarning, estimated}
   deactivate Rules
-
-  alt worker.hourlyWage < applicable minimum (BR-09)
-    Svc -> DB : insert/replace Payroll row with minWageWarning = 1
-  else wage meets minimum
-    Svc -> DB : insert/replace Payroll row with minWageWarning = 0
-  end
+  Svc -> DB : insert Payroll row (status='DRAFT')
 end
 
-Svc -> DB : commit + persist (replaces DRAFT rows only)
+Svc -> DB : commit + persist
 deactivate DB
-Svc --> UI : Payroll[] (DRAFT), warnings[]
+Svc --> UI : Payroll[] (DRAFT) with minimumHourly, probation per row
 deactivate Svc
-UI --> Owner : table per worker + minimum-wage warning rows
+UI --> Owner : table per worker + minimum-wage warning rows (BR-09)
 
-alt any row has minWageWarning
-  UI --> Owner : block "Confirm" until warning acknowledged
-  Owner -> UI : acknowledge warning
+alt row has minWageWarning and not yet acknowledged
+  Owner -> UI : Acknowledge (yearMonth, workerId)
+  UI -> Svc : acknowledgeMinWage(yearMonth, workerId)
+  activate Svc
+  Svc -> DB : tx: get DRAFT row; error NO_DRAFT / NO_WARNING\nif missing or not warned
+  Svc -> DB : UPDATE Payroll SET minWageAck = 1
+  Svc --> UI : {workerId, minWageAck: 1}
+  deactivate Svc
 end
 
 Owner -> UI : Confirm
-UI -> Svc : confirmPayroll(payrollId)
+UI -> Svc : confirmPayroll(yearMonth)
 activate Svc
-Svc -> DB : tx: update Payroll.status = CONFIRMED (read-only afterwards)
-Svc --> UI : confirmed
+Svc -> DB : tx: get DRAFT rows of yearMonth
+
+alt any DRAFT row has minWageWarning && !minWageAck
+  Svc --> UI : throw ServiceError('MIN_WAGE_UNACKNOWLEDGED',\nlisting the unacknowledged workers' names)
+  UI --> Owner : block confirm, list workers to acknowledge
+else all warnings acknowledged
+  Svc -> DB : UPDATE Payroll SET status='CONFIRMED'\nWHERE yearMonth=? AND status='DRAFT'
+  Svc --> UI : {confirmed: count}
+  UI --> Owner : payroll rows become read-only
+end
 deactivate Svc
-UI --> Owner : payroll row becomes read-only
 @enduml

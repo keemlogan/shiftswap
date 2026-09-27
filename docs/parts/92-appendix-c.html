@@ -1,0 +1,886 @@
+<h1 id="appendix-spec">Appendix C. Specification (spec.md)</h1>
+<p>The specification file that the prompt treats as its contract, verbatim. Source file: <code>spec/spec.md</code>.</p>
+<div class="appendix small"><h3
+id="appendix-spec-shiftswap--canonical-specification-single-source-of-truth">ShiftSwap
+— Canonical Specification (single source of truth)</h3>
+<blockquote>
+<p>Every artifact in this repository (app code, UML, proposal, interim
+report, final report, slides, prompts) MUST use the IDs, names, states,
+rules and numbers defined here. If something is not defined here, do not
+invent it in one artifact only — add it here first.</p>
+</blockquote>
+<h4 id="appendix-spec-0-project-identity">0. Project identity</h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System name</td>
+<td><strong>ShiftSwap</strong></td>
+</tr>
+<tr>
+<td>Full title</td>
+<td>ShiftSwap: A Shift Schedule and Substitute Management System for
+Small Part-Time Workplaces</td>
+</tr>
+<tr>
+<td>Korean title</td>
+<td>소규모 매장 아르바이트 근무표·대타 관리 시스템</td>
+</tr>
+<tr>
+<td>Course</td>
+<td>Software Engineering (2026 Fall), Seoul National University of
+Science and Technology (SeoulTech)</td>
+</tr>
+<tr>
+<td>Team</td>
+<td>Team 7</td>
+</tr>
+<tr>
+<td>Instructor submission e-mail</td>
+<td><a href="mailto:jihjim@gmail.com">jihjim@gmail.com</a></td>
+</tr>
+<tr>
+<td>Deployed app</td>
+<td><code>https://keemlogan.github.io/shiftswap/app/</code></td>
+</tr>
+<tr>
+<td>Repository</td>
+<td><code>https://github.com/keemlogan/shiftswap</code></td>
+</tr>
+</tbody>
+</table>
+<h5 id="appendix-spec-team-members">Team members</h5>
+<table>
+<thead>
+<tr>
+<th>Name (EN)</th>
+<th>Name (KR)</th>
+<th>Student ID</th>
+<th>Affiliation</th>
+<th>E-mail</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hyewon Kim</td>
+<td>김혜원</td>
+<td>24102028</td>
+<td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td>
+<td>(to be provided by member)</td>
+<td>Requirements lead — problem definition, owner/worker interviews,
+functional &amp; non-functional requirements, scenarios</td>
+</tr>
+<tr>
+<td>Hyoungdo Kim</td>
+<td>김형도</td>
+<td>18102075</td>
+<td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td>
+<td><a href="mailto:zloganway@gmail.com">zloganway@gmail.com</a></td>
+<td>Project manager &amp; design/implementation lead — WBS/schedule, UML
+design models, vibe-coding prompts, deployment</td>
+</tr>
+<tr>
+<td>Minkyung Kim</td>
+<td>김민경</td>
+<td>23102004</td>
+<td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td>
+<td>(to be provided by member)</td>
+<td>UI &amp; quality lead — UI screens, test cases, presentation deck,
+report integration</td>
+</tr>
+</tbody>
+</table>
+<p>(Topic origin: proposed by Hyewon Kim from her own part-time job
+experience; selected by the team after comparing seven candidate topics
+on 2026-09-27.)</p>
+<h4 id="appendix-spec-1-problem-statement-short">1. Problem statement
+(short)</h4>
+<p>In small stores (cafés, convenience stores, restaurants) with fewer
+than ten part-time workers, each worker has <strong>fixed weekly
+shifts</strong> (e.g. every Monday 18:00–23:00). When a worker cannot
+come, the <strong>owner phones or messages other workers one by
+one</strong> to find a substitute, then <strong>edits a
+spreadsheet</strong> by hand, and at month end must <strong>re-check
+each worker's weekly hours</strong> to decide whether the <strong>weekly
+holiday allowance (주휴수당)</strong> is owed. Three problems
+follow:</p>
+<ul>
+<li>P1. Finding a substitute costs the owner repeated one-to-one
+contacts (reference store: typically 3–5 contacts per request, Hyewon's
+store).</li>
+<li>P2. The schedule, weekly hours and holiday-allowance eligibility of
+<strong>two</strong> workers change with every swap, and all
+recalculation is manual.</li>
+<li>P3. Legal pay rules (minimum wage, holiday allowance, 5-employee
+threshold for premiums, probation reduction) are applied from memory, so
+errors are not caught before payday.</li>
+</ul>
+<h4 id="appendix-spec-2-actors">2. Actors</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Actor</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>Worker</td>
+<td>Primary, human</td>
+<td>Part-time employee. Views own schedule, registers availability,
+requests substitutes, responds to requests, records attendance.</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Owner</td>
+<td>Primary, human</td>
+<td>Store owner (also acts as manager). Registers workers and fixed
+schedules, approves/rejects substitutions, confirms attendance, reviews
+weekly summaries, confirms monthly payroll, edits settings.</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>System Clock</td>
+<td>Secondary, system</td>
+<td>Time-triggered actor. Expires unanswered/unapproved requests at
+their deadline and closes weeks for weekly summary. (In the demo app
+this is driven by the adjustable "demo clock".)</td>
+</tr>
+</tbody>
+</table>
+<h4
+id="appendix-spec-3-use-cases-core--uc-01uc-09-map-11-to-the-nine-functions-of-the-proposal">3.
+Use cases (core = UC-01…UC-09 map 1:1 to the nine functions of the
+proposal)</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Primary actor</th>
+<th>Priority</th>
+<th>Main tables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UC-01</td>
+<td>Register worker and fixed schedule</td>
+<td>Owner</td>
+<td>Must</td>
+<td>Worker, FixedSchedule</td>
+</tr>
+<tr>
+<td>UC-02</td>
+<td>Register availability</td>
+<td>Worker</td>
+<td>Must</td>
+<td>Availability</td>
+</tr>
+<tr>
+<td>UC-03</td>
+<td>Generate weekly schedule</td>
+<td>Owner</td>
+<td>Must</td>
+<td>Shift</td>
+</tr>
+<tr>
+<td>UC-04</td>
+<td>Request substitute</td>
+<td>Worker</td>
+<td>Must</td>
+<td>SubRequest, SubRequestTarget, Notification</td>
+</tr>
+<tr>
+<td>UC-05</td>
+<td>Respond to substitute request (accept / decline)</td>
+<td>Worker (candidate)</td>
+<td>Must</td>
+<td>SubRequestTarget, SubRequest</td>
+</tr>
+<tr>
+<td>UC-06</td>
+<td>Approve or reject substitution</td>
+<td>Owner</td>
+<td>Must</td>
+<td>SubRequest, Shift, WeeklySummary</td>
+</tr>
+<tr>
+<td>UC-07</td>
+<td>Record and confirm attendance</td>
+<td>Worker, Owner</td>
+<td>Should</td>
+<td>Attendance, Shift</td>
+</tr>
+<tr>
+<td>UC-08</td>
+<td>Compute weekly hours and holiday allowance</td>
+<td>Owner (System)</td>
+<td>Must</td>
+<td>WeeklySummary, Workplace</td>
+</tr>
+<tr>
+<td>UC-09</td>
+<td>Generate and confirm monthly payroll</td>
+<td>Owner</td>
+<td>Should</td>
+<td>Payroll, MinimumWage, Worker</td>
+</tr>
+<tr>
+<td>UC-10</td>
+<td>Manage workplace settings and minimum wage table</td>
+<td>Owner</td>
+<td>Should</td>
+<td>Workplace, MinimumWage</td>
+</tr>
+<tr>
+<td>UC-11</td>
+<td>Expire overdue substitute request</td>
+<td>System Clock</td>
+<td>Must</td>
+<td>SubRequest, SubRequestTarget, Notification</td>
+</tr>
+<tr>
+<td>UC-12</td>
+<td>Cancel own substitute request</td>
+<td>Worker</td>
+<td>Should</td>
+<td>SubRequest, SubRequestTarget</td>
+</tr>
+<tr>
+<td>UC-13</td>
+<td>Sign in by role (demo account selection)</td>
+<td>Worker, Owner</td>
+<td>Must</td>
+<td>Worker</td>
+</tr>
+</tbody>
+</table>
+<p>Relationships for the use case diagram:</p>
+<ul>
+<li>UC-04 «include» <em>Find eligible candidates</em> (BR-01).</li>
+<li>UC-06 «include» UC-08 (approval triggers recomputation for both
+workers).</li>
+<li>UC-11 «extend» UC-04 (extension point: deadline reached with no
+approved acceptance).</li>
+<li>UC-12 «extend» UC-04.</li>
+<li>UC-09 «include» UC-08.</li>
+<li>All UCs except UC-11 «include» UC-13 (must be signed in).</li>
+</ul>
+<h4 id="appendix-spec-4-functional-requirements">4. Functional
+requirements</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>UC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR-01</td>
+<td>The owner shall register a worker with name, phone, hourly wage
+(KRW), contract start date, contract end date, probation end date
+(optional), simple-labor flag, and active flag.</td>
+<td>UC-01</td>
+</tr>
+<tr>
+<td>FR-02</td>
+<td>The owner shall register one or more fixed weekly shifts per worker
+(weekday, start time, end time); fixed shifts of the same worker must
+not overlap. Deleting a fixed-schedule row keeps the shifts it already
+generated (their fixedScheduleId becomes NULL).</td>
+<td>UC-01</td>
+</tr>
+<tr>
+<td>FR-03</td>
+<td>A worker shall register availability slots (weekday, start, end)
+during which they can take substitute shifts.</td>
+<td>UC-02</td>
+</tr>
+<tr>
+<td>FR-04</td>
+<td>The system shall generate the shifts of a given week (Mon–Sun) from
+all active fixed schedules; generating the same week twice shall not
+create duplicates.</td>
+<td>UC-03</td>
+</tr>
+<tr>
+<td>FR-05</td>
+<td>The owner shall be able to add, move or delete a single shift of a
+generated week. Deleting a shift that has a substitute request or an
+attendance record is refused with an explanatory message.</td>
+<td>UC-03</td>
+</tr>
+<tr>
+<td>FR-06</td>
+<td>A worker shall create a substitute request for one of their own
+future SCHEDULED shifts, with an optional reason and a response
+deadline.</td>
+<td>UC-04</td>
+</tr>
+<tr>
+<td>FR-07</td>
+<td>On creation the system shall compute the eligible candidates
+(BR-01), create one SubRequestTarget per candidate, and put a
+notification in each candidate's inbox at once.</td>
+<td>UC-04</td>
+</tr>
+<tr>
+<td>FR-08</td>
+<td>If no worker is eligible, the system shall still create the request
+and notify the owner that no candidate exists.</td>
+<td>UC-04</td>
+</tr>
+<tr>
+<td>FR-09</td>
+<td>A candidate shall accept or decline a request from their inbox. The
+first acceptance makes that candidate the request's acceptor (BR-02);
+later acceptances shall be refused with an explanatory message.</td>
+<td>UC-05</td>
+</tr>
+<tr>
+<td>FR-10</td>
+<td>When a request is accepted, the system shall notify the requester
+and the owner, and close all other pending targets.</td>
+<td>UC-05</td>
+</tr>
+<tr>
+<td>FR-11</td>
+<td>The approval screen shall show, for both the requester and the
+acceptor, the weekly contractual hours, weekly scheduled hours and
+holiday-allowance eligibility <strong>before and after</strong> the
+swap, and highlight any eligibility change.</td>
+<td>UC-06</td>
+</tr>
+<tr>
+<td>FR-12</td>
+<td>On approval the system shall reassign the shift to the acceptor
+(keeping the original worker), recompute the weekly summaries of both
+workers, and notify both. On rejection the shift stays unchanged and
+both are notified.</td>
+<td>UC-06</td>
+</tr>
+<tr>
+<td>FR-13</td>
+<td>A worker shall record actual start and end time of a shift they
+worked; the owner shall confirm it or mark the shift ABSENT.</td>
+<td>UC-07</td>
+</tr>
+<tr>
+<td>FR-14</td>
+<td>The system shall compute, per worker and week, contractual hours,
+scheduled hours, actual hours, perfect-attendance flag,
+holiday-allowance eligibility and holiday-allowance hours (BR-06,
+BR-07).</td>
+<td>UC-08</td>
+</tr>
+<tr>
+<td>FR-15</td>
+<td>The owner shall generate a monthly payroll draft per worker (base
+pay, holiday allowance, premium pay, total) and confirm it; a confirmed
+payroll is read-only.</td>
+<td>UC-09</td>
+</tr>
+<tr>
+<td>FR-16</td>
+<td>The payroll screen shall warn when a worker's hourly wage is below
+the applicable minimum wage (BR-09), and apply the probation reduction
+only when BR-10 holds.</td>
+<td>UC-09</td>
+</tr>
+<tr>
+<td>FR-17</td>
+<td>The owner shall edit workplace settings: store name, number of
+regular employees, substitution-attendance policy (BR-06), and yearly
+minimum wage rows.</td>
+<td>UC-10</td>
+</tr>
+<tr>
+<td>FR-18</td>
+<td>When a request's deadline passes, or its shift starts, while it is
+still REQUESTED or ACCEPTED, the system shall mark it EXPIRED, close its
+targets and notify requester and owner.</td>
+<td>UC-11</td>
+</tr>
+<tr>
+<td>FR-19</td>
+<td>A requester shall cancel their own request while it is REQUESTED or
+ACCEPTED; all PENDING targets become CLOSED, and every target that was
+PENDING or ACCEPTED receives a REQUEST_CANCELLED notification.</td>
+<td>UC-12</td>
+</tr>
+<tr>
+<td>FR-20</td>
+<td>Users shall sign in by choosing a demo account; the UI shows only
+the menus of that role.</td>
+<td>UC-13</td>
+</tr>
+<tr>
+<td>FR-21</td>
+<td>Every user shall have an in-app notification inbox listing
+notifications newest first with unread count.</td>
+<td>UC-04–06, 11, 12</td>
+</tr>
+</tbody>
+</table>
+<h4
+id="appendix-spec-5-non-functional-requirements-classified-as-in-chapter-8-product--organisational--external">5.
+Non-functional requirements (classified as in Chapter 8: Product /
+Organisational / External)</h4>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Class</th>
+<th>Sub-class</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NFR-01</td>
+<td>Product</td>
+<td>Usability</td>
+<td>A candidate can accept a request in at most 2 clicks from the
+inbox.</td>
+<td>UI walkthrough</td>
+</tr>
+<tr>
+<td>NFR-02</td>
+<td>Product</td>
+<td>Usability</td>
+<td>All screens are usable at 360 px width (mobile) and 1440 px
+(desktop) without horizontal scrolling.</td>
+<td>Browser check at both widths</td>
+</tr>
+<tr>
+<td>NFR-03</td>
+<td>Product</td>
+<td>Efficiency / Performance</td>
+<td>With 20 workers and 12 weeks of shifts, any screen renders in under
+1 second on a mid-range laptop.</td>
+<td>Timed load with seeded data</td>
+</tr>
+<tr>
+<td>NFR-04</td>
+<td>Product</td>
+<td>Reliability</td>
+<td>"First acceptance wins" is enforced inside one database transaction
+that re-checks the request state; two acceptances can never both
+succeed.</td>
+<td>Unit test TC-05x</td>
+</tr>
+<tr>
+<td>NFR-05</td>
+<td>Product</td>
+<td>Reliability</td>
+<td>Data persists across page reloads (browser storage) and can be reset
+to seed data.</td>
+<td>Manual test</td>
+</tr>
+<tr>
+<td>NFR-06</td>
+<td>Product</td>
+<td>Portability</td>
+<td>Runs in current Chrome, Edge, Safari, Firefox without installation
+or server.</td>
+<td>Manual test</td>
+</tr>
+<tr>
+<td>NFR-07</td>
+<td>Organisational</td>
+<td>Delivery</td>
+<td>Working system deployed by Week 14 (2026-12-04).</td>
+<td>Deployed URL</td>
+</tr>
+<tr>
+<td>NFR-08</td>
+<td>Organisational</td>
+<td>Implementation</td>
+<td>Static web application (HTML/CSS/JavaScript ES modules) with an
+embedded SQLite database (sql.js, WebAssembly); built by vibe coding
+from the final prompt; hosted on GitHub Pages.</td>
+<td>Repository</td>
+</tr>
+<tr>
+<td>NFR-09</td>
+<td>Organisational</td>
+<td>Standards</td>
+<td>Models follow UML 2.5 notation; code identifiers in English.</td>
+<td>Review</td>
+</tr>
+<tr>
+<td>NFR-10</td>
+<td>External</td>
+<td>Legislative</td>
+<td>Pay rules follow the Minimum Wage Act (2026 minimum hourly wage KRW
+10,320) and the Labor Standards Act (Art. 18 ③, Art. 55, Enforcement
+Decree Art. 30; Art. 11 / 56 premium threshold).</td>
+<td>Unit tests TC-08x, TC-09x</td>
+</tr>
+<tr>
+<td>NFR-11</td>
+<td>External</td>
+<td>Privacy</td>
+<td>A worker's phone number and wage are visible only to the owner and
+that worker (Personal Information Protection Act principle of minimum
+disclosure).</td>
+<td>Role test</td>
+</tr>
+<tr>
+<td>NFR-12</td>
+<td>External</td>
+<td>Ethical</td>
+<td>The system does not collect location data; attendance is
+self-reported and owner-confirmed.</td>
+<td>Design review</td>
+</tr>
+</tbody>
+</table>
+<h4 id="appendix-spec-6-business-rules">6. Business rules</h4>
+<ul>
+<li><strong>BR-01 Eligible candidates.</strong> A worker W is eligible
+for a request on shift S (date d, start s, end e) iff: W is active; W ≠
+requester; W has no shift on date d overlapping [s, e); W has an
+availability slot on weekday(d) with slotStart ≤ s and slotEnd ≥ e.</li>
+<li><strong>BR-02 First acceptance wins.</strong> Acceptance succeeds
+only if the request is REQUESTED at the moment of the transaction; it
+sets request.status = ACCEPTED, request.acceptorId = W,
+target(W).response = ACCEPTED, and all other PENDING targets →
+CLOSED.</li>
+<li><strong>BR-03 Request validity.</strong> Only the shift's current
+worker can request; shift must be SCHEDULED and start in the future; at
+most one open (REQUESTED/ACCEPTED) request per shift; deadline must be
+after now and no later than the shift start.</li>
+<li><strong>BR-04 Approval effect.</strong> Approve: shift.workerId =
+acceptor; shift.originalWorkerId keeps the first worker (set only if
+null); request → APPROVED. Reject: request → REJECTED, shift unchanged.
+Owner can approve only an ACCEPTED request.</li>
+<li><strong>BR-05 Week.</strong> A week runs Monday 00:00 to Sunday
+24:00 (ISO week). Weekly records are keyed by the Monday date.</li>
+<li><strong>BR-06 Holiday-allowance eligibility (주휴).</strong>
+Eligible iff (a) weekly contractual hours ≥ 15, and (b) perfect
+attendance: every shift of the week whose <em>original</em> worker is W
+and that was not given away was not ABSENT (a shift that is still
+SCHEDULED does not break attendance, so the weekly result is a
+projection until the week is over). Shifts W gave away by an APPROVED
+substitution count according to Workplace.subAttendancePolicy:
+<code>EXCUSED</code> (default — the working day was changed by
+agreement, so it does not break attendance) or <code>ABSENT</code> (it
+breaks attendance). Contractual hours = sum of W's fixed-schedule hours
+per week. Substitute shifts W took do not change contractual hours.
+(Legal basis: Labor Standards Act Art. 55 ①, Enforcement Decree Art. 30
+①, Art. 18 ③. The law averages 15 h over four weeks; the system uses the
+weekly contractual hours from the fixed schedule, which is constant, so
+the average equals the weekly value.)</li>
+<li><strong>BR-07 Holiday-allowance hours.</strong> hours =
+min(contractualHours, 40) / 40 × 8, rounded to 2 decimals; pay = hours ×
+Worker.hourlyWage, rounded down to the won per week (monthly holiday pay
+is the sum of the rounded weekly amounts).</li>
+<li><strong>BR-08 Premium pay.</strong> Applies only if
+Workplace.regularEmployees ≥ 5 (Labor Standards Act Art. 11, 56). Then
++50 % of wage for (i) daily hours beyond 8, (ii) weekly hours beyond 40
+not already counted in (i), (iii) night hours 22:00–06:00. Night premium
+adds to overtime premium. If regularEmployees &lt; 5 → premium = 0. In a
+monthly payroll, weekly overtime uses only the days of that ISO week
+that fall inside the month. Premium pay = premium hours × wage × 0.5,
+rounded down.</li>
+<li><strong>BR-09 Minimum-wage check.</strong> Warn if worker.hourlyWage
+&lt; MinimumWage(year).hourly × (0.9 if BR-10 applies else 1). The
+payroll still computes with the worker's wage; the warning is shown on
+the payroll row and blocks confirmation until the owner acknowledges it,
+which sets Payroll.minWageAck = 1. Re-generating a DRAFT month replaces
+its rows, so acknowledgements must be given again.</li>
+<li><strong>BR-10 Probation reduction.</strong> The minimum may be
+reduced to 90 % only if all hold: contract length ≥ 1 year (contractEnd
+− contractStart ≥ 365 days, or contractEnd empty = open-ended), the date
+is within 3 months of contractStart and ≤ probationEnd, and simpleLabor
+= false (Minimum Wage Act Art. 5 ②, Enforcement Decree Art. 3). In a
+monthly payroll the conditions are evaluated on the first day of the
+month, or on contractStart if later.</li>
+<li><strong>BR-11 Monthly payroll.</strong> Month = calendar month. Base
+pay = Σ actual hours of WORKED shifts in the month × wage for WORKED
+shifts (recorded clock-in/out); SCHEDULED shifts in the month count with
+their scheduled hours and set estimated = 1 on the row; ABSENT shifts
+count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls
+in the month. Total = base + holiday + premium. Amounts are integers in
+KRW, rounded down.</li>
+<li><strong>BR-12 Expiry.</strong> A REQUESTED or ACCEPTED request whose
+deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED.</li>
+</ul>
+<h4 id="appendix-spec-7-states">7. States</h4>
+<p><strong>SubRequest.status</strong>: <code>REQUESTED</code> →
+<code>ACCEPTED</code> (UC-05) → <code>APPROVED</code> |
+<code>REJECTED</code> (UC-06).
+<code>REQUESTED</code>/<code>ACCEPTED</code> → <code>EXPIRED</code>
+(UC-11) | <code>CANCELLED</code> (UC-12). Final states: APPROVED,
+REJECTED, EXPIRED, CANCELLED.</p>
+<p><strong>SubRequestTarget.response</strong>: <code>PENDING</code> →
+<code>ACCEPTED</code> | <code>DECLINED</code> | <code>CLOSED</code>.</p>
+<p><strong>Shift.status</strong>: <code>SCHEDULED</code> →
+<code>WORKED</code> (attendance confirmed) | <code>ABSENT</code> (owner
+marks). A SCHEDULED shift may be reassigned (BR-04) — status stays
+SCHEDULED.</p>
+<p><strong>Attendance.confirmed</strong>: 0 (recorded by worker) → 1
+(confirmed by owner).</p>
+<p><strong>Payroll.status</strong>: <code>DRAFT</code> →
+<code>CONFIRMED</code>. Re-generating a month replaces DRAFT rows
+only.</p>
+<h4 id="appendix-spec-8-data-model-sqlite-12-tables">8. Data model
+(SQLite; 12 tables)</h4>
+<div class="sourceCode" id="appendix-spec-cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="appendix-spec-cb1-1"><a href="#appendix-spec-cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Workplace (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, name TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, regularEmployees <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">4</span>,</span>
+<span id="appendix-spec-cb1-2"><a href="#appendix-spec-cb1-2" aria-hidden="true" tabindex="-1"></a>  subAttendancePolicy TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;EXCUSED&#39;</span> <span class="kw">CHECK</span> (subAttendancePolicy <span class="kw">IN</span> (<span class="st">&#39;EXCUSED&#39;</span>,<span class="st">&#39;ABSENT&#39;</span>)));</span>
+<span id="appendix-spec-cb1-3"><a href="#appendix-spec-cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Worker (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workplaceId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Workplace(<span class="kw">id</span>), <span class="kw">role</span> TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">CHECK</span> (<span class="kw">role</span> <span class="kw">IN</span> (<span class="st">&#39;OWNER&#39;</span>,<span class="st">&#39;WORKER&#39;</span>)),</span>
+<span id="appendix-spec-cb1-4"><a href="#appendix-spec-cb1-4" aria-hidden="true" tabindex="-1"></a>  name TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, phone TEXT, hourlyWage <span class="dt">INTEGER</span>, contractStart TEXT, contractEnd TEXT, probationEnd TEXT,</span>
+<span id="appendix-spec-cb1-5"><a href="#appendix-spec-cb1-5" aria-hidden="true" tabindex="-1"></a>  simpleLabor <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>, active <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">1</span>);</span>
+<span id="appendix-spec-cb1-6"><a href="#appendix-spec-cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> FixedSchedule (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), weekday <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">CHECK</span> (weekday <span class="kw">BETWEEN</span> <span class="dv">1</span> <span class="kw">AND</span> <span class="dv">7</span>),</span>
+<span id="appendix-spec-cb1-7"><a href="#appendix-spec-cb1-7" aria-hidden="true" tabindex="-1"></a>  startTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, endTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>);</span>
+<span id="appendix-spec-cb1-8"><a href="#appendix-spec-cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Availability (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), weekday <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">CHECK</span> (weekday <span class="kw">BETWEEN</span> <span class="dv">1</span> <span class="kw">AND</span> <span class="dv">7</span>),</span>
+<span id="appendix-spec-cb1-9"><a href="#appendix-spec-cb1-9" aria-hidden="true" tabindex="-1"></a>  startTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, endTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>);</span>
+<span id="appendix-spec-cb1-10"><a href="#appendix-spec-cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Shift (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workDate TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, startTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, endTime TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-11"><a href="#appendix-spec-cb1-11" aria-hidden="true" tabindex="-1"></a>  workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), originalWorkerId <span class="dt">INTEGER</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), fixedScheduleId <span class="dt">INTEGER</span> <span class="kw">REFERENCES</span> FixedSchedule(<span class="kw">id</span>),</span>
+<span id="appendix-spec-cb1-12"><a href="#appendix-spec-cb1-12" aria-hidden="true" tabindex="-1"></a>  status TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;SCHEDULED&#39;</span> <span class="kw">CHECK</span> (status <span class="kw">IN</span> (<span class="st">&#39;SCHEDULED&#39;</span>,<span class="st">&#39;WORKED&#39;</span>,<span class="st">&#39;ABSENT&#39;</span>)));</span>
+<span id="appendix-spec-cb1-13"><a href="#appendix-spec-cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> SubRequest (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, shiftId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Shift(<span class="kw">id</span>), requesterId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>),</span>
+<span id="appendix-spec-cb1-14"><a href="#appendix-spec-cb1-14" aria-hidden="true" tabindex="-1"></a>  acceptorId <span class="dt">INTEGER</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), reason TEXT, deadline TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-15"><a href="#appendix-spec-cb1-15" aria-hidden="true" tabindex="-1"></a>  status TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">CHECK</span> (status <span class="kw">IN</span> (<span class="st">&#39;REQUESTED&#39;</span>,<span class="st">&#39;ACCEPTED&#39;</span>,<span class="st">&#39;APPROVED&#39;</span>,<span class="st">&#39;REJECTED&#39;</span>,<span class="st">&#39;EXPIRED&#39;</span>,<span class="st">&#39;CANCELLED&#39;</span>)), createdAt TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, decidedAt TEXT);</span>
+<span id="appendix-spec-cb1-16"><a href="#appendix-spec-cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> SubRequestTarget (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, subRequestId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> SubRequest(<span class="kw">id</span>), workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>),</span>
+<span id="appendix-spec-cb1-17"><a href="#appendix-spec-cb1-17" aria-hidden="true" tabindex="-1"></a>  response TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;PENDING&#39;</span> <span class="kw">CHECK</span> (response <span class="kw">IN</span> (<span class="st">&#39;PENDING&#39;</span>,<span class="st">&#39;ACCEPTED&#39;</span>,<span class="st">&#39;DECLINED&#39;</span>,<span class="st">&#39;CLOSED&#39;</span>)), respondedAt TEXT);</span>
+<span id="appendix-spec-cb1-18"><a href="#appendix-spec-cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Attendance (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, shiftId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">UNIQUE</span> <span class="kw">REFERENCES</span> Shift(<span class="kw">id</span>), clockIn TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, clockOut TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-19"><a href="#appendix-spec-cb1-19" aria-hidden="true" tabindex="-1"></a>  confirmed <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>);</span>
+<span id="appendix-spec-cb1-20"><a href="#appendix-spec-cb1-20" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> WeeklySummary (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), weekStart TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-21"><a href="#appendix-spec-cb1-21" aria-hidden="true" tabindex="-1"></a>  contractHours <span class="dt">REAL</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, scheduledHours <span class="dt">REAL</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, actualHours <span class="dt">REAL</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, perfectAttendance <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-22"><a href="#appendix-spec-cb1-22" aria-hidden="true" tabindex="-1"></a>  holidayEligible <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, holidayHours <span class="dt">REAL</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, <span class="kw">UNIQUE</span> (workerId, weekStart));</span>
+<span id="appendix-spec-cb1-23"><a href="#appendix-spec-cb1-23" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Payroll (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), yearMonth TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-24"><a href="#appendix-spec-cb1-24" aria-hidden="true" tabindex="-1"></a>  baseHours <span class="dt">REAL</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, basePay <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, holidayPay <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, premiumPay <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>, total <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="appendix-spec-cb1-25"><a href="#appendix-spec-cb1-25" aria-hidden="true" tabindex="-1"></a>  minWageWarning <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>, minWageAck <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>, estimated <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>,</span>
+<span id="appendix-spec-cb1-26"><a href="#appendix-spec-cb1-26" aria-hidden="true" tabindex="-1"></a>  status TEXT <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;DRAFT&#39;</span> <span class="kw">CHECK</span> (status <span class="kw">IN</span> (<span class="st">&#39;DRAFT&#39;</span>,<span class="st">&#39;CONFIRMED&#39;</span>)), <span class="kw">UNIQUE</span> (workerId, yearMonth));</span>
+<span id="appendix-spec-cb1-27"><a href="#appendix-spec-cb1-27" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> MinimumWage (<span class="dt">year</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, hourly <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span>);</span>
+<span id="appendix-spec-cb1-28"><a href="#appendix-spec-cb1-28" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> Notification (<span class="kw">id</span> <span class="dt">INTEGER</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span>, workerId <span class="dt">INTEGER</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">REFERENCES</span> Worker(<span class="kw">id</span>), subRequestId <span class="dt">INTEGER</span> <span class="kw">REFERENCES</span> SubRequest(<span class="kw">id</span>),</span>
+<span id="appendix-spec-cb1-29"><a href="#appendix-spec-cb1-29" aria-hidden="true" tabindex="-1"></a>  kind TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, message TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, createdAt TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>, readAt TEXT);</span></code></pre></div>
+<p>Dates are ISO <code>YYYY-MM-DD</code>, times <code>HH:MM</code> (24
+h; an end time ≤ start time means the shift ends next day — seed data
+contains no overnight shift, but the rule functions support it and
+TC-09x test it). Datetimes are ISO <code>YYYY-MM-DDTHH:MM</code>.</p>
+<p>Attendance.clockIn/clockOut are <code>HH:MM</code> on the shift date
+(end ≤ start means next day). A WeeklySummary row exists only for
+workers who have a shift (as current or original worker) in that week;
+the seed contains no WeeklySummary or Payroll rows — they are
+derived.</p>
+<p>Notification recipients:</p>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>recipients</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQUEST_RECEIVED</td>
+<td>each eligible candidate (UC-04)</td>
+</tr>
+<tr>
+<td>NO_CANDIDATE</td>
+<td>owner (UC-04, FR-08)</td>
+</tr>
+<tr>
+<td>REQUEST_ACCEPTED</td>
+<td>requester and owner (UC-05)</td>
+</tr>
+<tr>
+<td>TARGET_CLOSED</td>
+<td>the other PENDING targets when someone accepts (UC-05)</td>
+</tr>
+<tr>
+<td>REQUEST_APPROVED / REQUEST_REJECTED</td>
+<td>requester and acceptor (UC-06)</td>
+</tr>
+<tr>
+<td>REQUEST_EXPIRED</td>
+<td>requester and owner; pending targets are closed silently
+(UC-11)</td>
+</tr>
+<tr>
+<td>REQUEST_CANCELLED</td>
+<td>every target that was PENDING or ACCEPTED (UC-12)</td>
+</tr>
+</tbody>
+</table>
+<p>A decline notifies no one.</p>
+<h4 id="appendix-spec-9-design-architecture">9. Design
+(architecture)</h4>
+<p>Layered, client-only architecture:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Module (file)</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Presentation</td>
+<td><code>app/index.html</code>, <code>app/ui/*.js</code>,
+<code>app/styles.css</code></td>
+<td>Screens per role, routing by hash (<code>#/schedule</code>,
+<code>#/requests</code>, …)</td>
+</tr>
+<tr>
+<td>Application services</td>
+<td><code>app/core/services.js</code></td>
+<td>Use-case operations (one function per UC step), transactions</td>
+</tr>
+<tr>
+<td>Domain rules</td>
+<td><code>app/core/rules.js</code></td>
+<td>Pure functions: eligibility, overlap, weekly summary, holiday
+allowance, premium, payroll, minimum wage/probation — no DB access
+(unit-tested)</td>
+</tr>
+<tr>
+<td>Data access</td>
+<td><code>app/core/db.js</code></td>
+<td>sql.js initialisation, schema, seed, persistence to
+<code>localStorage</code>, <code>tx()</code> helper</td>
+</tr>
+<tr>
+<td>Clock</td>
+<td><code>app/core/clock.js</code></td>
+<td>Demo clock (<code>now()</code>), adjustable from the UI; System
+Clock actor ticks expiry on every navigation</td>
+</tr>
+</tbody>
+</table>
+<p>Key classes for the class diagram (domain view): Workplace, Worker
+(role OWNER/WORKER), FixedSchedule, Availability, Shift, SubRequest,
+SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage,
+Notification; services: ScheduleService, SubstituteService,
+AttendanceService, PayrollService, NotificationService; rule object:
+LaborRules.</p>
+<p>Sequence diagrams required: SD-1 Request substitute (UC-04), SD-2
+Accept request with concurrent second acceptance (UC-05), SD-3 Approve
+substitution with weekly recomputation (UC-06), SD-4 Generate monthly
+payroll (UC-09).</p>
+<p>State diagrams: SubRequest, Shift, Payroll. Activity diagrams: AD-1
+Holiday-allowance determination (BR-06/07), AD-2 Candidate selection
+(BR-01).</p>
+<h4
+id="appendix-spec-10-seed--demo-data-fixed-used-in-screenshots-and-tests">10.
+Seed / demo data (fixed; used in screenshots and tests)</h4>
+<ul>
+<li>Workplace: <strong>Dalbit Café (달빛카페)</strong>, regularEmployees
+= 4, policy EXCUSED.</li>
+<li>MinimumWage: 2025 → 10,030; 2026 → 10,320.</li>
+<li>Names are stored in English (e.g. <code>Park Jiyoung</code>,
+<code>Dalbit Café</code>); the Korean UI shows them unchanged. Phone
+numbers (fictional): ids 1–5 → <code>010-3827-1150</code>,
+<code>010-4172-2083</code>, <code>010-5290-3316</code>,
+<code>010-6631-4427</code>, <code>010-7748-5539</code>.</li>
+<li>Owner: <strong>Park Jiyoung (박지영)</strong>, id 1.</li>
+<li>Workers (hourly wage KRW, contract, fixed shifts, availability):
+<ul>
+<li>id 2 <strong>Lee Seoyeon (이서연)</strong> 10,500; 2026-03-02 ~
+2027-02-28; Mon &amp; Wed 18:00–23:00 (10 h/wk); avail Tue 17:00–23:00,
+Thu 17:00–23:00, Sat 10:00–22:00.</li>
+<li>id 3 <strong>Choi Minho (최민호)</strong> 10,320; 2026-06-01 ~
+2026-12-31; Tue &amp; Thu 18:00–23:00, Sat 12:00–18:00 (16 h/wk); avail
+Mon 17:00–23:00, Wed 17:00–23:00.</li>
+<li>id 4 <strong>Jung Hana (정하나)</strong> 10,320; 2026-09-01 ~
+open-ended, probationEnd 2026-11-30, simpleLabor 0; Fri 17:00–23:00, Sun
+10:00–16:00 (12 h/wk); avail Mon 18:00–23:00, Sat 10:00–18:00.</li>
+<li>id 5 <strong>Kang Doyun (강도윤)</strong> 10,000 (below minimum —
+triggers BR-09 warning); 2026-08-15 ~ 2026-11-15, simpleLabor 1; Sat
+10:00–16:00 &amp; Sun 16:00–22:00 (12 h/wk); avail Wed 18:00–23:00, Thu
+18:00–23:00, Fri 17:00–23:00.</li>
+</ul></li>
+<li>Demo clock default: <strong>2026-09-28T09:00</strong> (Monday).
+Weeks of 2026-09-21 and 2026-09-28 are generated; week of 2026-09-21 has
+confirmed attendance for all shifts.</li>
+<li>Seed request: Lee Seoyeon requests a substitute for Wed 2026-09-30
+18:00–23:00, deadline 2026-09-29T21:00, reason "Midterm exam", createdAt
+2026-09-28T08:30 → eligible: Choi Minho (avail Wed 17–23). Kang Doyun
+also has Wed 18:00–23:00 availability → also eligible. Status
+REQUESTED.</li>
+</ul>
+<p>Demo walkthrough S7 (ABSENT policy, used in the reports): the owner
+sets the policy to ABSENT; Choi Minho requests a substitute for Sat
+2026-10-03 12:00–18:00 → eligible: Lee Seoyeon (avail Sat 10–22) and
+Jung Hana (avail Sat 10–18); Kang Doyun is excluded because his Sat
+10:00–16:00 shift overlaps. If the swap is approved, Minho's week of
+2026-09-28 loses perfect attendance and he is not eligible for holiday
+allowance that week.</p>
+<p>Worked example used in the reports (must match the app): if Choi
+Minho takes Seoyeon's Wednesday shift, Seoyeon's contractual hours stay
+10 (not eligible either way, &lt; 15), Minho's contractual hours stay 16
+(eligible, holiday hours = 16/40×8 = 3.2 h → 3.2 × 10,320 = 33,024 KRW)
+while his scheduled hours for the week rise from 16 to 21.</p>
+<h4
+id="appendix-spec-11-test-case-ids-unit-tests-in-testsrulestestjs-run-with-node---test">11.
+Test case IDs (unit tests in <code>tests/rules.test.js</code>, run with
+<code>node --test</code>)</h4>
+<p>TC-01x overlap &amp; eligibility (BR-01); TC-02x request validity
+(BR-03); TC-05x first-acceptance concurrency (BR-02, NFR-04); TC-06x
+approval effect (BR-04); TC-08x holiday allowance incl. 15 h boundary
+(14.99 / 15) and 40 h cap, both policies (BR-06/07); TC-09x premium
+below/at 5 employees, night hours (BR-08); TC-10x minimum wage &amp;
+probation conditions (BR-09/10); TC-11x monthly payroll totals (BR-11);
+TC-12x expiry (BR-12).</p>
+<h4 id="appendix-spec-12-traceability-rule">12. Traceability rule</h4>
+<p>Every FR maps to ≥1 UC, every UC to ≥1 screen and service function,
+every BR to ≥1 test case. The final report contains the full matrix.</p>
+<h4 id="appendix-spec-13-legal-sources-reference-list-entries">13. Legal
+sources (reference list entries)</h4>
+<ol type="1">
+<li>Ministry of Employment and Labor, "2026 minimum wage KRW 10,320 per
+hour" (MOEL notice, 2025-08). <a
+href="https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144">https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144</a></li>
+<li>Korea Policy Briefing, "2026년 시간당 최저임금 10,320원". <a
+href="https://www.korea.kr/news/policyNewsView.do?newsId=148956812">https://www.korea.kr/news/policyNewsView.do?newsId=148956812</a></li>
+<li>Labor Standards Act (근로기준법) Art. 11, 18, 55, 56; Enforcement
+Decree Art. 30. <a
+href="https://www.law.go.kr">https://www.law.go.kr</a></li>
+<li>Minimum Wage Act (최저임금법) Art. 5 ②; Enforcement Decree Art. 3.
+<a href="https://www.law.go.kr">https://www.law.go.kr</a></li>
+<li>Easy-Law (찾기쉬운 생활법령정보), part-time workers' rest and
+holidays. <a
+href="https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&amp;csmSeq=896&amp;ccfNo=2&amp;cciNo=3&amp;cnpClsNo=1">https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&amp;csmSeq=896&amp;ccfNo=2&amp;cciNo=3&amp;cnpClsNo=1</a></li>
+<li>D. A. Gustafson, <em>Schaum's Outline of Software Engineering</em>,
+McGraw-Hill, 2002 (course textbook; Ch. 1 life cycle, Ch. 2 process
+&amp; UML models, Ch. 8 requirements).</li>
+<li>I. Sommerville, <em>Software Engineering</em>, 10th ed., Pearson,
+2016 (requirements classification used in lecture Ch. 8).</li>
+<li>OMG, <em>Unified Modeling Language Specification</em> v2.5.1,
+2017.</li>
+<li>sql.js — SQLite compiled to WebAssembly. <a
+href="https://sql.js.org">https://sql.js.org</a></li>
+<li>Related products (for related-work section): Shiftee, 알바몬
+근무관리 / 알바천국 스케줄, When I Work, Homebase, Deputy — shift
+scheduling products; none links substitute approval to Korean
+holiday-allowance eligibility at the moment of approval.</li>
+</ol>
+<h4 id="appendix-spec-14-course-calendar-fixed">14. Course calendar
+(fixed)</h4>
+<p>Week n runs Monday–Sunday starting 2026-08-31 (Week 1 = 08-31…09-06).
+Deadlines are Fridays: Week 3 team formation
+<strong>2026-09-18</strong>, Week 5 proposal
+<strong>2026-10-02</strong>, Week 7 interim report
+<strong>2026-10-16</strong>, Week 14 final report + slides +
+presentation <strong>2026-12-04</strong> (Week 14 = 11-30…12-06). Topic
+comparison ran in Week 4 (09-21…09-27); the topic was selected on
+2026-09-27. Increment 1 (Must) is due end of Week 10 (11-06), Increment
+2 (Should) end of Week 11 (11-13).</p>
+</div>
