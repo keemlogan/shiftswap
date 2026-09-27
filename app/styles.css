@@ -111,6 +111,10 @@ button { font: inherit; color: inherit; }
   .clock-chip span { padding: 4px 8px; }
   .clock-chip .icon { display: none; }
 }
+@media (max-width: 380px) {
+  .topbar { gap: 4px; padding-left: 12px; }
+  .clock-chip span { padding: 4px 6px; }
+}
 
 /* ---- Layout and navigation ---- */
 
@@ -276,7 +280,7 @@ body.in-flow .content { padding-bottom: calc(var(--btn-h) + 48px + env(safe-area
 .endstate .icon { width: 20px; height: 20px; margin-top: 2px; color: var(--ink-3); }
 .endstate div { display: flex; flex-direction: column; }
 .endstate span { color: var(--ink-2); font-size: 15px; }
-.endstate-rejected .icon, .endstate-expired .icon { color: var(--alert); }
+.endstate-rejected .icon, .endstate-expired .icon, .endstate-failed .icon { color: var(--alert); }
 .status-line { font-weight: 600; }
 .answers { display: flex; flex-wrap: wrap; gap: 6px; }
 .answer { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface); color: var(--ink-2); }
@@ -408,6 +412,7 @@ body.in-flow .content { padding-bottom: calc(var(--btn-h) + 48px + env(safe-area
   width: 64px; height: 64px; border-radius: 50%; background: var(--shift); color: #fff; display: flex; align-items: center; justify-content: center; align-self: flex-start;
 }
 .done-mark .icon { width: 32px; height: 32px; stroke-width: 2.5; }
+.done-mark.is-alert { background: var(--alert-soft); color: var(--alert); }
 
 /* ---- Forms ---- */
 

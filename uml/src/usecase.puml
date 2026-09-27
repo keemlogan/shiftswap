@@ -44,9 +44,8 @@ A1 -[hidden]-> A3
 
 rectangle "ShiftSwap" as Boundary {
   ' -- worker-side use cases (near A1) --
-  usecase "UC-02\nRegister availability" as UC02
   usecase "UC-04\nRequest substitute" as UC04 <<amber>>
-  usecase "UC-05\nRespond to substitute\nrequest (accept/decline)" as UC05 <<amber>>
+  usecase "UC-05\nRespond (accept / can't)" as UC05 <<amber>>
   usecase "UC-12\nCancel own\nsubstitute request" as UC12 <<amber>>
 
   ' -- shared use cases (both actors, drawn in the middle) --
@@ -70,7 +69,6 @@ UC10 -[hidden]-> A2
 
 ' ===== actor associations only (primary actor per spec §3 table) =====
 ' detail of UC-04's include/extend/UC-08 relationships: see usecase-substitute.puml
-A1 -- UC02
 A1 -- UC04
 A1 -- UC05
 A1 -- UC12
@@ -92,6 +90,7 @@ note as N1
   Amber border = substitution-related use case
   (detail in Figure usecase-substitute).
   All use cases except UC-11 «include» UC-13.
+  UC-02 (Register availability) retired in iteration 6 (§15).
 end note
 
 Boundary -[hidden]d-> N1

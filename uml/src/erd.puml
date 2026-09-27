@@ -44,15 +44,6 @@ entity "FixedSchedule" as FixedSchedule {
   endTime : TEXT
 }
 
-entity "Availability" as Availability {
-  * id : INTEGER <<PK>>
-  --
-  # workerId : INTEGER <<FK>>
-  weekday : INTEGER
-  startTime : TEXT
-  endTime : TEXT
-}
-
 entity "Shift" as Shift {
   * id : INTEGER <<PK>>
   --
@@ -148,7 +139,6 @@ entity "Notification" as Notification {
 
 Workplace ||--o{ Worker
 Worker ||--o{ FixedSchedule
-Worker ||--o{ Availability
 Worker ||--o{ Shift : workerId
 Worker |o--o{ Shift : originalWorkerId
 FixedSchedule |o--o{ Shift : fixedScheduleId

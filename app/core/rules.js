@@ -77,28 +77,29 @@ export function weekStartOf(date) {
 }
 
 /**
- * BR-01: worker W is eligible for a request on shift S (date d, start s, end e) iff W is active,
- * W is not the requester, W has no shift on d overlapping [s, e), and W has an availability slot on
- * weekday(d) with slotStart ≤ s and slotEnd ≥ e.
- * @param {{worker:{id:number,active:number|boolean}, requesterId:number,
+ * BR-01: worker W is eligible for a request on shift S (date d, start s, end e) iff W is an active WORKER,
+ * W is not the requester and W has no shift on d overlapping [s, e). Availability is not used (spec §15).
+ * `worker.role` may be omitted; when given it must be 'WORKER'.
+ * @param {{worker:{id:number,active:number|boolean,role?:string}, requesterId:number,
  *   shift:{workDate:string,startTime:string,endTime:string},
- *   workerShifts:Array<{workDate:string,startTime:string,endTime:string}>,
- *   availability:Array<{weekday:number,startTime:string,endTime:string}>}} input
+ *   workerShifts:Array<{workDate:string,startTime:string,endTime:string}>}} input
  */
-export function isEligibleCandidate({ worker, requesterId, shift, workerShifts, availability }) {
+export function isEligibleCandidate({ worker, requesterId, shift, workerShifts }) {
   if (!worker.active) return false;
+  if (worker.role && worker.role !== 'WORKER') return false;
   if (worker.id === requesterId) return false;
-  const clash = workerShifts.some(
+  return !workerShifts.some(
     (x) => x.workDate === shift.workDate && overlaps(x.startTime, x.endTime, shift.startTime, shift.endTime),
   );
-  if (clash) return false;
-  const wd = isoWeekday(shift.workDate);
-  const [s, e] = span(shift.startTime, shift.endTime);
-  return availability.some((slot) => {
-    if (slot.weekday !== wd) return false;
-    const [as, ae] = span(slot.startTime, slot.endTime);
-    return as <= s && ae >= e;
-  });
+}
+
+/**
+ * BR-13: a REQUESTED request has no taker left (and ends FAILED) when it has no target at all or every
+ * target answered DECLINED.
+ * @param {string[]} responses the SubRequestTarget.response values of the request
+ */
+export function hasNoTaker(responses) {
+  return responses.every((r) => r === 'DECLINED');
 }
 
 /**

@@ -2,7 +2,7 @@
 
 <p>This chapter specifies what ShiftSwap must do. It follows the requirements engineering activities of Chapter 8 of the lecture — elicitation, analysis, validation and management [6], [7] — and the contents recommended there for a software requirements specification: problem description, functional and non-functional requirements, scenarios, use-case diagram and supplementary diagrams. The problem description is Chapter 2. Section 3.1 explains how the requirements were elicited, and Section 3.2 identifies stakeholders and actors. Sections 3.3 to 3.5 present the use-case model, the functional requirements and a full description of each use case. Section 3.6 states the business rules, the domain requirements that carry the legal content of the system. Section 3.7 gives the non-functional requirements, Section 3.8 the scenarios, and Section 3.9 the analysis models. Sections 3.10 and 3.11 describe how the requirements were validated and how changes to them were managed.</p>
 
-<p>All identifiers used in this chapter (A1–A3, UC-01–UC-13, FR-01–FR-21, NFR-01–NFR-13, BR-01–BR-12, TC groups) are defined in the specification file <code>spec/spec.md</code> of the repository, which the team treated as the single source of truth (Section 3.11). The wording of the requirements in this chapter is the wording of that file.</p>
+<p>All identifiers used in this chapter (A1–A3, UC-01–UC-13 with UC-02 retired, FR-01–FR-22 with FR-03 retired, NFR-01–NFR-13, BR-01–BR-13, TC groups) are defined in the specification file <code>spec/spec.md</code> of the repository, which the team treated as the single source of truth (Section 3.11). The wording of the requirements in this chapter is the wording of that file.</p>
 
 <h2 id="ch3-elicitation">3.1 Requirements Elicitation</h2>
 
@@ -30,7 +30,7 @@
     <tr><td>Owner</td><td>Pay calculation</td><td>How do you decide the weekly holiday allowance today? How do you treat a shift that a worker gave to a colleague? When do you update the hourly wage after a minimum-wage change?</td><td>FR-14–FR-16, BR-06–BR-11</td></tr>
     <tr><td>Owner</td><td>Deadlines</td><td>How long before a shift must a substitute be confirmed? What happens when nobody answers?</td><td>FR-18, BR-03, BR-12</td></tr>
     <tr><td>Co-workers (2)</td><td>Receiving requests</td><td>How do you prefer to be asked? How quickly do you usually answer? Have you ever agreed to a shift that someone else had already taken?</td><td>FR-07, FR-09, FR-10, NFR-01</td></tr>
-    <tr><td>Co-workers (2)</td><td>Availability and privacy</td><td>Would you record the times you are available for extra shifts? Which of your data should other workers not see?</td><td>FR-03, NFR-11</td></tr>
+    <tr><td>Co-workers (2)</td><td>Availability and privacy</td><td>Would you record the times you are available for extra shifts? Which of your data should other workers not see?</td><td>FR-03 (retired in iteration 6), NFR-11</td></tr>
     <tr><td>All</td><td>Devices</td><td>Which device do you use to check the schedule? Do you use a computer at the store?</td><td>NFR-02, NFR-06</td></tr>
   </tbody>
 </table>
@@ -51,7 +51,7 @@
   <tbody>
     <tr><td>Store owner</td><td>Fewer contacts per substitute; correct schedule; correct and lawful pay; no disputes on payday.</td><td>Actor A2; goals G1, G3, G4; FR-11, FR-12, FR-15, FR-16.</td></tr>
     <tr><td>Part-time worker (requester)</td><td>Find a substitute quickly without personally asking colleagues; keep the holiday allowance where possible.</td><td>Actor A1; FR-06, FR-19; before/after comparison (FR-11).</td></tr>
-    <tr><td>Part-time worker (candidate)</td><td>Be asked only when actually available; know at once whether a shift is still free; privacy of wage and phone number.</td><td>Actor A1; BR-01, BR-02; NFR-01, NFR-11.</td></tr>
+    <tr><td>Part-time worker (candidate)</td><td>Be asked only when not already working at that time; answer with one tap, including "can't"; know at once whether a shift is still free; privacy of wage and phone number.</td><td>Actor A1; BR-01, BR-02, BR-13; FR-22; NFR-01, NFR-11.</td></tr>
     <tr><td>Legislator and labour authorities</td><td>Minimum wage, weekly paid holiday and premium pay applied as the law requires.</td><td>Business rules BR-06 to BR-10; NFR-10.</td></tr>
     <tr><td>Course instructor</td><td>A system that demonstrates the full life cycle and can be reproduced from the final prompt.</td><td>Organisational requirements NFR-07 to NFR-09; goals G5, G6.</td></tr>
     <tr><td>Development team</td><td>A scope that can be delivered in one semester; a system that three students can test.</td><td>MoSCoW scope; client-only architecture (NFR-08); demo clock (A3).</td></tr>
@@ -64,7 +64,7 @@
     <tr><th style="width:6%">ID</th><th style="width:15%">Actor</th><th style="width:17%">Type</th><th>Description</th></tr>
   </thead>
   <tbody>
-    <tr><td class="req-id">A1</td><td>Worker</td><td>Primary, human</td><td>Part-time employee. Views own schedule, registers availability, requests substitutes, responds to requests, records attendance.</td></tr>
+    <tr><td class="req-id">A1</td><td>Worker</td><td>Primary, human</td><td>Part-time employee. Views own schedule, requests substitutes, accepts or declines ("can't") requests from co-workers, records attendance.</td></tr>
     <tr><td class="req-id">A2</td><td>Owner</td><td>Primary, human</td><td>Store owner (also acts as manager). Registers workers and fixed schedules, approves/rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll, edits settings.</td></tr>
     <tr><td class="req-id">A3</td><td>System Clock</td><td>Secondary, system</td><td>Time-triggered actor. Expires unanswered/unapproved requests at their deadline and closes weeks for weekly summary. (In the demo app this is driven by the adjustable "demo clock".)</td></tr>
   </tbody>
@@ -76,10 +76,10 @@
 
 <h2 id="ch3-ucmodel">3.3 Use-Case Model</h2>
 
-<p>The figure below shows the use-case diagram. It contains thirteen use cases. UC-01 to UC-09 correspond one to one to the nine main functions announced in the proposal; UC-10 to UC-13 are supporting use cases, already listed in the proposal, which make settings, expiry, cancellation and role selection explicit so that the core use cases are complete. The table after the diagram lists the use cases with their primary actor, priority and the database tables they mainly use.</p>
+<p>The figure below shows the use-case diagram. It contains twelve active use cases. UC-01 to UC-09 correspond one to one to the nine main functions announced in the proposal; UC-02 (register availability) was retired in iteration 6 (Section 3.11.4), and its identifier is kept but not reused. UC-10 to UC-13 are supporting use cases, already listed in the proposal, which make settings, expiry, cancellation and role selection explicit so that the core use cases are complete. The table after the diagram lists the use cases with their primary actor, priority and the database tables they mainly use.</p>
 
 <figure>
-  <img style="max-height:6in" src="../uml/usecase.svg" alt="UML use-case diagram of ShiftSwap with actors Worker, Owner and System Clock and use cases UC-01 to UC-13">
+  <img style="max-height:6in" src="../uml/usecase.svg" alt="UML use-case diagram of ShiftSwap with actors Worker, Owner and System Clock and the twelve active use cases">
   <figcaption>Figure {{fig}}. Use-case diagram of ShiftSwap (UML 2.5)</figcaption>
 </figure>
 
@@ -90,10 +90,10 @@
   </thead>
   <tbody>
     <tr><td class="req-id">UC-01</td><td>Register worker and fixed schedule</td><td>Owner</td><td>Must</td><td>Worker, FixedSchedule</td></tr>
-    <tr><td class="req-id">UC-02</td><td>Register availability</td><td>Worker</td><td>Must</td><td>Availability</td></tr>
+    <tr><td class="req-id"><s>UC-02</s></td><td><s>Register availability</s> — retired in iteration 6</td><td>—</td><td>—</td><td>— (table Availability removed)</td></tr>
     <tr><td class="req-id">UC-03</td><td>Generate weekly schedule</td><td>Owner</td><td>Must</td><td>Shift</td></tr>
     <tr><td class="req-id">UC-04</td><td>Request substitute</td><td>Worker</td><td>Must</td><td>SubRequest, SubRequestTarget, Notification</td></tr>
-    <tr><td class="req-id">UC-05</td><td>Respond to substitute request (accept / decline)</td><td>Worker (candidate)</td><td>Must</td><td>SubRequestTarget, SubRequest</td></tr>
+    <tr><td class="req-id">UC-05</td><td>Respond to substitute request (accept / can't)</td><td>Worker (candidate)</td><td>Must</td><td>SubRequestTarget, SubRequest, Notification</td></tr>
     <tr><td class="req-id">UC-06</td><td>Approve or reject substitution</td><td>Owner</td><td>Must</td><td>SubRequest, Shift, WeeklySummary</td></tr>
     <tr><td class="req-id">UC-07</td><td>Record and confirm attendance</td><td>Worker, Owner</td><td>Should</td><td>Attendance, Shift</td></tr>
     <tr><td class="req-id">UC-08</td><td>Compute weekly hours and holiday allowance</td><td>Owner (System)</td><td>Must</td><td>WeeklySummary, Workplace</td></tr>
@@ -130,13 +130,13 @@
   <tbody>
     <tr><td class="req-id">FR-01</td><td>Workers and schedules</td><td>The owner shall register a worker with name, phone, hourly wage (KRW), contract start date, contract end date, probation end date (optional), simple-labor flag, and active flag.</td><td>UC-01</td><td>Must</td></tr>
     <tr><td class="req-id">FR-02</td><td>Workers and schedules</td><td>The owner shall register one or more fixed weekly shifts per worker (weekday, start time, end time); fixed shifts of the same worker must not overlap. Deleting a fixed-schedule row keeps the shifts it already generated (their fixedScheduleId becomes NULL).</td><td>UC-01</td><td>Must</td></tr>
-    <tr><td class="req-id">FR-03</td><td>Workers and schedules</td><td>A worker shall register availability slots (weekday, start, end) during which they can take substitute shifts.</td><td>UC-02</td><td>Must</td></tr>
+    <tr><td class="req-id"><s>FR-03</s></td><td>—</td><td>Retired in iteration 6: availability slots are no longer collected (Section 3.11.4).</td><td>—</td><td>—</td></tr>
     <tr><td class="req-id">FR-04</td><td>Workers and schedules</td><td>The system shall generate the shifts of a given week (Mon–Sun) from all active fixed schedules; generating the same week twice shall not create duplicates.</td><td>UC-03</td><td>Must</td></tr>
     <tr><td class="req-id">FR-05</td><td>Workers and schedules</td><td>The owner shall be able to add, move or delete a single shift of a generated week. Deleting a shift that has a substitute request or an attendance record is refused with an explanatory message.</td><td>UC-03</td><td>Must</td></tr>
     <tr><td class="req-id">FR-06</td><td>Substitute workflow</td><td>A worker shall create a substitute request for one of their own future SCHEDULED shifts, with an optional reason and a response deadline.</td><td>UC-04</td><td>Must</td></tr>
     <tr><td class="req-id">FR-07</td><td>Substitute workflow</td><td>On creation the system shall compute the eligible candidates (BR-01), create one SubRequestTarget per candidate, and put a notification in each candidate's inbox at once.</td><td>UC-04</td><td>Must</td></tr>
-    <tr><td class="req-id">FR-08</td><td>Substitute workflow</td><td>If no worker is eligible, the system shall still create the request and notify the owner that no candidate exists.</td><td>UC-04</td><td>Must</td></tr>
-    <tr><td class="req-id">FR-09</td><td>Substitute workflow</td><td>A candidate shall accept or decline a request from their inbox. The first acceptance makes that candidate the request's acceptor (BR-02); later acceptances shall be refused with an explanatory message.</td><td>UC-05</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-08</td><td>Substitute workflow</td><td>If no worker is eligible, the system shall still create the request and end it at once as FAILED (BR-13): the requester is told that no co-worker can take the shift and to contact the owner, and the owner receives a REQUEST_FAILED notification.</td><td>UC-04</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-09</td><td>Substitute workflow</td><td>A candidate shall accept a request, or answer <b>can't</b> (decline), from their inbox or Home. The first acceptance makes that candidate the request's acceptor (BR-02); later acceptances shall be refused with an explanatory message.</td><td>UC-05</td><td>Must</td></tr>
     <tr><td class="req-id">FR-10</td><td>Substitute workflow</td><td>When a request is accepted, the system shall notify the requester and the owner, and close all other pending targets.</td><td>UC-05</td><td>Must</td></tr>
     <tr><td class="req-id">FR-11</td><td>Substitute workflow</td><td>The approval screen shall show, for both the requester and the acceptor, the weekly contractual hours, weekly scheduled hours and holiday-allowance eligibility before and after the swap, and highlight any eligibility change.</td><td>UC-06</td><td>Must</td></tr>
     <tr><td class="req-id">FR-12</td><td>Substitute workflow</td><td>On approval the system shall reassign the shift to the acceptor (keeping the original worker), recompute the weekly summaries of both workers, and notify both. On rejection the shift stays unchanged and both are notified.</td><td>UC-06</td><td>Must</td></tr>
@@ -149,16 +149,17 @@
     <tr><td class="req-id">FR-19</td><td>Substitute workflow</td><td>A requester shall cancel their own request while it is REQUESTED or ACCEPTED; all PENDING targets become CLOSED, and every target that was PENDING or ACCEPTED receives a REQUEST_CANCELLED notification.</td><td>UC-12</td><td>Should</td></tr>
     <tr><td class="req-id">FR-20</td><td>Access</td><td>Users shall sign in by choosing a demo account, either from a guided three-step demo tour or from the list of all accounts; the UI shows only the menus of that role.</td><td>UC-13</td><td>Must</td></tr>
     <tr><td class="req-id">FR-21</td><td>Access</td><td>Every user shall have an in-app notification inbox listing notifications newest first with unread count.</td><td>UC-04–06, 11, 12</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-22</td><td>Substitute workflow</td><td>When every target of a REQUESTED request has answered can't (DECLINED), the request ends as FAILED (BR-13): the requester receives "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." ("Every co-worker said they can't cover this shift. Please contact the owner.") and the owner receives a REQUEST_FAILED notification whose only action is <i>확인했어요</i> (acknowledge, which marks it read).</td><td>UC-05</td><td>Must</td></tr>
   </tbody>
 </table>
 
-<p>Every functional requirement maps to at least one use case, as the traceability rule of the specification requires (spec §12). The reverse also holds: every use case is realised by at least one functional requirement. UC-08 is realised by FR-14 alone, but the computation it describes is detailed by business rules BR-05 to BR-07. The notification inbox (FR-21) is not a use case of its own; it is the shared output of the five use cases that create notifications. The kinds of notification are fixed by the specification: <code>REQUEST_RECEIVED</code>, <code>REQUEST_ACCEPTED</code>, <code>REQUEST_APPROVED</code>, <code>REQUEST_REJECTED</code>, <code>REQUEST_EXPIRED</code>, <code>REQUEST_CANCELLED</code>, <code>NO_CANDIDATE</code> and <code>TARGET_CLOSED</code>.</p>
+<p>Of the 22 identifiers, 21 functional requirements are active; FR-03 was retired together with UC-02. Every active functional requirement maps to at least one use case, as the traceability rule of the specification requires (spec §12). The reverse also holds: every use case is realised by at least one functional requirement. UC-08 is realised by FR-14 alone, but the computation it describes is detailed by business rules BR-05 to BR-07. The notification inbox (FR-21) is not a use case of its own; it is the shared output of the five use cases that create notifications. The kinds of notification are fixed by the specification: <code>REQUEST_RECEIVED</code>, <code>REQUEST_ACCEPTED</code>, <code>REQUEST_APPROVED</code>, <code>REQUEST_REJECTED</code>, <code>REQUEST_EXPIRED</code>, <code>REQUEST_CANCELLED</code>, <code>REQUEST_FAILED</code> and <code>TARGET_CLOSED</code>. REQUEST_FAILED replaced the earlier <code>NO_CANDIDATE</code> in iteration 6.</p>
 
 <p>The following conventions apply to all requirements. Dates are ISO <code>YYYY-MM-DD</code>, times are <code>HH:MM</code> in 24-hour notation, and datetimes are <code>YYYY-MM-DDTHH:MM</code>. A time interval [s, e) includes its start and excludes its end, so a shift ending at 18:00 does not overlap one starting at 18:00. An end time that is not later than the start time means that the shift ends on the following day. Money amounts are integers in Korean won.</p>
 
 <h2 id="ch3-ucdesc">3.5 Use-Case Descriptions</h2>
 
-<p>The lecture notes that a use case is represented both in a diagram, as an overview, and in a more detailed textual form [6]. This section gives the textual form for every use case, UC-01 to UC-13, in one fixed structure: identifier and name, actors, preconditions, trigger, main flow as numbered steps, alternative flows, exception flows, postconditions, the business rules applied, the related functional and non-functional requirements, and the screen of the application on which the use case is performed. The fields correspond to the scenario contents required by the SRS outline of the lecture (related actors, initial condition, final condition, exceptional case and step-by-step flow of action). Alternative flows describe other successful paths; exception flows describe paths on which the goal of the use case is not reached. The screens are described in Chapter 4 and shown in the user guide of Chapter 7.</p>
+<p>The lecture notes that a use case is represented both in a diagram, as an overview, and in a more detailed textual form [6]. This section gives the textual form for every active use case, UC-01 and UC-03 to UC-13, in one fixed structure: identifier and name, actors, preconditions, trigger, main flow as numbered steps, alternative flows, exception flows, postconditions, the business rules applied, the related functional and non-functional requirements, and the screen of the application on which the use case is performed. The fields correspond to the scenario contents required by the SRS outline of the lecture (related actors, initial condition, final condition, exceptional case and step-by-step flow of action). Alternative flows describe other successful paths; exception flows describe paths on which the goal of the use case is not reached. The screens are described in Chapter 4 and shown in the user guide of Chapter 7.</p>
 
 <p>Two conventions keep the descriptions short. "The system validates" always means that invalid input leaves the data unchanged and produces a message that states the cause and the correction, as required by the copy rules of the design. Every use case except UC-11 includes UC-13, which is therefore stated only as a precondition.</p>
 
@@ -181,24 +182,9 @@
   </tbody>
 </table>
 
-<h3 id="ch3-uc02">UC-02 Register availability</h3>
-<table class="uc">
-  <caption>Table {{tab}}. Use-case description UC-02</caption>
-  <tbody>
-    <tr><th style="width:19%">ID</th><td><span class="req-id">UC-02</span></td></tr>
-    <tr><th style="width:19%">Name</th><td>Register availability</td></tr>
-    <tr><th style="width:19%">Actors</th><td>Primary: Worker (A1).</td></tr>
-    <tr><th style="width:19%">Preconditions</th><td><ul><li>The worker is signed in (UC-13).</li></ul></td></tr>
-    <tr><th style="width:19%">Trigger</th><td>The worker wants to offer time in which they could take substitute shifts.</td></tr>
-    <tr><th style="width:19%">Main flow</th><td><ol><li>The worker opens the <i>Me</i> tab and its availability editor.</li><li>The system lists the worker's availability slots by weekday.</li><li>The worker adds a slot by choosing weekday, start time and end time.</li><li>The system validates the slot and stores it.</li><li>The system shows the updated list.</li></ol></td></tr>
-    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 Remove a slot.</b> The worker deletes a slot; the system removes it and shows the updated list.</li><li><b>A2 Change a slot.</b> The worker removes a slot and adds a corrected one.</li></ul></td></tr>
-    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Invalid times.</b> A time is missing, or the end time is not later than the start time (an availability slot must end on the same day). The system does not store the slot and explains the correction.</li></ul></td></tr>
-    <tr><th style="width:19%">Postconditions</th><td><ul><li>The availability slots are stored and are used for all substitute requests created afterwards (BR-01).</li><li>Requests that already exist keep the candidates computed at their creation (FR-07).</li></ul></td></tr>
-    <tr><th style="width:19%">Business rules</th><td>BR-01 (availability is an input of candidate selection)</td></tr>
-    <tr><th style="width:19%">Related FR / NFR</th><td>FR-03; NFR-02</td></tr>
-    <tr><th style="width:19%">UI screen</th><td>Me (내 정보): availability editor (worker)</td></tr>
-  </tbody>
-</table>
+<h3 id="ch3-uc02">UC-02 Register availability (retired)</h3>
+
+<p>Up to iteration 5, workers registered weekly availability slots in the <i>Me</i> tab, and BR-01 asked only workers whose slot covered the whole shift. UC-02 and its requirement FR-03 were retired in iteration 6, together with the table Availability, after the product owner found that the availability check led to requests that nobody could answer and that keeping the slots up to date was extra work for the workers (Section 3.11.4). The identifier UC-02 is kept retired and is not reused, following the change procedure of Section 3.11.3.</p>
 
 <h3 id="ch3-uc03">UC-03 Generate weekly schedule</h3>
 <table class="uc">
@@ -228,32 +214,32 @@
     <tr><th style="width:19%">Actors</th><td>Primary: Worker (A1) as requester. Secondary: other Workers (A1) as candidates, Owner (A2) as receiver of notifications.</td></tr>
     <tr><th style="width:19%">Preconditions</th><td><ul><li>The worker is signed in (UC-13).</li><li>The worker is the current worker of a shift that is SCHEDULED and starts in the future.</li><li>The shift has no open (REQUESTED or ACCEPTED) request.</li></ul></td></tr>
     <tr><th style="width:19%">Trigger</th><td>The worker learns that they cannot work one of their coming shifts.</td></tr>
-    <tr><th style="width:19%">Main flow</th><td><ol><li>The worker starts the request flow with <i>Find a substitute</i> from the <i>Swaps</i> tab, from the next-shift card on Home, or from the detail panel of one of their own shifts (the shift is then preselected).</li><li>Step 1 of 3: the system lists the worker's own future SCHEDULED shifts; a shift that already has an open request is shown disabled with the reason. The worker chooses a shift.</li><li>Step 2 of 3: the worker chooses a reason (optional; chips or free text) and a deadline, preset to the earlier of now + 24 hours and the shift start; the chosen deadline is repeated as a sentence.</li><li>Step 3 of 3: the system finds the eligible candidates at this moment (included use case <i>Find eligible candidates</i>, BR-01) and shows a summary of shift, reason and deadline with the names of the recipients.</li><li>The worker selects <i>Send substitute request</i>.</li><li>The system validates the request (BR-03), creates it with status REQUESTED, determines the eligible candidates again inside the transaction, and creates one SubRequestTarget with response PENDING for each.</li><li>The system puts a REQUEST_RECEIVED notification in the inbox of every candidate at once.</li><li>The system shows a result screen with the progress tracker at its first step (Requested → Accepted → Approved) and the recipients. On the schedule the shift is marked with a dashed amber outline.</li></ol></td></tr>
-    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 No eligible candidate.</b> At step 4 the review already warns that nobody is available now; at step 6 no worker is eligible. The system still creates the request (step 7, with no targets), sends a NO_CANDIDATE notification to the owner, and tells the requester that no eligible worker was found (FR-08).</li><li><b>Extension point <i>deadline reached with no approved acceptance</i>.</b> UC-11 extends this use case when the deadline or the shift start passes while the request is open.</li><li><b>Extension point <i>requester withdraws</i>.</b> UC-12 extends this use case when the requester cancels the open request.</li></ul></td></tr>
+    <tr><th style="width:19%">Main flow</th><td><ol><li>The worker starts the request flow with <i>Find a substitute</i> from the <i>Swaps</i> tab, from the next-shift card on Home, or from the detail panel of one of their own shifts (the shift is then preselected).</li><li>Step 1 of 3: the system lists the worker's own future SCHEDULED shifts; a shift that already has an open request is shown disabled with the reason. The worker chooses a shift.</li><li>Step 2 of 3: the worker chooses a reason (optional; chips or free text) and a deadline, preset to the earlier of now + 24 hours and the shift start; the chosen deadline is repeated as a sentence.</li><li>Step 3 of 3: the system finds the eligible candidates at this moment — every active co-worker who is not already working at that time (included use case <i>Find eligible candidates</i>, BR-01) — and shows a summary of shift, reason and deadline with the names of the recipients.</li><li>The worker selects <i>Send substitute request</i>.</li><li>The system validates the request (BR-03), creates it with status REQUESTED, determines the eligible candidates again inside the transaction, and creates one SubRequestTarget with response PENDING for each.</li><li>The system puts a REQUEST_RECEIVED notification in the inbox of every candidate at once.</li><li>The system shows a result screen with the progress tracker at its first step (Requested → Accepted → Approved) and the recipients, whose answers are shown as they arrive (waiting / can't / accepted). On the schedule the shift is marked with a dashed amber outline.</li></ol></td></tr>
+    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 No eligible candidate.</b> At step 4 the review already warns that no co-worker is free at that time; at step 6 no worker is eligible. The system still creates the request, with no targets, and ends it at once as FAILED (BR-13). It sends REQUEST_FAILED to the requester and the owner and tells the requester to contact the owner (FR-08).</li><li><b>Extension point <i>nobody can take it</i>.</b> When every candidate answers can't, the request ends as FAILED in UC-05 (FR-22).</li><li><b>Extension point <i>deadline reached with no approved acceptance</i>.</b> UC-11 extends this use case when the deadline or the shift start passes while the request is open.</li><li><b>Extension point <i>requester withdraws</i>.</b> UC-12 extends this use case when the requester cancels the open request.</li></ul></td></tr>
     <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Shift not eligible for a request.</b> The shift belongs to another worker, is not SCHEDULED or has already started. The system refuses the request and states the reason.</li><li><b>E2 Open request exists.</b> The shift already has a REQUESTED or ACCEPTED request. The system refuses and points to the existing request.</li><li><b>E3 Invalid deadline.</b> The deadline is not after now or is later than the shift start. The system keeps the form open and states the allowed range.</li></ul></td></tr>
-    <tr><th style="width:19%">Postconditions</th><td><ul><li>A request in state REQUESTED exists with one target per eligible candidate.</li><li>Each candidate has an unread REQUEST_RECEIVED notification, or the owner has a NO_CANDIDATE notification.</li><li>The shift itself is unchanged.</li></ul></td></tr>
-    <tr><th style="width:19%">Business rules</th><td>BR-01, BR-03</td></tr>
+    <tr><th style="width:19%">Postconditions</th><td><ul><li>A request in state REQUESTED exists with one target per eligible candidate, or, without candidates, a request in state FAILED.</li><li>Each candidate has an unread REQUEST_RECEIVED notification, or the requester and the owner have a REQUEST_FAILED notification.</li><li>The shift itself is unchanged.</li></ul></td></tr>
+    <tr><th style="width:19%">Business rules</th><td>BR-01, BR-03, BR-13</td></tr>
     <tr><th style="width:19%">Related FR / NFR</th><td>FR-06, FR-07, FR-08, FR-21; NFR-11</td></tr>
     <tr><th style="width:19%">UI screen</th><td>Swaps (대타) tab and the three-step request flow; Home next-shift card; Schedule shift detail (worker)</td></tr>
   </tbody>
 </table>
 
-<h3 id="ch3-uc05">UC-05 Respond to substitute request (accept / decline)</h3>
+<h3 id="ch3-uc05">UC-05 Respond to substitute request (accept / can't)</h3>
 <table class="uc">
   <caption>Table {{tab}}. Use-case description UC-05</caption>
   <tbody>
     <tr><th style="width:19%">ID</th><td><span class="req-id">UC-05</span></td></tr>
-    <tr><th style="width:19%">Name</th><td>Respond to substitute request (accept / decline)</td></tr>
+    <tr><th style="width:19%">Name</th><td>Respond to substitute request (accept / can't)</td></tr>
     <tr><th style="width:19%">Actors</th><td>Primary: Worker (A1) as candidate. Secondary: requester (A1) and Owner (A2), who are notified.</td></tr>
     <tr><th style="width:19%">Preconditions</th><td><ul><li>The candidate is signed in (UC-13).</li><li>The candidate has a target with response PENDING for a request.</li></ul></td></tr>
     <tr><th style="width:19%">Trigger</th><td>A REQUEST_RECEIVED notification arrives (unread count on the bell icon; card on Home).</td></tr>
-    <tr><th style="width:19%">Main flow</th><td><ol><li>The candidate opens Home (or follows the notification from the bell icon).</li><li>Home shows, first, a card for each pending request: who asks, the shift, the reason, a deadline countdown and the effect on the candidate's own week (scheduled hours before → after, holiday allowance unchanged or changed), with <i>Accept</i> and <i>Decline</i>.</li><li>The candidate selects <i>Accept</i> (one tap).</li><li>Within one database transaction the system reads the request again and confirms that it is still REQUESTED (BR-02).</li><li>The system sets the request to ACCEPTED with the candidate as acceptor, sets the candidate's target to ACCEPTED and all other PENDING targets to CLOSED.</li><li>The system sends REQUEST_ACCEPTED to the requester and the owner, and TARGET_CLOSED to the other candidates whose targets were closed (FR-10).</li><li>The system confirms the result in a message that also says what happens next (the owner's approval).</li></ol></td></tr>
-    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 Decline.</b> At step 3 the candidate selects <i>Decline</i>. The target becomes DECLINED; the request stays REQUESTED and remains open for the other candidates. A decline notifies no one.</li></ul></td></tr>
-    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Already taken.</b> At step 4 the request is no longer REQUESTED because another candidate accepted first. The transaction makes no change, and the card says that the other candidate was faster, naming them, and closes (FR-09).</li><li><b>E2 Request closed.</b> At step 4 the request has been cancelled or has expired. The system makes no change and shows the state of the request.</li><li><b>E3 Candidate now busy.</b> Since the request was created, the candidate has been given another shift that overlaps the requested one. The acceptance is refused (ACCEPTOR_BUSY) and nothing changes (BR-02).</li></ul></td></tr>
-    <tr><th style="width:19%">Postconditions</th><td><ul><li>On success: request ACCEPTED, exactly one target ACCEPTED, no target PENDING; requester and owner notified.</li><li>On decline: the candidate's target is DECLINED; the request is unchanged.</li></ul></td></tr>
-    <tr><th style="width:19%">Business rules</th><td>BR-02</td></tr>
-    <tr><th style="width:19%">Related FR / NFR</th><td>FR-09, FR-10, FR-21; NFR-01 (at most 2 clicks), NFR-04 (transaction)</td></tr>
-    <tr><th style="width:19%">UI screen</th><td>Home (홈) request card; Swaps tab, received requests (worker)</td></tr>
+    <tr><th style="width:19%">Main flow</th><td><ol><li>The candidate opens Home (or follows the notification from the bell icon).</li><li>Home shows, first, a card for each pending request: who asks, the shift, the reason, a deadline countdown and the effect on the candidate's own week (scheduled hours before → after, holiday allowance unchanged or changed), with <i>Accept</i> and <i>Can't</i>.</li><li>The candidate selects <i>Accept</i> (one tap).</li><li>Within one database transaction the system reads the request again and confirms that it is still REQUESTED (BR-02).</li><li>The system sets the request to ACCEPTED with the candidate as acceptor, sets the candidate's target to ACCEPTED and all other PENDING targets to CLOSED.</li><li>The system sends REQUEST_ACCEPTED to the requester and the owner, and TARGET_CLOSED to the other candidates whose targets were closed (FR-10).</li><li>The system confirms the result in a message that also says what happens next (the owner's approval).</li></ol></td></tr>
+    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 Can't.</b> At step 3 the candidate selects <i>Can't</i> (one tap). The target becomes DECLINED, and the card closes with a short confirmation. If other targets are still PENDING, the request stays REQUESTED and remains open for them, and the answer notifies no one.</li><li><b>A2 Nobody can take it.</b> If the answer of A1 leaves every target DECLINED, the request ends as FAILED (BR-13, FR-22). The requester receives REQUEST_FAILED with the message that all co-workers said they can't and that they should contact the owner; the owner receives REQUEST_FAILED as a card on Home whose only action is <i>Got it</i>.</li></ul></td></tr>
+    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Already taken.</b> At step 4 the request is no longer REQUESTED because another candidate accepted first. The transaction makes no change, and the card says that the other candidate was faster, naming them, and closes (FR-09).</li><li><b>E2 Request closed.</b> At step 4 the request has been cancelled, has expired or has failed. The system makes no change and shows the state of the request (REQUEST_CLOSED).</li><li><b>E3 Candidate now busy.</b> Since the request was created, the candidate has been given another shift that overlaps the requested one. The acceptance is refused (ACCEPTOR_BUSY) and nothing changes (BR-02).</li></ul></td></tr>
+    <tr><th style="width:19%">Postconditions</th><td><ul><li>On success: request ACCEPTED, exactly one target ACCEPTED, no target PENDING; requester and owner notified.</li><li>On can't: the candidate's target is DECLINED; the request is unchanged, or FAILED if no target is left PENDING and none accepted.</li></ul></td></tr>
+    <tr><th style="width:19%">Business rules</th><td>BR-02, BR-13</td></tr>
+    <tr><th style="width:19%">Related FR / NFR</th><td>FR-09, FR-10, FR-21, FR-22; NFR-01 (at most 2 clicks), NFR-04 (transaction)</td></tr>
+    <tr><th style="width:19%">UI screen</th><td>Home (홈) request card; Swaps tab, received requests (worker); Home FAILED card (requester and owner)</td></tr>
   </tbody>
 </table>
 
@@ -382,7 +368,7 @@
     <tr><th style="width:19%">Trigger</th><td>The requester can work the shift after all, or has arranged the matter otherwise.</td></tr>
     <tr><th style="width:19%">Main flow</th><td><ol><li>The requester opens the <i>Swaps</i> tab, section "sent requests" (or Home).</li><li>The system shows each open request as a progress tracker with the candidates' answers so far.</li><li>The requester selects <i>Cancel request</i> on an open request.</li><li>The system sets the request to CANCELLED and sets every PENDING target to CLOSED.</li><li>The system sends REQUEST_CANCELLED to every target that was PENDING or ACCEPTED; targets already DECLINED or CLOSED are not notified.</li><li>The list shows the request as CANCELLED; the shift stays with the requester.</li></ol></td></tr>
     <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 Accepted request.</b> If the request was ACCEPTED, the acceptor's target keeps the response ACCEPTED, and the acceptor receives the REQUEST_CANCELLED notification, so the acceptor knows that the swap will not take place.</li></ul></td></tr>
-    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Request already decided.</b> The request is APPROVED, REJECTED or EXPIRED. The <i>Cancel</i> action is not offered.</li></ul></td></tr>
+    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Request already decided.</b> The request is APPROVED, REJECTED, FAILED or EXPIRED. The <i>Cancel</i> action is not offered.</li></ul></td></tr>
     <tr><th style="width:19%">Postconditions</th><td><ul><li>The request is CANCELLED and no target is PENDING.</li></ul></td></tr>
     <tr><th style="width:19%">Business rules</th><td>BR-03 (only one open request per shift; cancelling frees the shift for a new request)</td></tr>
     <tr><th style="width:19%">Related FR / NFR</th><td>FR-19, FR-21</td></tr>
@@ -414,7 +400,7 @@
 
 <p>The business rules are the domain requirements of ShiftSwap. They state precisely, with conditions and numbers, what the functional requirements refer to by name: which workers are eligible, when an acceptance succeeds, when the holiday allowance is owed, and how pay is computed. The lecture warns that a system that does not satisfy its domain requirements may be unworkable [7]; for this system, a wrong rule means a wrong pay slip. The rules are therefore written so that each can be implemented as one pure function in the domain-rule module (Chapter 4) and tested on its own (Section 3.10).</p>
 
-<p>The table below lists the twelve rules. The column "Rule" repeats the wording of the specification. The column "Rationale" explains why the rule has this form, and the column "Source" names the law or the store practice it comes from.</p>
+<p>The table below lists the thirteen rules. The column "Rule" repeats the wording of the specification. The column "Rationale" explains why the rule has this form, and the column "Source" names the law or the store practice it comes from.</p>
 
 <table>
   <caption>Table {{tab}}. Business rules with rationale and source</caption>
@@ -422,7 +408,7 @@
     <tr><th style="width:7%">ID</th><th style="width:40%">Rule</th><th style="width:34%">Rationale</th><th>Source</th></tr>
   </thead>
   <tbody>
-    <tr><td class="req-id">BR-01</td><td><b>Eligible candidates.</b> A worker W is eligible for a request on shift S (date d, start s, end e) iff: W is active; W ≠ requester; W has no shift on date d overlapping [s, e); W has an availability slot on weekday(d) with slotStart ≤ s and slotEnd ≥ e.</td><td>Only workers who can actually take the shift are asked, which removes the owner's search (P1). The slot must cover the whole shift; partial coverage would lead to a second swap. Half-open intervals let back-to-back shifts (e.g. 12:00–18:00 and 18:00–23:00) coexist.</td><td>Store practice (Section 2.1, steps 2–3)</td></tr>
+    <tr><td class="req-id">BR-01</td><td><b>Eligible candidates.</b> A worker W is eligible for a request on shift S (date d, start s, end e) iff: W is an active WORKER; W ≠ requester; W has no shift on date d overlapping [s, e) (someone already working then cannot take it). Availability is not used (removed in iteration 6): every other co-worker is asked.</td><td>Every co-worker who could take the shift is asked at once, which removes the owner's search (P1); whether they can is their own answer (BR-13) rather than a slot the system guesses from. A worker already working at that time is excluded because a yes would be impossible. Half-open intervals let back-to-back shifts (e.g. 12:00–18:00 and 18:00–23:00) coexist.</td><td>Store practice (Section 2.1, steps 2–3); product-owner review in iteration 6</td></tr>
     <tr><td class="req-id">BR-02</td><td><b>First acceptance wins.</b> Acceptance succeeds only if the request is REQUESTED at the moment of the transaction and the candidate still has no overlapping shift on that date (re-checked at acceptance and again at approval, error ACCEPTOR_BUSY); it sets request.status = ACCEPTED, request.acceptorId = W, target(W).response = ACCEPTED, and all other PENDING targets → CLOSED.</td><td>A broadcast request can be answered by several candidates at nearly the same time. The rule makes the outcome deterministic and avoids the double agreement observed in the current process. The state check must be inside the transaction; a check before it would allow a race.</td><td>Store practice (double agreement, Section 2.1.2); NFR-04</td></tr>
     <tr><td class="req-id">BR-03</td><td><b>Request validity.</b> Only the shift's current worker can request; shift must be SCHEDULED and start in the future; at most one open (REQUESTED/ACCEPTED) request per shift; deadline must be after now and no later than the shift start.</td><td>Prevents requests on someone else's shift, on past or completed shifts, and competing requests for one shift. A deadline after the shift start would be meaningless because the shift would already have to be covered.</td><td>Workflow consistency</td></tr>
     <tr><td class="req-id">BR-04</td><td><b>Approval effect.</b> Approve: shift.workerId = acceptor; shift.originalWorkerId keeps the first worker (set only if null); request → APPROVED. Reject: request → REJECTED, shift unchanged. Owner can approve only an ACCEPTED request.</td><td>The owner stays responsible for the schedule, as in the current process. Keeping the first worker as original worker lets the holiday-allowance rule count a given-away shift for the right person, even after a chain of swaps.</td><td>Store practice (owner decides); BR-06 needs the original worker</td></tr>
@@ -434,6 +420,7 @@
     <tr><td class="req-id">BR-10</td><td><b>Probation reduction.</b> The minimum may be reduced to 90 % only if all hold: contract length ≥ 1 year (contractEnd − contractStart ≥ 365 days, or contractEnd empty = open-ended), the date is within 3 months of contractStart and ≤ probationEnd, and simpleLabor = false. In a monthly payroll the conditions are evaluated on the first day of the month, or on contractStart if later. "Within 3 months" means from contractStart (inclusive) to the same calendar date three months later (exclusive); a worker without probationEnd is never on probation.</td><td>All legal conditions are required together; each is a separate field of the worker record so that the rule can be checked mechanically. An open-ended contract counts as one year or more. A monthly payroll needs one evaluation date; the first day of the month (or the contract start, if later) is the date on which the month's wage begins to apply.</td><td>Minimum Wage Act Art. 5 ②, Enforcement Decree Art. 3 [4]</td></tr>
     <tr><td class="req-id">BR-11</td><td><b>Monthly payroll.</b> Month = calendar month. Base pay = Σ actual hours of WORKED shifts in the month × wage (recorded clock-in/out); SCHEDULED shifts in the month count with their scheduled hours and set estimated = 1 on the row; ABSENT shifts count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.</td><td>Wages are paid monthly while the holiday allowance is weekly; assigning each week to the month of its Sunday makes every week count exactly once. The "estimated" flag lets the owner check pay during the month without mistaking it for the final amount; an absent shift earns nothing.</td><td>Store practice (monthly pay)</td></tr>
     <tr><td class="req-id">BR-12</td><td><b>Expiry.</b> A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED.</td><td>An open request must not remain open after it can no longer be useful. Expiring ACCEPTED requests as well means that an owner who does not decide in time leaves the shift with the original worker, which is the safe default.</td><td>Workflow consistency</td></tr>
+    <tr><td class="req-id">BR-13</td><td><b>No taker.</b> A REQUESTED request ends as FAILED (final) when it has no eligible candidate at creation, or when every SubRequestTarget has response DECLINED. FAILED sends REQUEST_FAILED to the requester and the owner; the owner's only action is to acknowledge (mark the notification read). Accepting a FAILED request is refused (REQUEST_CLOSED).</td><td>Once everyone asked has said no, waiting for the deadline only delays the moment at which the owner has to act. Ending the request at once tells the requester to call the owner and gives the owner a clear task, the same one as in the current process but without the search. The owner's card has no other action because the system has nothing left to try.</td><td>Product-owner review in iteration 6 (Section 3.11.4)</td></tr>
   </tbody>
 </table>
 
@@ -476,32 +463,32 @@
 <table>
   <caption>Table {{tab}}. Workers of the demonstration data (seed)</caption>
   <thead>
-    <tr><th style="width:17%">Worker (id)</th><th style="width:12%">Wage (KRW)</th><th style="width:20%">Contract</th><th style="width:25%">Fixed shifts (contractual h/week)</th><th>Availability</th></tr>
+    <tr><th style="width:17%">Worker (id)</th><th style="width:12%">Wage (KRW)</th><th style="width:20%">Contract</th><th>Fixed shifts (contractual h/week)</th></tr>
   </thead>
   <tbody>
-    <tr><td>Lee Seoyeon (2)</td><td>10,500</td><td>2026-03-02 ~ 2027-02-28</td><td>Mon, Wed 18:00–23:00 (10 h)</td><td>Tue 17:00–23:00; Thu 17:00–23:00; Sat 10:00–22:00</td></tr>
-    <tr><td>Choi Minho (3)</td><td>10,320</td><td>2026-06-01 ~ 2026-12-31</td><td>Tue, Thu 18:00–23:00; Sat 12:00–18:00 (16 h)</td><td>Mon 17:00–23:00; Wed 17:00–23:00</td></tr>
-    <tr><td>Jung Hana (4)</td><td>10,320</td><td>2026-09-01 ~ open-ended; probation end 2026-11-30; not simple labour</td><td>Fri 17:00–23:00; Sun 10:00–16:00 (12 h)</td><td>Mon 18:00–23:00; Sat 10:00–18:00</td></tr>
-    <tr><td>Kang Doyun (5)</td><td>10,000</td><td>2026-08-15 ~ 2026-11-15; simple labour</td><td>Sat 10:00–16:00; Sun 16:00–22:00 (12 h)</td><td>Wed 18:00–23:00; Thu 18:00–23:00; Fri 17:00–23:00</td></tr>
+    <tr><td>Lee Seoyeon (2)</td><td>10,500</td><td>2026-03-02 ~ 2027-02-28</td><td>Mon, Wed 18:00–23:00 (10 h)</td></tr>
+    <tr><td>Choi Minho (3)</td><td>10,320</td><td>2026-06-01 ~ 2026-12-31</td><td>Tue, Thu 18:00–23:00; Sat 12:00–18:00 (16 h)</td></tr>
+    <tr><td>Jung Hana (4)</td><td>10,320</td><td>2026-09-01 ~ open-ended; probation end 2026-11-30; not simple labour</td><td>Fri 17:00–23:00; Sun 10:00–16:00 (12 h)</td></tr>
+    <tr><td>Kang Doyun (5)</td><td>10,000</td><td>2026-08-15 ~ 2026-11-15; simple labour</td><td>Sat 10:00–16:00; Sun 16:00–22:00 (12 h)</td></tr>
   </tbody>
 </table>
 
 <div class="box" style="break-inside:auto">
 <h3 id="ch3-s1">S-1 Requesting a substitute for an exam evening (UC-13, UC-04)</h3>
 <p><b>Starting situation.</b> Lee Seoyeon has a midterm exam on Thursday morning and cannot work her fixed shift on Wednesday 2026-09-30, 18:00–23:00. No request exists for that shift.</p>
-<p><b>Normal flow.</b> Seoyeon opens ShiftSwap on her phone and signs in by choosing her demo account. In the <i>Swaps</i> tab she starts <i>Find a substitute</i>, chooses her Wednesday shift in step 1, gives the reason "Midterm exam" and sets the deadline to Tuesday 2026-09-29 21:00 in step 2, and in step 3 sees that the request will go to Choi Minho and Kang Doyun. The system checks the request (BR-03) and then checks every worker against BR-01. Choi Minho is available on Wednesday 17:00–23:00 and has no shift that day, so he is eligible. Kang Doyun is available on Wednesday 18:00–23:00 and has no shift that day, so he is eligible too. Jung Hana has no availability on Wednesday and is not eligible. The system creates the request with two targets and puts a notification in Minho's and Doyun's inboxes. Seoyeon sees the result screen with the tracker at "Requested" and the two recipients, and the Wednesday shift on the schedule now has a dashed amber outline.</p>
+<p><b>Normal flow.</b> Seoyeon opens ShiftSwap on her phone and signs in by choosing her demo account. In the <i>Swaps</i> tab she starts <i>Find a substitute</i>, chooses her Wednesday shift in step 1, gives the reason "Midterm exam" and sets the deadline to Tuesday 2026-09-29 21:00 in step 2, and in step 3 sees that the request will go to Choi Minho, Jung Hana and Kang Doyun. The system checks the request (BR-03) and then checks every worker against BR-01. None of the three co-workers has a shift on Wednesday evening, so all three are eligible. The system creates the request with three targets and puts a notification in the inboxes of Minho, Hana and Doyun. Seoyeon sees the result screen with the tracker at "Requested" and the three recipients, and the Wednesday shift on the schedule now has a dashed amber outline.</p>
 <p><b>What can go wrong.</b> If Seoyeon had tried to set the deadline after the shift start, the flow would have refused it and shown the allowed range. If she had already had an open request for the shift, step 1 would have shown the shift disabled with the reason.</p>
 <p><b>Concurrent activities.</b> None; the owner is not involved at this stage and receives no notification because candidates exist.</p>
-<p><b>Final state.</b> Request REQUESTED with targets for Minho and Doyun, both PENDING. This is the state stored in the seed data.</p>
+<p><b>Final state.</b> Request REQUESTED with targets for Minho, Hana and Doyun, all PENDING. This is the state stored in the seed data.</p>
 </div>
 
 <div class="box" style="break-inside:auto">
 <h3 id="ch3-s2">S-2 Two candidates accept at nearly the same time (UC-05)</h3>
-<p><b>Starting situation.</b> The request of S-1 is REQUESTED. Choi Minho and Kang Doyun both see the request card on their Home screens.</p>
-<p><b>Normal flow.</b> Minho taps <i>Accept</i> on the request card on his Home screen, which also tells him that his week will go from 16 to 21 scheduled hours with the holiday allowance unchanged (NFR-01, NFR-13). In one transaction the system reads the request, finds it REQUESTED, sets it to ACCEPTED with Minho as acceptor, sets Minho's target to ACCEPTED and Doyun's target to CLOSED. Seoyeon and the owner Park Jiyoung receive REQUEST_ACCEPTED; Doyun receives TARGET_CLOSED.</p>
+<p><b>Starting situation.</b> The request of S-1 is REQUESTED. Choi Minho, Jung Hana and Kang Doyun see the request card on their Home screens.</p>
+<p><b>Normal flow.</b> Minho taps <i>Accept</i> on the request card on his Home screen, which also tells him that his week will go from 16 to 21 scheduled hours with the holiday allowance unchanged (NFR-01, NFR-13). In one transaction the system reads the request, finds it REQUESTED, sets it to ACCEPTED with Minho as acceptor, sets Minho's target to ACCEPTED and the targets of Hana and Doyun to CLOSED. Seoyeon and the owner Park Jiyoung receive REQUEST_ACCEPTED; Hana and Doyun receive TARGET_CLOSED.</p>
 <p><b>Concurrent activities.</b> Doyun had opened his Home screen before Minho's acceptance and still sees the <i>Accept</i> button. He taps it a moment after Minho. His transaction reads the request again, finds it ACCEPTED instead of REQUESTED, and changes nothing. His card now says that Minho was faster and closes.</p>
 <p><b>What can go wrong.</b> Without the re-check inside the transaction, both acceptances could succeed and two workers would come to the same shift — the double agreement of the current process. BR-02 and NFR-04 exclude this, and test group TC-05x tests it.</p>
-<p><b>Final state.</b> Request ACCEPTED, acceptor Choi Minho; Minho's target ACCEPTED, Doyun's CLOSED.</p>
+<p><b>Final state.</b> Request ACCEPTED, acceptor Choi Minho; Minho's target ACCEPTED, those of Hana and Doyun CLOSED.</p>
 </div>
 
 <div class="box" style="break-inside:auto">
@@ -525,19 +512,19 @@
 <div class="box" style="break-inside:auto">
 <h3 id="ch3-s4">S-4 A request expires without an answer (UC-04, UC-11)</h3>
 <p><b>Starting situation.</b> The demo clock shows Monday 2026-09-28 09:00. Jung Hana cannot work her Friday shift on 2026-10-02, 17:00–23:00.</p>
-<p><b>Normal flow.</b> Hana requests a substitute without changing the proposed deadline, which is the earlier of now + 24 h and the shift start, i.e. Tuesday 2026-09-29 09:00. Under BR-01 only Kang Doyun is eligible: he is available on Friday 17:00–23:00 and has no Friday shift. Choi Minho and Lee Seoyeon have no Friday availability. Doyun receives the notification but does not respond. On Tuesday the owner uses <i>+1 day</i> in the <i>Demo tools</i> panel, which moves the clock to 2026-09-29 09:00. The System Clock actor runs the expiry check (UC-11): the deadline is ≤ now, so the request becomes EXPIRED, Doyun's target is closed, and Hana and the owner receive REQUEST_EXPIRED.</p>
-<p><b>What can go wrong.</b> If Doyun had accepted but the owner had not approved before the deadline, the request would expire in state ACCEPTED in the same way (BR-12), and the shift would stay with Hana.</p>
+<p><b>Normal flow.</b> Hana requests a substitute without changing the proposed deadline, which is the earlier of now + 24 h and the shift start, i.e. Tuesday 2026-09-29 09:00. Under BR-01 Lee Seoyeon, Choi Minho and Kang Doyun are eligible, since none of them has a shift on Friday. They receive the notification, but none of them responds. On Tuesday the owner uses <i>+1 day</i> in the <i>Demo tools</i> panel, which moves the clock to 2026-09-29 09:00. The System Clock actor runs the expiry check (UC-11): the deadline is ≤ now, so the request becomes EXPIRED, the three targets are closed, and Hana and the owner receive REQUEST_EXPIRED.</p>
+<p><b>What can go wrong.</b> If one of them had accepted but the owner had not approved before the deadline, the request would expire in state ACCEPTED in the same way (BR-12), and the shift would stay with Hana.</p>
 <p><b>Concurrent activities.</b> The request of S-1 to S-3 is independent; each request expires on its own deadline.</p>
 <p><b>Final state.</b> Request EXPIRED; the Friday shift is still Hana's. Hana may create a new request for the same shift, because no open request exists any more.</p>
 </div>
 
 <div class="box" style="break-inside:auto">
-<h3 id="ch3-s5">S-5 No worker is eligible (UC-04 alternative flow, UC-12)</h3>
-<p><b>Starting situation.</b> Kang Doyun cannot work his shift on Sunday 2026-10-04, 16:00–22:00.</p>
-<p><b>Normal flow.</b> Doyun creates a request. No worker has availability on Sunday, so BR-01 returns no candidates. The system still creates the request (FR-08), sends NO_CANDIDATE to the owner, and tells Doyun that no eligible worker was found. The owner can now handle the case personally, as in the current process, but knows at once that asking around is unnecessary. Later Doyun finds that he can work after all and cancels the request in the <i>Swaps</i> tab (UC-12); it becomes CANCELLED.</p>
-<p><b>What can go wrong.</b> If Doyun forgets to cancel, the request expires at its deadline (BR-12); either way it does not stay open.</p>
-<p><b>Concurrent activities.</b> Jung Hana works Sunday 10:00–16:00; her shift ends when Doyun's begins and does not overlap it, but she has no Sunday availability and is not a candidate.</p>
-<p><b>Final state.</b> Request CANCELLED with no targets; the owner's inbox holds the NO_CANDIDATE notification.</p>
+<h3 id="ch3-s5">S-5 Nobody can take the shift (UC-04, UC-05, UC-12; demonstration walkthrough S8)</h3>
+<p><b>Starting situation.</b> Jung Hana cannot work her shift on Sunday 2026-10-04, 10:00–16:00. No request exists for it.</p>
+<p><b>Normal flow.</b> Hana creates a request. Under BR-01 Lee Seoyeon, Choi Minho and Kang Doyun are eligible: Seoyeon and Minho have no Sunday shift, and Doyun's Sunday shift 16:00–22:00 begins when Hana's ends and does not overlap it. All three receive the request. Each of them taps <i>Can't</i> on the card on their Home screen; the first two answers notify no one. With the third answer every target is DECLINED, so the request ends as FAILED (BR-13, FR-22). Hana sees the card "Every co-worker said they can't cover this shift. Please contact the owner." The owner's Home shows the card "No one can cover" for Hana's Sunday shift, whose only action is <i>Got it</i>; acknowledging removes it.</p>
+<p><b>What can go wrong.</b> If Hana finds that she can work after all while answers are still missing, she cancels the request in the <i>Swaps</i> tab (UC-12), and it becomes CANCELLED. If nobody answers at all, the request expires at its deadline (BR-12). In no case does it stay open. If no co-worker had been free at the time of the shift, the request would have ended FAILED at once, when it was created (FR-08).</p>
+<p><b>Concurrent activities.</b> A candidate who has not yet answered could still accept; the request then continues as in S-2, and the earlier answers of can't have no effect.</p>
+<p><b>Final state.</b> Request FAILED, all three targets DECLINED; the shift is still Hana's, and the owner knows that the matter needs a personal call.</p>
 </div>
 
 <div class="box" style="break-inside:auto">
@@ -558,23 +545,23 @@
 <p><b>Final state.</b> September 2026 payroll CONFIRMED for four workers; Doyun's minimum-wage warning acknowledged.</p>
 </div>
 
-<p>The table below shows which use cases each scenario exercises. Every use case appears in at least one scenario, and the Must use cases appear in several.</p>
+<p>The table below shows which use cases each scenario exercises; the retired UC-02 has no column. Every active use case appears in at least one scenario, and the Must use cases appear in several.</p>
 
 <table>
   <caption>Table {{tab}}. Coverage of use cases by scenarios</caption>
-  <thead><tr><th>Scenario</th><th>UC-01</th><th>02</th><th>03</th><th>04</th><th>05</th><th>06</th><th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th><th>13</th></tr></thead>
+  <thead><tr><th>Scenario</th><th>UC-01</th><th>03</th><th>04</th><th>05</th><th>06</th><th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th><th>13</th></tr></thead>
   <tbody>
-    <tr><td>S-1</td><td>(seed)</td><td>(seed)</td><td>(seed)</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-2</td><td></td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-3</td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-4</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td></tr>
-    <tr><td>S-5</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td></tr>
-    <tr><td>S-6</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-7</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-1</td><td>(seed)</td><td>(seed)</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-2</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-3</td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-4</td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td></tr>
+    <tr><td>S-5</td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td></tr>
+    <tr><td>S-6</td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-7</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td><td></td><td></td><td>●</td></tr>
   </tbody>
 </table>
 
-<p>UC-01, UC-02 and UC-03 are exercised through the seed data, which is the result of registering four workers with their fixed schedules and availability and generating two weeks. The user guide in Chapter 7 walks through these three use cases on the screens.</p>
+<p>UC-01 and UC-03 are exercised through the seed data, which is the result of registering four workers with their fixed schedules and generating two weeks. The user guide in Chapter 7 walks through these two use cases on the screens.</p>
 
 <h2 id="ch3-analysis">3.9 Analysis Models</h2>
 
@@ -587,19 +574,19 @@
   <figcaption>Figure {{fig}}. Activity diagram AD-2 — find eligible candidates for a shift (BR-01), included by UC-04</figcaption>
 </figure>
 
-<p>The figure above shows the activity included by UC-04. The system starts with an empty list and examines every worker of the workplace in turn. A worker is rejected at the first failed condition, in the order of BR-01: inactive, the requester, a conflicting shift on the date of the request, or no availability slot on that weekday that covers the whole shift. A worker who passes all four checks is added to the list. After the loop the diagram branches: an empty list leads to the NO_CANDIDATE notification to the owner (FR-08); otherwise one target is created per candidate and all candidates are notified at once (FR-07). The notification step is outside the loop, which is what makes the notification simultaneous rather than sequential — the difference between the new process and the loop of processes 2.0 and 3.0 in the data flow diagram of Section 2.1.3.</p>
+<p>The figure above shows the activity included by UC-04. The system starts with an empty list and examines every active worker of the workplace in turn; the owner is not among them. A worker is rejected at the first failed condition, in the order of BR-01: inactive, the requester, or a conflicting shift on the date of the request. A worker who passes all three checks is added to the list; since iteration 6 there is no availability check. After the loop the diagram branches: an empty list ends the request as FAILED and sends REQUEST_FAILED to the requester and the owner (FR-08, BR-13); otherwise one target is created per candidate and all candidates are notified at once (FR-07). The notification step is outside the loop, which is what makes the notification simultaneous rather than sequential — the difference between the new process and the loop of processes 2.0 and 3.0 in the data flow diagram of Section 2.1.3.</p>
 
-<p>The table below traces the activity for the seed request of scenario S-1 (Wednesday 2026-09-30, 18:00–23:00). The owner Park Jiyoung is also a row of the table Worker; she has no availability slots and is therefore never eligible.</p>
+<p>The table below traces the activity for the seed request of scenario S-1 (Wednesday 2026-09-30, 18:00–23:00). The owner Park Jiyoung is also a row of the table Worker; her role is OWNER, so she is never a candidate.</p>
 
 <table>
   <caption>Table {{tab}}. Trace of AD-2 for the seed request (Wednesday 2026-09-30, 18:00–23:00)</caption>
-  <thead><tr><th>Worker</th><th>Active</th><th>Not requester</th><th>No conflicting shift</th><th>Availability covers 18:00–23:00</th><th>Result</th></tr></thead>
+  <thead><tr><th>Worker</th><th>Active worker</th><th>Not requester</th><th>No conflicting shift</th><th>Result</th></tr></thead>
   <tbody>
-    <tr><td>Park Jiyoung (owner)</td><td>yes</td><td>yes</td><td>yes</td><td>no slot</td><td>rejected</td></tr>
-    <tr><td>Lee Seoyeon</td><td>yes</td><td>no</td><td>—</td><td>—</td><td>rejected</td></tr>
-    <tr><td>Choi Minho</td><td>yes</td><td>yes</td><td>yes</td><td>yes (Wed 17:00–23:00)</td><td><b>eligible</b></td></tr>
-    <tr><td>Jung Hana</td><td>yes</td><td>yes</td><td>yes</td><td>no (Mon, Sat only)</td><td>rejected</td></tr>
-    <tr><td>Kang Doyun</td><td>yes</td><td>yes</td><td>yes</td><td>yes (Wed 18:00–23:00)</td><td><b>eligible</b></td></tr>
+    <tr><td>Park Jiyoung (owner)</td><td>no (role OWNER)</td><td>—</td><td>—</td><td>rejected</td></tr>
+    <tr><td>Lee Seoyeon</td><td>yes</td><td>no</td><td>—</td><td>rejected</td></tr>
+    <tr><td>Choi Minho</td><td>yes</td><td>yes</td><td>yes (no Wednesday shift)</td><td><b>eligible</b></td></tr>
+    <tr><td>Jung Hana</td><td>yes</td><td>yes</td><td>yes (no Wednesday shift)</td><td><b>eligible</b></td></tr>
+    <tr><td>Kang Doyun</td><td>yes</td><td>yes</td><td>yes (no Wednesday shift)</td><td><b>eligible</b></td></tr>
   </tbody>
 </table>
 
@@ -617,11 +604,11 @@
 <h3 id="ch3-st">3.9.3 State diagram: substitute request</h3>
 
 <figure>
-  <img style="max-height:6in" src="../uml/state-subrequest.svg" alt="UML state machine diagram of SubRequest.status with states REQUESTED, ACCEPTED, APPROVED, REJECTED, EXPIRED and CANCELLED">
+  <img style="max-height:6in" src="../uml/state-subrequest.svg" alt="UML state machine diagram of SubRequest.status with states REQUESTED, ACCEPTED, APPROVED, REJECTED, FAILED, EXPIRED and CANCELLED">
   <figcaption>Figure {{fig}}. State machine diagram of a substitute request (SubRequest.status)</figcaption>
 </figure>
 
-<p>The figure above shows the life cycle of a substitute request. A request is created in REQUESTED (UC-04). The first acceptance moves it to ACCEPTED (UC-05, BR-02); the owner's decision moves it to APPROVED or REJECTED (UC-06, BR-04). From both open states, the System Clock can move it to EXPIRED (UC-11, BR-12) and the requester can move it to CANCELLED (UC-12). The four states APPROVED, REJECTED, EXPIRED and CANCELLED are final. Each transition is labelled with the event, the guard in brackets where there is one, and the operation that performs it.</p>
+<p>The figure above shows the life cycle of a substitute request. A request is created in REQUESTED (UC-04). The first acceptance moves it to ACCEPTED (UC-05, BR-02); the owner's decision moves it to APPROVED or REJECTED (UC-06, BR-04). A REQUESTED request moves to FAILED when it has no candidate at creation or when every candidate has answered can't (UC-04, UC-05, BR-13). From both open states, the System Clock can move it to EXPIRED (UC-11, BR-12) and the requester can move it to CANCELLED (UC-12). The five states APPROVED, REJECTED, FAILED, EXPIRED and CANCELLED are final. Each transition is labelled with the event, the guard in brackets where there is one, and the operation that performs it.</p>
 
 <p>The lecture gives three rules for state diagrams used in a requirements specification: all states must be domain significant, all sequences from the scenarios must be allowed, and all prohibited sequences must not be allowed [7]. The lecture also gives the general rules that there is one initial state, every state is reachable from it, every state has a path to a stop state, and every transition is labelled with an event [6]. The table below checks the diagram against these rules.</p>
 
@@ -629,11 +616,11 @@
   <caption>Table {{tab}}. Check of the SubRequest state diagram against the lecture's rules</caption>
   <thead><tr><th style="width:32%">Rule</th><th>Check</th></tr></thead>
   <tbody>
-    <tr><td>One initial state; every state reachable; path to a stop state from every state</td><td>Satisfied. The initial transition leads to REQUESTED; every other state is reachable from REQUESTED; the four final states lead to the stop state, and both open states have transitions to final states.</td></tr>
-    <tr><td>Every transition labelled with an event</td><td>Satisfied. The initial transition and each of the seven transitions between states are labelled (e.g. "candidate accepts [first acceptance, BR-02]").</td></tr>
-    <tr><td>All states domain significant</td><td>Satisfied. Each state corresponds to a situation the owner and workers talk about ("asked", "someone took it", "approved", "rejected", "too late", "withdrawn"). The internal state of targets (PENDING, ACCEPTED, DECLINED, CLOSED) is kept out of this diagram.</td></tr>
-    <tr><td>All scenario sequences allowed</td><td>Satisfied. S-1–S-3: REQUESTED → ACCEPTED → APPROVED. S-4: REQUESTED → EXPIRED (and ACCEPTED → EXPIRED in its variant). S-5: REQUESTED → CANCELLED. UC-06 alternative flow A1: ACCEPTED → REJECTED.</td></tr>
-    <tr><td>Prohibited sequences not allowed</td><td>Satisfied. There is no transition REQUESTED → APPROVED (the owner cannot approve without an acceptor, BR-04), no transition ACCEPTED → ACCEPTED (a second acceptance cannot replace the first, BR-02), and no transition leaving a final state (an approved swap cannot be cancelled or expire).</td></tr>
+    <tr><td>One initial state; every state reachable; path to a stop state from every state</td><td>Satisfied. The initial transition leads to REQUESTED; every other state is reachable from REQUESTED; the five final states lead to the stop state, and both open states have transitions to final states.</td></tr>
+    <tr><td>Every transition labelled with an event</td><td>Satisfied. The initial transition and each of the eight transitions between states are labelled (e.g. "candidate accepts [first acceptance, BR-02]").</td></tr>
+    <tr><td>All states domain significant</td><td>Satisfied. Each state corresponds to a situation the owner and workers talk about ("asked", "someone took it", "approved", "rejected", "nobody can", "too late", "withdrawn"). The internal state of targets (PENDING, ACCEPTED, DECLINED, CLOSED) is kept out of this diagram.</td></tr>
+    <tr><td>All scenario sequences allowed</td><td>Satisfied. S-1–S-3: REQUESTED → ACCEPTED → APPROVED. S-4: REQUESTED → EXPIRED (and ACCEPTED → EXPIRED in its variant). S-5: REQUESTED → FAILED (and REQUESTED → CANCELLED in its variant). UC-06 alternative flow A1: ACCEPTED → REJECTED.</td></tr>
+    <tr><td>Prohibited sequences not allowed</td><td>Satisfied. There is no transition REQUESTED → APPROVED (the owner cannot approve without an acceptor, BR-04), no transition ACCEPTED → FAILED (once someone has accepted, later answers of can't do not matter), no transition ACCEPTED → ACCEPTED (a second acceptance cannot replace the first, BR-02), and no transition leaving a final state (an approved swap cannot be cancelled or expire).</td></tr>
   </tbody>
 </table>
 
@@ -671,7 +658,8 @@
     <tr><td>Who is the "original" worker after two swaps of the same shift?</td><td>The first worker; the field is set only when empty.</td><td>BR-04</td></tr>
     <tr><td>How is a shift that ends after midnight measured?</td><td>An end time not later than the start time means the next day; supported by the rule functions and tested, although the seed data has no such shift.</td><td>spec §8, TC-09x</td></tr>
     <tr><td>In which month is the holiday pay of a week that spans two months paid?</td><td>In the month of the week's Sunday.</td><td>BR-11</td></tr>
-    <tr><td>Who is told when a request is cancelled or expires, and who when someone declines?</td><td>A recipients table per notification kind: cancel notifies every target that was PENDING or ACCEPTED; expiry notifies requester and owner and closes pending targets silently; a decline notifies no one.</td><td>spec §8, FR-19</td></tr>
+    <tr><td>Who is told when a request is cancelled or expires, and who when someone declines?</td><td>A recipients table per notification kind: cancel notifies every target that was PENDING or ACCEPTED; expiry notifies requester and owner and closes pending targets silently; a single can't notifies no one, and the last can't that leaves nobody triggers REQUEST_FAILED.</td><td>spec §8, FR-19, FR-22</td></tr>
+    <tr><td>What happens when nobody can take the shift? (raised by the product owner in iteration 6)</td><td>The request ends as FAILED as soon as every target has answered can't, or at once when nobody can be asked; the requester is told to contact the owner, and the owner gets an acknowledge-only card.</td><td>BR-13, FR-08, FR-22</td></tr>
     <tr><td>Is a week that has not ended yet already "perfect"?</td><td>Only an ABSENT shift breaks attendance; a SCHEDULED shift does not, so the weekly result is a projection until the week is over.</td><td>BR-06</td></tr>
   </tbody>
 </table>
@@ -688,7 +676,7 @@
   <caption>Table {{tab}}. Mapping of business rules to test-case groups</caption>
   <thead><tr><th style="width:11%">Business rule</th><th style="width:12%">Test group</th><th>Cases required by the specification and the final prompt</th><th style="width:14%">Related requirements</th></tr></thead>
   <tbody>
-    <tr><td>BR-01</td><td>TC-01x</td><td>Interval overlap including back-to-back shifts; each eligibility condition failing on its own; the seed request yielding exactly Choi Minho and Kang Doyun.</td><td>FR-07, FR-08</td></tr>
+    <tr><td>BR-01</td><td>TC-01x</td><td>Interval overlap including back-to-back shifts; each eligibility condition failing on its own; the seed request yielding exactly Choi Minho, Jung Hana and Kang Doyun.</td><td>FR-07, FR-08</td></tr>
     <tr><td>BR-03</td><td>TC-02x</td><td>Request on someone else's shift, on a past or non-SCHEDULED shift, a second open request, a deadline before now or after the shift start.</td><td>FR-06</td></tr>
     <tr><td>BR-02</td><td>TC-05x</td><td>Two acceptances of the same request, of which only the first succeeds; other targets closed.</td><td>FR-09, FR-10, NFR-04</td></tr>
     <tr><td>BR-04</td><td>TC-06x</td><td>Approve sets the acceptor and keeps the first original worker; reject leaves the shift unchanged; approval of a non-ACCEPTED request refused.</td><td>FR-12</td></tr>
@@ -697,6 +685,7 @@
     <tr><td>BR-09, BR-10</td><td>TC-10x</td><td>Warning below the minimum; probation reduction only when all conditions hold, each condition failing on its own (contract under one year, after three months, after probation end, simple labour).</td><td>FR-16, NFR-10</td></tr>
     <tr><td>BR-11</td><td>TC-11x</td><td>Monthly totals; holiday pay assigned by the week's Sunday; estimated flag when attendance is missing; rounding down to the won.</td><td>FR-15</td></tr>
     <tr><td>BR-12</td><td>TC-12x</td><td>Expiry at the deadline and at the shift start, for REQUESTED and ACCEPTED requests; no expiry of final states.</td><td>FR-18</td></tr>
+    <tr><td>BR-13</td><td>TC-025, TC-13x</td><td>No candidate at creation ends the request FAILED; the last can't ends it FAILED with REQUEST_FAILED to requester and owner; an earlier can't changes nothing; accepting a FAILED request is refused.</td><td>FR-08, FR-09, FR-22</td></tr>
   </tbody>
 </table>
 
@@ -729,3 +718,31 @@
 <p>The prompt log serves as the change history that the lecture requires. Each entry records a prompt version, what was asked, what the AI coding assistant produced, what was wrong with it, and whether the correction was made in the prompt or in the specification. Chapter 5 presents the log. The distinction matters: a correction in the prompt concerns how the system is built, while a correction in the specification changes what the system is required to do and therefore passes through the steps above.</p>
 
 <p>Several kinds of change were anticipated in the requirements and turned into data rather than code, so that they do not require a requirements change at all. A new minimum wage for 2027 is a new row in the minimum-wage table (UC-10), not a change to BR-09. A store that reaches five regular employees changes a setting, and BR-08 applies automatically. A store that reads the law differently on handed-over shifts changes the substitution-attendance policy. These are the changes that the domain makes most likely, and the design of Chapter 4 keeps them out of the code.</p>
+
+<h3 id="ch3-mgmt-iter6">3.11.4 Change request in iteration 6</h3>
+
+<p>The largest change to the requirements after the interim report came from the product owner, who used the running application after iteration 5. It went through the five steps of Section 3.11.3 and is recorded in §15 of the specification. This section follows it from the observation to the updated traceability links.</p>
+
+<p><b>Observed dead end.</b> Under the old BR-01, a worker was asked only if one of their availability slots covered the whole shift. In use, this produced requests that no one could answer: when no slot matched, the owner received a NO_CANDIDATE notification and nothing else, and had nothing to do in the system. At the same time, the slots were extra data that every worker had to keep up to date, although whether someone can take a particular shift is known only to that person on that day.</p>
+
+<p><b>Decision.</b> Availability is removed. Every other active co-worker without an overlapping shift is asked (BR-01), and the first acceptance still wins (BR-02). A candidate can now answer <i>can't</i>, and a request that nobody can take ends early as FAILED instead of waiting for its deadline (BR-13, FR-22). The requester is then told to contact the owner, and the owner receives a notification whose only action is to acknowledge it. The same ending applies when nobody can be asked at all (FR-08). UC-02, FR-03 and the table Availability are retired; following step 3 of the procedure, their identifiers are kept and not reused, and the new rule and requirement receive the next free numbers.</p>
+
+<p><b>Impact analysis.</b> The traceability links of the specification were followed from each changed identifier. The table below lists what the change touched.</p>
+
+<table>
+  <caption>Table {{tab}}. Impact of the iteration 6 change request</caption>
+  <thead><tr><th style="width:20%">Artefact</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>Use cases</td><td>UC-02 retired (12 active use cases); UC-04 alternative flow A1 ends the request FAILED; UC-05 renamed "accept / can't", with the new alternative flow A2 "nobody can take it"</td></tr>
+    <tr><td>Functional requirements</td><td>FR-03 retired; FR-08 and FR-09 reworded; FR-22 new (21 active functional requirements: FR-01, FR-02, FR-04 to FR-22)</td></tr>
+    <tr><td>Business rules</td><td>BR-01 loses its availability condition and is restricted to active workers; BR-13 new (13 rules)</td></tr>
+    <tr><td>States and notifications</td><td>SubRequest.status gains the final state FAILED; the notification kind NO_CANDIDATE is replaced by REQUEST_FAILED, sent to the requester and the owner</td></tr>
+    <tr><td>Database</td><td>Table Availability removed (11 tables); the CHECK constraint of SubRequest.status admits FAILED</td></tr>
+    <tr><td>Seed data and scenarios</td><td>Availability slots removed from the seed; the seed request now has three candidates (Choi Minho, Jung Hana, Kang Doyun); scenarios S-1, S-2 and S-4 updated; S-5 replaced by the demonstration walkthrough S8 (nobody can take the shift)</td></tr>
+    <tr><td>Screens</td><td>Me: the availability editor removed, the worker's profile shown instead; Home (worker): <i>Can't</i> on the request card, and the FAILED card for the requester; Home (owner): the acknowledge-only card "No one can cover"; request flow step 3: recipients are all free co-workers</td></tr>
+    <tr><td>Services and prompt</td><td>The service that saved availability slots is removed; answering can't checks whether any target is still PENDING and ends the request FAILED if none is; prompt version 6 gains a done criterion for walkthrough S8</td></tr>
+    <tr><td>Tests</td><td>Tests that relied on availability rewritten (TC-014, TC-015, TC-025) and expected values updated for three candidates; seven new tests: TC-13A to TC-13F for BR-13, FR-08 and FR-22, and TC-003 for the replacement of a database saved before the change (84 tests in total, Section 6.9)</td></tr>
+  </tbody>
+</table>
+
+<p><b>Traceability after the change.</b> The retired identifiers leave gaps that the traceability rule of spec §12 must still satisfy: every active functional requirement maps to a use case, every active use case to a screen and a service function, and every business rule, including the new BR-13, to at least one test. The matrix of Section 6.8 was regenerated from the code after the change and shows FR-03 and UC-02 as retired and FR-22 and BR-13 with their tests. The change also shows why step 3 of the procedure forbids reusing identifiers: the prompt log, the earlier reports and the tests of iterations 1 to 5 still refer to FR-03 and UC-02 with their old meaning, and a new requirement under the same number would make those records ambiguous.</p>

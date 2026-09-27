@@ -26,7 +26,7 @@
 <ol>
   <li>The browser loads <code>app/index.html</code>, the style sheet, <code>vendor/sql-wasm.js</code> and the module <code>main.js</code>. While the database is being prepared, the page shows a loading message.</li>
   <li><code>main.js</code> initialises sql.js, which loads the WebAssembly file <code>vendor/sql-wasm.wasm</code> (about 650 KB) from the same site. No database server is contacted.</li>
-  <li>If the browser's <code>localStorage</code> holds a saved database under <code>shiftswap.db.v1</code> with the current schema, it is opened. Otherwise the schema of spec §8 is created, the demonstration data of spec §10 is inserted, and the database is saved. The demo clock is read from <code>shiftswap.clock.v1</code> (default Monday 2026-09-28 09:00) and the language from <code>shiftswap.lang</code>; without a saved choice the interface is in Korean.</li>
+  <li>If the browser's <code>localStorage</code> holds a saved database under <code>shiftswap.db.v1</code> with the current schema, it is opened. Otherwise the schema of spec §8 is created, the demonstration data of spec §10 is inserted, and the database is saved. The demo clock is read from <code>shiftswap.clock.v1</code> (default Monday 2026-09-28 09:00) and the language from <code>shiftswap.lang</code>; without a saved choice the interface is in Korean. The progress of the demo tour is kept under <code>shiftswap.tour.v1</code>, and an unfinished substitute request is kept in <code>sessionStorage</code>, so that a reload does not lose the flow.</li>
   <li>The router calls <code>expireOverdue()</code> and renders the sign-in screen, which doubles as a guided demo tour (Section 4.9). From now on, every change is saved to <code>localStorage</code> after its transaction commits.</li>
 </ol>
 
@@ -47,8 +47,160 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 
 <h3 id="deploy-browsers">7.1.4 Browser support</h3>
 
-<p>The application uses only standard features: ES modules, <code>localStorage</code>, <code>sessionStorage</code> and WebAssembly. It was tested in Google Chrome on desktop (1440 px) and in Chrome's mobile emulation. NFR-06 also names Edge, Safari and Firefox; checks in these browsers had not been recorded when this chapter was written (Section 6.7). If a browser blocks storage, for example in some private-browsing modes, the application still runs, but data is kept only until the tab is closed.</p>
+<p>The application uses only standard features: ES modules, <code>localStorage</code>, <code>sessionStorage</code> and WebAssembly. It was tested in Google Chrome on desktop and in headless Chrome at 1280 px and 360 px width with <code>tools/check.mjs</code> (Section 6.7). NFR-06 also names Edge, Safari and Firefox; checks in these browsers had not been recorded when this chapter was written (Section 6.7). If a browser blocks storage, for example in some private-browsing modes, the application still runs, but data is kept only until the tab is closed.</p>
 
 <h2 id="deploy-guide">7.2 User Guide</h2>
 
-<!-- USER-GUIDE: written after the version 4 screenshots are captured -->
+<p>The guide follows the demonstration data through one complete substitution and then through the owner's other tasks. Dalbit Café has one owner, Park Jiyoung, and four part-time workers: Lee Seoyeon, Choi Minho, Jung Hana and Kang Doyun. The demo clock starts on Monday 2026-09-28 at 09:00, and Lee Seoyeon has already asked for a substitute for her Wednesday evening shift because of a midterm exam. The interface opens in Korean. Most screenshots are in English, which is selected in the header menu, and three show the Korean default. Desktop screenshots were taken at 1280 px width and phone screenshots at 390 px.</p>
+
+<h3 id="guide-signin">7.2.1 Signing in with the demo tour (all users)</h3>
+
+<figure>
+  <img src="img/ui-01-signin.png" alt="Sign-in screen with the three-step demo tour and the list of all five accounts" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Sign-in as a demo guide (UC-13): the three-step tour — see Lee Seoyeon's request, accept as Choi Minho, approve as Park Jiyoung — with <i>Start</i> as the only primary button, and all five accounts with their fixed shifts and weekly hours</figcaption>
+</figure>
+
+<p>The first screen is a guide to the demo. The <i>3-minute tour</i> card lists three numbered steps; each step's button signs in as the right person and opens the screen where the step happens, and completed steps are marked. Below it, <i>All accounts</i> lists every person with a one-line summary, for example "Tue, Thu 18:00–23:00, Sat 12:00–18:00 · 16 h a week" for Choi Minho. There are no passwords. Once signed in, the header shows the store name, the demo-clock chip, the bell with the number of unread notifications, the current person (select it to <i>View as someone else</i>) and the menu with the language switch and <i>Sign out</i>.</p>
+
+<h3 id="guide-worker-home">7.2.2 Worker Home: answering a request (candidate)</h3>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-05-inbox.png" alt="Choi Minho's Home screen in English with the request card, next shift and this week" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+    <img src="img/ko-worker-home.png" alt="The same worker Home screen in the Korean default interface" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. Worker Home (UC-05, NFR-13). (a) Choi Minho, English: the request card for Wed, Sep 30 · 18:00–23:00 with the reason, the deadline "Please reply by tomorrow, 21:00", the effect "If you accept: this week 16 h → 21 h · holiday allowance unchanged (₩33,024)", <i>Accept</i> and <i>Can't</i>; below, the next shift and this week's hours against the 15-hour line. (b) The same screen in the Korean default interface, which shows the seed people with their Korean names ("최민호님, 안녕하세요"; the request from 이서연님) and the buttons 수락하기 and 불가</figcaption>
+</figure>
+
+<p>A worker's Home lists what needs the worker now. For a candidate, the first card is the request: who asks, which shift, why, by when, and — before any button — what accepting would do to the candidate's own week. <i>Accept</i> takes one tap (NFR-01). A message then confirms that the shift is taken and that the owner will decide. If another candidate was faster, the card says so and closes. <i>Can't</i> is also one tap: it closes the card with a short confirmation and tells no one, unless it was the last answer missing and everyone has said they can't, in which case the request ends (Section 7.2.5). Further down, Home shows the next shift with <i>Find a substitute</i>, the week's scheduled and contract hours with the holiday allowance in words and money, and any past shifts still to record.</p>
+
+<h3 id="guide-request">7.2.3 Requesting a substitute and following it (requester)</h3>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-04-request-form.png" alt="Step 3 of 3 of the request flow in English" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+    <img src="img/ko-request-review.png" alt="Step 3 of 3 of the request flow in Korean" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. Request flow, step 3 of 3 (UC-04). (a) English: "Here's what we'll send" — shift Mon, Sep 28 · 18:00–23:00, reason "Family event", reply deadline "by today, 18:00", "Sent to 3": Choi Minho, Jung Hana and Kang Doyun, none of whom works on Monday evening, with the note "Everyone listed is notified right away", and the single button <i>Send swap request</i>. (b) The same step in Korean, with the recipients 최민호, 정하나 and 강도윤</figcaption>
+</figure>
+
+<p><i>Find a substitute</i> — on Home, on the <i>Swaps</i> tab or in the detail of one's own shift — starts a flow of three steps with a step indicator, a back arrow and a close button. Step 1 asks which shift; a shift that already has an open request is shown as "Already looking for cover" and cannot be chosen (BR-03). Step 2 asks for a reason (chips such as <i>Exam</i> or <i>Family event</i>, or free text) and a reply deadline (<i>In 24 hours</i>, <i>2 hours before</i> or a chosen time), and repeats the deadline as a sentence; the default is the earlier of 24 hours from now and the shift start. Step 3 shows the request and the people who will receive it: every co-worker who is not already working at that time, computed at that moment (BR-01). If no co-worker is free, the step says so and explains that the owner will be told at once (FR-08).</p>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-07-my-requests.png" alt="Lee Seoyeon's Swaps tab with a progress tracker at Accepted" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+    <img src="img/ui-08-attendance.png" alt="Lee Seoyeon's Me tab with contract data and attendance list" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. (a) <i>Swaps</i> tab of Lee Seoyeon (UC-12): the Wednesday request as a tracker Requested ✓ → Accepted → Approved, "Minho accepted. Waiting for the owner's approval.", <i>Cancel request</i>, and <i>Find a substitute</i> as the primary action. (b) <i>Me</i> tab (UC-07): her contract (Mar 2, 2026 – Feb 28, 2027), 10 h a week, hourly wage ₩10,500 and phone ("Only you and the owner can see your phone number and wage", NFR-11), and her attendance records — two upcoming shifts and two confirmed ones of the week of 21 September; <i>Open schedule</i> is the primary action. Since iteration 6 the tab has no availability editor</figcaption>
+</figure>
+
+<p>The <i>Swaps</i> tab lists requests received, the worker's own requests and past requests. Each open request is a tracker with three steps — Requested, Accepted, Approved — with each co-worker's answer so far (waiting, can't or accepted) and a sentence saying what happens next; rejected, expired, cancelled and failed requests end with a labelled state and the reason. <i>Cancel request</i> withdraws an open request, and everyone it was sent to is told. The <i>Me</i> tab holds the worker's own profile — contract, weekly contract hours, hourly wage and phone, which only the worker and the owner can see (NFR-11) — and the attendance list, in which a past shift is recorded with <i>Record</i>. Since iteration 6 it has no availability editor: workers are no longer asked to maintain the times they could take extra shifts.</p>
+
+<h3 id="guide-owner-home">7.2.4 Owner Home: approving a swap (owner)</h3>
+
+<figure>
+  <img src="img/ui-06-approval.png" alt="Owner Home with one decision card for Minho covering Seoyeon's shift" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Owner Home (UC-06, FR-11): "1 thing to handle today"; the decision card "Minho will cover Seoyeon's shift on Wed, Sep 30 · 18:00–23:00" with the impact lines "Seoyeon: this week 10 h → 5 h · no holiday allowance (contract 10 h a week)" and "Minho: this week 16 h → 21 h · holiday allowance unchanged (₩33,024)", and <i>Approve</i>, <i>Reject</i>, <i>Details</i>; below, who works today and the week's shifts, hours and estimated holiday allowance</figcaption>
+</figure>
+
+<p>The owner's Home starts with the number of things to handle today and a decision card for each accepted swap. The card states the swap in one sentence and gives one line per person with scheduled hours before and after and the holiday allowance; if a worker's eligibility would change, the line is highlighted in amber. <i>Details</i> opens the full before/after comparison. <i>Approve</i> reassigns the shift, recomputes both workers' weekly summaries and informs both; <i>Reject</i> leaves the shift with the requester. Home also lists requests still waiting for replies, attendance records to confirm (<i>Confirm</i> or <i>Mark absent</i>), unacknowledged pay warnings, who works today, and the week's totals.</p>
+
+<h3 id="guide-failed">7.2.5 When nobody can take the shift (requester and owner)</h3>
+
+<p>Demonstration walkthrough S8 of the specification shows what happens when nobody can take a shift (BR-13, FR-22). Jung Hana requests a substitute for her Sunday shift, 4 October, 10:00–16:00. The request goes to Lee Seoyeon, Choi Minho and Kang Doyun; Doyun is asked because his own Sunday shift begins at 16:00, when Hana's ends. Each of the three signs in and taps <i>Can't</i> on the request card. The first two answers change nothing for anyone else, and Hana's tracker shows them as they arrive. With the third answer the request ends at once, without waiting for its deadline. Hana's <i>Swaps</i> tab then shows the card "Every co-worker said they can't cover this shift. Please contact the owner." The owner's Home shows a card "No one can cover" for Hana's Sunday shift, whose only action is <i>Got it</i>: there is nothing left for the system to try, and the owner settles the shift with Hana directly. Acknowledging removes the card. The same ending occurs immediately when a request is sent while no co-worker is free at that time.</p>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-16-failed-owner.png" alt="Owner Home with the card No one can cover for Jung Hana's Sunday shift and the single button Got it" style="height:3.4in;width:auto;max-width:62%;border:1px solid var(--line)">
+    <img src="img/ko-failed-worker.png" alt="Jung Hana's Swaps tab in Korean with the failed request card" style="height:3.4in;width:auto;max-width:34%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. Walkthrough S8, nobody can take the shift (BR-13, FR-22). (a) Owner Home, English: the section "No one can cover" with the card "No co-worker can take Hana's shift on Sun, Oct 4 · 10:00–16:00. Please contact them directly." and <i>Got it</i> as its only action; below, Seoyeon's request still waiting for replies (Minho, Hana and Doyun waiting) and the week's totals. (b) Jung Hana's <i>Swaps</i> tab in Korean at 360 px: under 보낸 요청, the Sunday request 10월 4일(일) 10:00–16:00 with "대타를 못 구했어요 — 모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." and 확인했어요; above it, Seoyeon's request that Hana herself can still answer</figcaption>
+</figure>
+
+<h3 id="guide-schedule">7.2.6 The schedule (all users)</h3>
+
+<figure>
+  <img src="img/ui-14-board-handover.png" alt="Owner schedule after the approval with the handed-over Wednesday shift" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Schedule after the approval (UC-03, FR-12), owner view: the Wednesday 9/30 shift shows Choi Minho in bold and Lee Seoyeon struck through, with the amber left edge and stripes of a handed-over shift; <i>Add shift</i> is the primary action</figcaption>
+</figure>
+
+<p>On wide screens the schedule shows the week as a time grid: seven day columns, an hour axis from 10:00 to 23:00, today marked, and each shift a block placed by its time. A shift with an open request has a dashed amber outline and the chip "Looking for cover"; a handed-over shift has an amber edge and stripes. A worker's own shifts are highlighted in blue, and the worker's primary action is <i>Find a substitute</i>. Selecting a shift opens its detail with its swap history and only the actions the viewer may take. For the owner these are <i>Change time</i>, <i>Change worker</i> and <i>Delete</i>; deleting is refused with its reason for a shift that has a request or an attendance record (FR-05). The owner's primary action is <i>Add shift</i>, or <i>Create this week's schedule</i> for a week without shifts (FR-04).</p>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-13-mobile-board.png" alt="Owner schedule on a 360 px phone as a list of days with today expanded" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+    <img src="img/ko-owner-home.png" alt="Owner Home on a phone in the Korean interface" style="height:4.3in;width:auto;max-width:48%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. On a phone. (a) The owner's schedule at 360 px (NFR-02): days in order, today expanded and the other days collapsed with their shift count, <i>Add shift</i> fixed above the tab bar Home · Schedule · Staff · Pay. (b) The owner's Home in the Korean default interface, with the decision card, its approve button and the week's totals</figcaption>
+</figure>
+
+<h3 id="guide-pay">7.2.7 Pay: weekly summary and monthly payroll (owner)</h3>
+
+<figure>
+  <img src="img/ui-09-weekly.png" alt="Pay tab, Weekly segment for the week of 21 September with one card per worker" style="max-height:3.8in">
+  <figcaption>Figure {{fig}}. Pay → Weekly (UC-08), week of Mon 9/21: one card per worker; only Choi Minho "Gets holiday allowance", ₩33,024 (holiday 3.2 h · contract 16 h a week); the others "No holiday allowance" with the reason "Contract … a week · under 15 h"; the line above the cards states that handed-over shifts are not counted as absences</figcaption>
+</figure>
+
+<p>The <i>Pay</i> tab has two segments. <i>Weekly</i> shows, for the chosen week, each worker's contract, scheduled and worked hours, whether the week earns the weekly holiday allowance, and the amount or the reason. For a week in progress the result is a projection, because scheduled shifts do not break attendance until they are marked absent.</p>
+
+<figure>
+  <img src="img/ui-10-payroll.png" alt="Pay tab, Monthly segment for September 2026 with four rows, a minimum-wage warning and a disabled confirm button" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Pay → Monthly (UC-09), September 2026 draft: Lee Seoyeon 20 h and Choi Minho 21 h ("Estimated"), Minho with ₩33,024 holiday pay; Jung Hana with "Probation minimum 90 %"; Kang Doyun "Below minimum wage" with the sentence "Doyun's hourly wage of ₩10,000 is below the 2026 minimum wage of ₩10,320" and <i>Acknowledge</i>; total ₩703,584; <i>Confirm September pay</i> disabled, with its reason under it</figcaption>
+</figure>
+
+<p><i>Monthly</i> shows the payroll of a month. Without a draft, the primary action is <i>Create September pay draft</i>, with the month named in the button. Each row has hours, base pay, holiday pay, premium and total, with flags: "Estimated" when some shifts have no confirmed attendance and are counted with their scheduled hours (BR-11), "Probation minimum 90 %" when all probation conditions hold (BR-10), and "Below minimum wage" with an explanation (BR-09). <i>Confirm September pay</i> stays disabled, with the reason written under it, until every warning has been acknowledged with <i>Acknowledge</i>; the acknowledgement is saved. A confirmed month is read-only. <i>Rebuild draft</i> replaces only draft rows, and warnings must then be acknowledged again. The note under the table explains that premium pay applies only with five or more regular employees.</p>
+
+<h3 id="guide-staff">7.2.8 Staff and settings (owner)</h3>
+
+<figure>
+  <img src="img/ui-11-workers.png" alt="Staff detail of Choi Minho with personal and contract data and the fixed-shift editor" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Staff → worker detail (UC-01): Choi Minho's name, phone, hourly wage, contract start and end, optional probation end, the <i>Simple labour</i> and <i>Currently employed</i> switches, and the fixed-shift editor with the weekday chips Tue, Thu and Sat and the result "Contract of 16 h a week"; <i>Save</i> is the primary action</figcaption>
+</figure>
+
+<p><i>Staff</i> lists the workers with contract hours, wage and contract period; <i>Add worker</i> is the primary action. A worker's detail holds the personal and contract data and the fixed weekly shifts, edited by choosing weekdays and times. The editor shows the resulting weekly contract hours, which decide the holiday allowance. Leave the contract end empty for an open-ended contract; the probation end is optional and is used only for the 90 % minimum-wage rule; <i>Simple labour</i> marks work that the law excludes from that reduction. Overlapping fixed shifts are refused with a message naming the conflict.</p>
+
+<figure>
+  <img src="img/ui-12-settings.png" alt="Settings page with store name, regular employees, handed-over shift policy and minimum wage table" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Settings (UC-10), from the header menu: store name, 4 regular employees ("With 5 or more, overtime and night premiums apply"), the handed-over shift policy as two cards — "Do not count as absence" (default) and "Count as absence" — each with its effect, and the minimum wage by year (2025: 10,030 won; 2026: 10,320 won)</figcaption>
+</figure>
+
+<p><i>Settings</i> holds the values that the pay rules depend on: the number of regular employees, which switches premium pay on from five; the treatment of shifts handed over by an approved swap; and the minimum wage by year. When a new minimum wage is announced, add a row for the new year; the program does not need to change.</p>
+
+<h3 id="guide-demo-tools">7.2.9 Demo tools</h3>
+
+<p>The demo-clock chip in the header ("Mon 9/28 09:00") opens <i>Demo tools</i>, a pop-over on desktops and a sheet on phones. It contains the current demo time with <i>Set this time</i>, <i>+1 hour</i> and <i>+1 day</i>, and <i>Reset demo data</i>, which asks for confirmation inside the panel. Moving the clock past a request's deadline or its shift start makes the request expire the next time any screen is shown (UC-11), and the requester and the owner are told.</p>
+
+<h2 id="deploy-demo">7.3 Demonstration Script</h2>
+
+<p>The script below runs the core workflow in about five minutes, following the tour on the sign-in screen (done criterion 4 of the final prompt). Start with <i>Reset demo data</i>.</p>
+
+<table>
+  <caption>Table {{tab}}. Live demonstration script</caption>
+  <thead><tr><th style="width:5%">#</th><th style="width:16%">Person</th><th style="width:34%">Action</th><th>Expected result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Lee Seoyeon</td><td>Tour step 1 (<i>Start</i>)</td><td><i>Swaps</i> shows the Wednesday request as a tracker at "Requested"</td></tr>
+    <tr><td>2</td><td>Choi Minho</td><td>Tour step 2; <i>Accept</i> on the Home card</td><td>The card showed 16 h → 21 h, holiday allowance unchanged; a message confirms the shift is taken</td></tr>
+    <tr><td>3</td><td>Kang Doyun</td><td>Open Home (<i>View as someone else</i>)</td><td>The card says that Minho was faster</td></tr>
+    <tr><td>4</td><td>Park Jiyoung</td><td>Tour step 3; <i>Approve</i> on the decision card</td><td>The card showed Seoyeon 10 → 5 h and Minho 16 → 21 h, ₩33,024 unchanged; approval confirmed</td></tr>
+    <tr><td>5</td><td>Park Jiyoung</td><td>Open <i>Schedule</i></td><td>Wednesday 9/30 shows the handover: Choi Minho in bold, Lee Seoyeon struck through</td></tr>
+    <tr><td>6</td><td>Park Jiyoung</td><td><i>Pay</i> → <i>Monthly</i>, September 2026, create the draft</td><td>Minho's holiday pay ₩33,024; warning on Kang Doyun's row; confirmation disabled until acknowledged</td></tr>
+    <tr><td>7 (optional)</td><td>Any</td><td>Create a request, then <i>+1 day</i> in Demo tools</td><td>The request expires; requester and owner are notified (UC-11)</td></tr>
+    <tr><td>8 (optional)</td><td>Jung Hana, then Lee Seoyeon, Choi Minho, Kang Doyun, then Park Jiyoung</td><td>Hana requests a substitute for Sun 10/4 10:00–16:00; each of the three taps <i>Can't</i>; the owner opens Home (walkthrough S8, done criterion 5)</td><td>After the third answer the request has failed: Hana sees "Please contact the owner"; the owner's card "No one can cover" disappears after <i>Got it</i></td></tr>
+  </tbody>
+</table>
+
+<h2 id="deploy-troubleshooting">7.4 Troubleshooting</h2>
+
+<table>
+  <caption>Table {{tab}}. Common problems and solutions</caption>
+  <thead><tr><th style="width:36%">Problem</th><th>Cause and solution</th></tr></thead>
+  <tbody>
+    <tr><td>An error message asks to serve the folder over HTTP</td><td>The page was opened from the file system. Use the deployed URL or a local web server (Section 7.1.3).</td></tr>
+    <tr><td>The data differs from this guide</td><td>Earlier changes are saved in the browser. Open Demo tools and select <i>Reset demo data</i>.</td></tr>
+    <tr><td>The interface is in Korean</td><td>Korean is the default. Choose English in the header menu; the choice is remembered.</td></tr>
+    <tr><td>A request card no longer has <i>Accept</i></td><td>Another candidate accepted first, or the request expired because the demo clock passed its deadline or the shift start. The card or the notification states which.</td></tr>
+    <tr><td>A shift cannot be chosen in step 1 of the request flow</td><td>It already has an open request, has started, or is not the worker's own (BR-03).</td></tr>
+    <tr><td>A shift cannot be recorded in <i>Me</i></td><td>It has not started yet according to the demo clock. Move the clock forward in Demo tools.</td></tr>
+    <tr><td><i>Confirm September pay</i> is disabled</td><td>The reason is written under the button: a minimum-wage warning must be acknowledged first, or the wage corrected in <i>Staff</i> and the draft rebuilt.</td></tr>
+  </tbody>
+</table>

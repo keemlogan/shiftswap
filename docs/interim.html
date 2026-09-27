@@ -25,8 +25,11 @@
   .pair > div { min-width: 0; }
   .pair figure { margin: 6pt 0 10pt; }
   .pair figure.shot img { max-height: 3.3in; }
-  figure.phone .clip { height: 6in; overflow: hidden; border: 1px solid var(--line); }
-  figure.phone .clip img { width: 100%; max-height: none; border: 0; display: block; }
+  .phones { display: flex; gap: 10pt; align-items: flex-start; break-inside: avoid; }
+  .phones > div { flex: 1 1 0; min-width: 0; }
+  .phones figure { margin: 6pt 0 10pt; }
+  .phones figure.shot img { max-height: 4in; }
+  .phones figcaption { font-size: 8.5pt; line-height: 1.25; text-align: left; }
 </style>
 </head>
 <body>
@@ -519,7 +522,7 @@
   <li>Park Jiyoung signs in as owner. <em>Home</em> reads &ldquo;1 thing to handle today&rdquo; and lists the swap under &ldquo;Swaps waiting for approval&rdquo; (Figure 14).</li>
   <li>The system compares both workers before and after the swap:
     <table>
-      <caption>Table 20. Approval panel for S3 (week of 2026-09-28, policy EXCUSED)</caption>
+      <caption>Table 20. Comparison for S3 (week of 2026-09-28, policy EXCUSED)</caption>
       <thead><tr><th>Worker</th><th class="num">Contract h (before &rarr; after)</th><th class="num">Scheduled h this week</th><th>Holiday allowance</th><th class="num">Holiday h</th></tr></thead>
       <tbody>
         <tr><td>Lee Seoyeon (requester)</td><td class="num">10 &rarr; 10</td><td class="num">10 &rarr; 5</td><td>Not eligible &rarr; not eligible (contract hours below 15)</td><td class="num">0 &rarr; 0</td></tr>
@@ -642,80 +645,100 @@
 
 <a id="ui"></a>
 <h1 id="s8">8. Main user interface screens</h1>
-<p>The screens below were captured from the prototype on the demo data of Section 2.3, with the demo clock at Monday 2026-09-28 09:00 unless the caption states otherwise. All screens use the same visual language: white cards on a light grey surface, blue for the signed-in worker's own shifts, and amber only for substitution (a dashed amber outline for an open request, an amber edge and stripe for a handed-over shift). Status chips carry text, not only color.</p>
+<p>The screens below were captured from the prototype on the demo data of Section 2.3, with the demo clock at Monday 2026-09-28 09:00. A worker has four screens: <em>Home</em>, <em>Schedule</em>, <em>Swaps</em> and <em>Me</em>. The owner has <em>Home</em>, <em>Schedule</em>, <em>Staff</em> and <em>Pay</em>, plus <em>Settings</em>. A <em>Demo tools</em> screen controls the demo clock and the demo data. On a desktop the screens are listed in a left navigation; on a phone they become a bottom tab bar. Colour is used sparingly: blue marks the signed-in worker's own shifts and primary buttons, and amber is reserved for substitution (a dashed outline with &ldquo;Looking for cover&rdquo; for an open request, an amber edge and stripe for a handed-over shift). Status chips carry text, not only colour. The header of every screen shows the demo clock, the notification bell with its unread count, and the signed-in user.</p>
 
 <figure class="shot">
-  <img src="img/ui-01-signin.png" alt="Sign-in screen with five demo accounts">
-  <figcaption>Figure 8. Sign-in (UC-13). &ldquo;Choose an account&rdquo; lists Park Jiyoung (Owner, Dalbit Caf&eacute;, 4 workers) and the four workers with their fixed shifts and weekly hours: Lee Seoyeon 10 h, Choi Minho 16 h, Jung Hana 12 h, Kang Doyun 12 h. A note says the demo has no passwords. The header shows the demo clock at 09/28/2026 09:00 with <em>+1 hour</em> and <em>+1 day</em>, the language switch and the menu.</figcaption>
+  <img src="img/interim/ui-01-signin.png" alt="Demo sign-in page with a three-step tour and the list of accounts">
+  <figcaption>Figure 8. Sign-in (UC-13). The &ldquo;Dalbit Caf&eacute; demo&rdquo; page (&ldquo;Pick a person and try the app. No passwords.&rdquo;) offers a &ldquo;3-minute tour&rdquo; in three steps: 1 See Lee Seoyeon's request, 2 Accept as Choi Minho, 3 Approve as owner Park Jiyoung. Below, &ldquo;All accounts&rdquo; lists the owner (Dalbit Caf&eacute;, 4 workers) and the four workers with their fixed shifts and weekly hours (10, 16, 12 and 12 h).</figcaption>
 </figure>
 
 <figure class="shot">
-  <img src="img/ui-02-board-owner.png" alt="Weekly board as seen by the owner">
-  <figcaption>Figure 9. Weekly board, owner view (UC-03), demo clock Mon 2026-09-28 09:00. The week of Mon 09-28 to Sun 10-04 has 9 shifts and 50 h; summary cards show 0 approvals waiting and 1 open substitute request. Each shift block shows its time range, the worker and an <em>Edit</em> button; <em>Generate this week</em> and <em>Add shift</em> are at the top right. Lee Seoyeon's Wednesday 18:00&ndash;23:00 shift has a dashed amber outline and the chip &ldquo;Substitute requested&rdquo;.</figcaption>
+  <img src="img/interim/ui-02-board-owner.png" alt="Owner schedule for the week of 28 September 2026">
+  <figcaption>Figure 9. Schedule, owner view (UC-03). The week Mon, Sep 28 to Sun, Oct 4 in seven day columns from 10:00 to 23:00, with <em>Add shift</em> above. Lee Seoyeon's Wednesday 18:00&ndash;23:00 shift has a dashed amber outline and the chip &ldquo;Looking for cover&rdquo;. The legend explains &ldquo;Handed over&rdquo; and &ldquo;Looking for cover&rdquo;.</figcaption>
 </figure>
 
-<div class="pair">
-<div style="flex:0 0 2.1in"><figure class="shot phone">
-  <div class="clip"><img src="img/ui-13-mobile-board.png" alt="Owner weekly board at 390 pixel width shown as a day-by-day list"></div>
-  <figcaption>Figure 10. Weekly board at 390 px width (NFR-02), owner view; the upper part of the page is shown. The header controls wrap onto several lines and the seven-column grid becomes a day-by-day list. The Wednesday 09-30 shift of Lee Seoyeon keeps its dashed amber outline and &ldquo;Substitute requested&rdquo; chip.</figcaption>
-</figure></div>
-<div style="flex:1"><figure class="shot">
-  <img src="img/ui-05-inbox.png" alt="Inbox item with Accept and Decline buttons">
-  <figcaption>Figure 11. Inbox of a candidate (UC-05, FR-21). The new notification of Mon 09-28 08:30 reads &ldquo;Lee Seoyeon asks for a substitute on Wed 09-30 18:00&ndash;23:00. Reply by Tue 09-29 21:00.&rdquo; with the reason &ldquo;Midterm exam&rdquo;. <em>Accept</em> and <em>Decline</em> are on the item itself, so the candidate answers without opening another screen (NFR-01).</figcaption>
-</figure>
 <figure class="shot">
-  <img src="img/ui-08-attendance.png" alt="Attendance screen of a worker recording clock-in and clock-out">
-  <figcaption>Figure 12. Attendance, worker view (UC-07), signed in as Lee Seoyeon with the demo clock at 2026-09-29T09:00. For Mon 09-28 18:00&ndash;23:00 (status &ldquo;Not recorded&rdquo;) she has entered clock-in 18:05 and clock-out 23:00 and can press <em>Save record</em>. Wed 09-30 is marked &ldquo;Not started yet&rdquo;. The owner confirms the saved record in the owner view of the same screen.</figcaption>
-</figure></div>
-</div>
+  <img src="img/interim/ui-03-board-worker.png" alt="Worker schedule for Lee Seoyeon">
+  <figcaption>Figure 10. Schedule, worker view (UC-03, UC-04), signed in as Lee Seoyeon. Her own shifts (Mon and Wed 18:00&ndash;23:00) are outlined and shaded blue with her name in blue; the Wednesday shift is also &ldquo;Looking for cover&rdquo;. The worker sees <em>Find a substitute</em> instead of <em>Add shift</em>, and the navigation Home, Schedule, Swaps and Me.</figcaption>
+</figure>
 
-<div class="pair">
-<div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-03-board-worker.png" alt="Weekly board as seen by the worker Lee Seoyeon">
-  <figcaption>Figure 13. Weekly board, worker view (UC-03, UC-04), signed in as Lee Seoyeon. Her own shifts (Mon and Wed 18:00&ndash;23:00) are shaded blue with her name in blue. The Monday shift offers <em>Request substitute</em>; the Wednesday shift already carries &ldquo;Substitute requested&rdquo;. The worker menu has Schedule, My requests, Inbox, Attendance and Availability, and no editing controls.</figcaption>
+<div class="phones">
+<div><figure class="shot">
+  <img src="img/interim/ui-04-request-form.png" alt="Last step of the substitute request flow">
+  <figcaption>Figure 11. Request substitute, step 3 of 3 (UC-04), Lee Seoyeon. &ldquo;Here's what we'll send&rdquo;: shift Mon, Sep 28 18:00&ndash;23:00, reason &ldquo;Family event&rdquo;, reply deadline &ldquo;by today, 18:00&rdquo; (the shift start, earlier than now + 24 h). &ldquo;Sent to 2&rdquo;: Choi Minho and Jung Hana. Button: <em>Send swap request</em>.</figcaption>
 </figure></div>
-<div style="flex-basis:50%"><figure class="shot">
-  <img src="img/ui-04-request-form.png" alt="Request substitute form on the My requests page">
-  <figcaption>Figure 14. Request substitute (UC-04) and My requests (UC-12), signed in as Lee Seoyeon. The form has the shift Mon 10-05 18:00&ndash;23:00 selected, the reason &ldquo;Family event&rdquo; and the reply deadline 09/29/2026 09:00, the default of now + 24 h. Wed 09-30 is not offered, because it already has an open request (BR-03). Below, that request is listed as &ldquo;Waiting for replies&rdquo; (reply by Tue 09-29 21:00, reason &ldquo;Midterm exam&rdquo;), with both candidates, Choi Minho and Kang Doyun, marked &ldquo;No reply yet&rdquo; and a <em>Cancel request</em> button.</figcaption>
+<div><figure class="shot">
+  <img src="img/interim/ui-05-inbox.png" alt="Worker home screen with a swap request to accept">
+  <figcaption>Figure 12. Home of Choi Minho (UC-05). Under &ldquo;Swap requests for you 1&rdquo;: &ldquo;Seoyeon needs someone to cover&rdquo;, Wed, Sep 30 18:00&ndash;23:00, reason &ldquo;Midterm exam&rdquo;, reply by tomorrow 21:00, and &ldquo;If you accept: this week 16 h &rarr; 21 h &middot; holiday allowance unchanged (&#8361;33,024)&rdquo;, with <em>Accept</em> and <em>Decline</em>. Below: next shift and this week's hours.</figcaption>
+</figure></div>
+<div><figure class="shot">
+  <img src="img/interim/ui-07-my-requests.png" alt="Swaps screen with the progress of a request">
+  <figcaption>Figure 13. Swaps of Lee Seoyeon (UC-05, UC-12) after Minho accepted. &ldquo;Your requests 1&rdquo;: Wed, Sep 30 18:00&ndash;23:00 with the progress Requested &rarr; Accepted &rarr; Approved at step 2 and &ldquo;Minho accepted. Waiting for the owner's approval.&rdquo; <em>Cancel request</em> and <em>Find a substitute</em> are available.</figcaption>
 </figure></div>
 </div>
 
 <figure class="shot">
-  <img src="img/ui-06-approval.png" alt="Approval panel comparing requester and acceptor before and after the swap">
-  <figcaption>Figure 15. Approval panel (UC-06, FR-11). Lee Seoyeon &rarr; Choi Minho for Wed 09-30 18:00&ndash;23:00, &ldquo;Accepted, waiting for approval&rdquo;. For the week of Mon 09-28, Seoyeon keeps 10 contract hours, her scheduled hours fall from 10 to 5 h, and she is not eligible before or after (0 h). Minho keeps 16 contract hours, his scheduled hours rise from 16 to 21 h, and he is eligible before and after with 3.2 holiday hours. The note reads &ldquo;Holiday-allowance eligibility does not change for either worker.&rdquo; Buttons: <em>Approve swap</em>, <em>Reject</em>, <em>Close</em>.</figcaption>
+  <img src="img/interim/ui-06-approval.png" alt="Owner home screen with a swap waiting for approval">
+  <figcaption>Figure 14. Home of the owner (UC-06, FR-11). &ldquo;1 thing to handle today&rdquo;. Under &ldquo;Swaps waiting for approval 1&rdquo;: &ldquo;Minho will cover Seoyeon's shift on Wed, Sep 30 &middot; 18:00&ndash;23:00&rdquo;, reason &ldquo;Midterm exam&rdquo;, then one line per worker: Seoyeon this week 10 h &rarr; 5 h, no holiday allowance (contract 10 h a week); Minho 16 h &rarr; 21 h, holiday allowance unchanged (&#8361;33,024). Buttons <em>Approve</em>, <em>Reject</em>, <em>Details</em>. Below: working today and this week (9 shifts, 50 h, estimated holiday allowance &#8361;33,024).</figcaption>
 </figure>
 
 <figure class="shot">
-  <img src="img/ui-14-board-handover.png" alt="Owner weekly board after the swap was approved">
-  <figcaption>Figure 16. Weekly board after approval (UC-06, BR-04). The Wednesday 09-30 18:00&ndash;23:00 shift now shows &ldquo;Choi Minho&rdquo; in bold with &ldquo;Lee Seoyeon&rdquo; struck through beneath it, on an amber left edge with a diagonal amber stripe. Open substitute requests are now 0, and the owner's inbox shows 1 unread notification.</figcaption>
+  <img src="img/interim/ui-14-board-handover.png" alt="Owner schedule after the swap was approved">
+  <figcaption>Figure 15. Schedule after approval (UC-06, BR-04). The Wednesday 09-30 18:00&ndash;23:00 shift shows &ldquo;Choi Minho&rdquo; in bold with &ldquo;Lee Seoyeon&rdquo; struck through beneath it, on an amber left edge with a diagonal amber stripe. The bell shows 1 unread notification.</figcaption>
+</figure>
+
+<div class="phones">
+<div><figure class="shot">
+  <img src="img/interim/ui-08-attendance.png" alt="Me screen of a worker with profile, availability and attendance">
+  <figcaption>Figure 16. Me of Lee Seoyeon (UC-02, UC-07, NFR-11). Contract Mar 2, 2026 &ndash; Feb 28, 2027, 10 h a week, hourly wage &#8361;10,500 and phone, with the note that only she and the owner can see phone and wage. &ldquo;When you can cover&rdquo;: Tue 17:00&ndash;23:00, Thu 17:00&ndash;23:00, Sat 10:00&ndash;22:00. &ldquo;Attendance&rdquo;: Sep 30 and Sep 28 upcoming, Sep 23 and Sep 21 confirmed 18:00&ndash;23:00.</figcaption>
+</figure></div>
+<div><figure class="shot">
+  <img src="img/interim/ui-13-mobile-board.png" alt="Owner schedule on a 390 pixel wide phone">
+  <figcaption>Figure 17. Schedule on a 390 px wide phone (NFR-02), owner view. The week becomes a list of days with the number of shifts per day; Mon 9/28 is expanded (Lee Seoyeon 18:00&ndash;23:00). <em>Add shift</em> sits above the bottom tab bar Home, Schedule, Staff, Pay.</figcaption>
+</figure></div>
+<div><figure class="shot">
+  <img src="img/interim/ko-request-review.png" alt="Last step of the request flow in the Korean interface">
+  <figcaption>Figure 18. The same step as Figure 11 with the language set to Korean: title, field labels, the reason, the deadline and the send button are in Korean; the date is shown in Korean format.</figcaption>
+</figure></div>
+</div>
+
+<figure class="shot">
+  <img src="img/interim/ui-09-weekly.png" alt="Pay screen, weekly tab, for the week of 21 September 2026">
+  <figcaption>Figure 19. Pay, tab Weekly (UC-08, FR-14), week of Mon 9/21, with the note &ldquo;Handed-over shifts are not counted as absences.&rdquo; (EXCUSED). One card per worker: Choi Minho &ldquo;Gets holiday allowance&rdquo;, &#8361;33,024, holiday 3.2 h, contract 16 h a week, scheduled 16 h, worked 16 h. Lee Seoyeon (10 h), Jung Hana (12 h) and Kang Doyun (12 h): &ldquo;No holiday allowance&rdquo;, contract under 15 h, scheduled and worked hours equal.</figcaption>
 </figure>
 
 <figure class="shot">
-  <img src="img/ui-09-weekly.png" alt="Weekly summary table for the week of 21 September 2026">
-  <figcaption>Figure 17. Weekly summary (UC-08, FR-14) for the week of Mon 09-21 to Sun 09-27, policy &ldquo;Given-away shifts count as: not absent&rdquo; (EXCUSED). All four workers have perfect attendance and actual hours equal to scheduled hours. Only Choi Minho (16 h) is eligible, with 3.2 holiday hours; Lee Seoyeon (10 h), Jung Hana (12 h) and Kang Doyun (12 h) are not eligible, with the reason &ldquo;contract hours below 15&rdquo;.</figcaption>
+  <img src="img/interim/ui-10-payroll.png" alt="Pay screen, monthly tab, draft for September 2026 with a minimum-wage warning">
+  <figcaption>Figure 20. Pay, tab Monthly (UC-09, FR-15, FR-16), September 2026. Lee Seoyeon 20 h, &#8361;210,000 (Draft, Estimated); Choi Minho 21 h, &#8361;216,720 + &#8361;33,024 holiday pay = &#8361;249,744 (Draft, Estimated); Jung Hana 12 h, &#8361;123,840 (Draft, Probation minimum 90 %); Kang Doyun 12 h, &#8361;120,000 (Draft, Below minimum wage) with &ldquo;Doyun's hourly wage of &#8361;10,000 is below the 2026 minimum wage of &#8361;10,320&rdquo; and <em>Acknowledge</em>. All workers &#8361;703,584. Premium is &#8361;0 (4 regular employees). <em>Confirm September pay</em> is disabled until the 1 warning is acknowledged.</figcaption>
 </figure>
 
-<figure class="shot">
-  <img src="img/ui-10-payroll.png" alt="Monthly payroll draft for September 2026 with a minimum-wage warning">
-  <figcaption>Figure 18. Payroll draft for September 2026 (UC-09, FR-15, FR-16). Premium pay is 0 because the store has 4 regular employees. Rows: Lee Seoyeon 20 h, 210,000 won (estimated); Choi Minho 21 h, 216,720 won base + 33,024 won holiday pay = 249,744 won (estimated); Jung Hana 12 h, 123,840 won with the chip &ldquo;Probation minimum (90 %)&rdquo;; Kang Doyun 12 h, 120,000 won with &ldquo;Below minimum wage&rdquo; (10,000 won below the 2026 minimum of 10,320 won) and an <em>Acknowledge</em> button. Total of all workers: 703,584 won. <em>Confirm payroll</em> stays disabled until the warning on 1 row is acknowledged.</figcaption>
-</figure>
+<div class="pair">
+<div style="flex-basis:50%"><figure class="shot">
+  <img src="img/interim/ui-11-workers.png" alt="Staff detail of Choi Minho">
+  <figcaption>Figure 21. Staff detail (UC-01), Choi Minho: name, phone, hourly wage 10320, contract 06/01/2026 &ndash; 12/31/2026, empty probation end, simple labour off, currently employed on, and fixed shifts Tue and Thu 18:00&ndash;23:00 and Sat 12:00&ndash;18:00: &ldquo;Contract of 16 h a week.&rdquo;</figcaption>
+</figure></div>
+<div style="flex-basis:50%"><figure class="shot">
+  <img src="img/interim/ui-12-settings.png" alt="Settings screen of the owner">
+  <figcaption>Figure 22. Settings (UC-10): store name Dalbit Caf&eacute;, 4 regular employees (&ldquo;With 5 or more, overtime and night premiums apply&rdquo;), handed-over shifts &ldquo;Do not count as absence&rdquo; (default) or &ldquo;Count as absence&rdquo;, and minimum wage by year: 2025 10030, 2026 10320.</figcaption>
+</figure></div>
+</div>
 
-<p>Table 21 maps every use case to the screen that realises it. UC-10 (settings), UC-01 (workers and schedules) and UC-02 (availability) use simple forms and are not shown as figures in this report.</p>
+<p>Table 21 maps every use case to the screen that realises it. UC-11 has no screen: the System Clock runs the expiry check whenever a screen is opened. Notifications (FR-21) are reached from the bell in the header of every screen.</p>
 <table>
   <caption>Table 21. Use cases and screens</caption>
   <thead><tr><th>Screen</th><th>Role</th><th>Use cases</th><th>Figure</th></tr></thead>
   <tbody>
-<tr><td>Sign-in</td><td>All</td><td>UC-13</td><td>8</td></tr>
-<tr><td>Weekly board</td><td>Owner, Worker</td><td>UC-03, UC-04 (entry), UC-06 (result)</td><td>9, 10, 13, 16</td></tr>
-<tr><td>Request substitute / My requests</td><td>Worker</td><td>UC-04, UC-12</td><td>14</td></tr>
-<tr><td>Inbox</td><td>All</td><td>UC-05, FR-21</td><td>11</td></tr>
-<tr><td>Approvals</td><td>Owner</td><td>UC-06</td><td>15</td></tr>
-<tr><td>Attendance</td><td>Owner, Worker</td><td>UC-07</td><td>12</td></tr>
-<tr><td>Weekly summary</td><td>Owner</td><td>UC-08</td><td>17</td></tr>
-<tr><td>Payroll</td><td>Owner</td><td>UC-09</td><td>18</td></tr>
-<tr><td>Workers &amp; schedules</td><td>Owner</td><td>UC-01</td><td>&ndash;</td></tr>
-<tr><td>Availability</td><td>Worker</td><td>UC-02</td><td>&ndash;</td></tr>
-<tr><td>Settings</td><td>Owner</td><td>UC-10</td><td>&ndash;</td></tr>
+<tr><td>Sign-in (demo tour and accounts)</td><td>All</td><td>UC-13</td><td>8</td></tr>
+<tr><td>Home</td><td>Worker</td><td>UC-05 (accept or decline), UC-04 (entry)</td><td>12</td></tr>
+<tr><td>Home</td><td>Owner</td><td>UC-06 (approve or reject)</td><td>14</td></tr>
+<tr><td>Schedule</td><td>Owner, Worker</td><td>UC-03, UC-04 (entry), UC-06 (result)</td><td>9, 10, 15, 17</td></tr>
+<tr><td>Swaps and the 3-step request flow</td><td>Worker</td><td>UC-04, UC-05, UC-12</td><td>11, 13, 18</td></tr>
+<tr><td>Me</td><td>Worker</td><td>UC-02, UC-07 (recording)</td><td>16</td></tr>
+<tr><td>Staff</td><td>Owner</td><td>UC-01</td><td>21</td></tr>
+<tr><td>Pay, Weekly</td><td>Owner</td><td>UC-08</td><td>19</td></tr>
+<tr><td>Pay, Monthly</td><td>Owner</td><td>UC-09</td><td>20</td></tr>
+<tr><td>Settings</td><td>Owner</td><td>UC-10</td><td>22</td></tr>
+<tr><td>Demo tools</td><td>All</td><td>Demo clock and data reset (drives UC-11)</td><td>&ndash;</td></tr>
 <tr><td>(no screen; runs on every screen change)</td><td>System Clock</td><td>UC-11</td><td>&ndash;</td></tr>
   </tbody>
 </table>

@@ -1,11 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  overlaps, durationHours, weekStartOf, isEligibleCandidate, validateRequest, contractHours,
+  overlaps, durationHours, weekStartOf, isEligibleCandidate, hasNoTaker, validateRequest, contractHours,
   computeWeeklySummary, holidayHours, premiumHours, minimumWageFor, probationApplies, computePayrollRow,
 } from '../app/core/rules.js';
 
-const minhoAvail = [{ weekday: 1, startTime: '17:00', endTime: '23:00' }, { weekday: 3, startTime: '17:00', endTime: '23:00' }];
 const wedShift = { workDate: '2026-09-30', startTime: '18:00', endTime: '23:00' };
 
 // ---- TC-01x overlap & eligibility (BR-01) ----
@@ -29,17 +28,27 @@ test('TC-013 weekStartOf returns the ISO Monday', () => {
   assert.equal(weekStartOf('2026-10-04'), '2026-09-28');
 });
 
-test('TC-014 eligible when active, not requester, free and covered by availability', () => {
-  assert.equal(isEligibleCandidate({ worker: { id: 3, active: 1 }, requesterId: 2, shift: wedShift, workerShifts: [], availability: minhoAvail }), true);
+test('TC-014 eligible when an active worker, not the requester and free at that time (no availability, spec §15)', () => {
+  assert.equal(isEligibleCandidate({ worker: { id: 3, active: 1 }, requesterId: 2, shift: wedShift, workerShifts: [] }), true);
+  assert.equal(isEligibleCandidate({ worker: { id: 3, active: 1, role: 'WORKER' }, requesterId: 2, shift: wedShift, workerShifts: [] }), true);
+  // A shift that only touches the requested one, or one on another day, does not exclude.
+  const touching = [{ workDate: '2026-09-30', startTime: '12:00', endTime: '18:00' }, { workDate: '2026-10-01', startTime: '18:00', endTime: '23:00' }];
+  assert.equal(isEligibleCandidate({ worker: { id: 3, active: 1 }, requesterId: 2, shift: wedShift, workerShifts: touching }), true);
 });
 
-test('TC-015 not eligible: requester, inactive, overlapping shift, or availability too short', () => {
-  const base = { requesterId: 2, shift: wedShift, workerShifts: [], availability: minhoAvail };
+test('TC-015 not eligible: requester, inactive, owner, or overlapping shift that day', () => {
+  const base = { requesterId: 2, shift: wedShift, workerShifts: [] };
   assert.equal(isEligibleCandidate({ ...base, worker: { id: 2, active: 1 } }), false);
   assert.equal(isEligibleCandidate({ ...base, worker: { id: 3, active: 0 } }), false);
+  assert.equal(isEligibleCandidate({ ...base, worker: { id: 1, active: 1, role: 'OWNER' } }), false);
   assert.equal(isEligibleCandidate({ ...base, worker: { id: 3, active: 1 }, workerShifts: [{ workDate: '2026-09-30', startTime: '12:00', endTime: '18:30' }] }), false);
-  assert.equal(isEligibleCandidate({ ...base, worker: { id: 3, active: 1 }, availability: [{ weekday: 3, startTime: '18:30', endTime: '23:00' }] }), false);
-  assert.equal(isEligibleCandidate({ ...base, worker: { id: 3, active: 1 }, availability: [{ weekday: 2, startTime: '17:00', endTime: '23:00' }] }), false);
+});
+
+test('TC-13F BR-13: no taker when there is no target or every target declined', () => {
+  assert.equal(hasNoTaker([]), true);
+  assert.equal(hasNoTaker(['DECLINED', 'DECLINED', 'DECLINED']), true);
+  assert.equal(hasNoTaker(['DECLINED', 'PENDING']), false);
+  assert.equal(hasNoTaker(['DECLINED', 'ACCEPTED']), false);
 });
 
 // ---- TC-02x request validity (BR-03) ----

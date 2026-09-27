@@ -27,6 +27,8 @@ package "Presentation\n(app/index.html, app/styles.css)" as Presentation {
   [main.js\n(router + bootstrap)] as Main
   package "app/ui/*.js" as UI {
     [login.js]
+    [home.js]
+    [me.js]
     [schedule.js]
     [requests.js]
     [inbox.js]
@@ -35,7 +37,8 @@ package "Presentation\n(app/index.html, app/styles.css)" as Presentation {
     [weekly.js]
     [payroll.js]
     [workers.js]
-    [availability.js]
+    [slots.js]
+    [components.js]
     [settings.js]
     [i18n.js]
   }
@@ -62,7 +65,7 @@ Owner --> Main
 Main --> UI
 
 UI ..> AppServices : calls (one fn per UC step)
-AppServices ..> Rules : imports 12 named functions\n(addDays, isoWeekday, weekStartOf,\ndurationHours, overlaps, isEligibleCandidate,\nvalidateRequest, contractHours, computeWeeklySummary,\nminimumWageFor, probationApplies, computePayrollRow)
+AppServices ..> Rules : imports 14 named functions\n(addDays, isoWeekday, weekStartOf,\ndurationHours, overlaps, round2, isEligibleCandidate,\nhasNoTaker, validateRequest, contractHours, computeWeeklySummary,\nminimumWageFor, probationApplies, computePayrollRow)
 AppServices ..> DBModule : tx(), all(), get(), run()
 AppServices ..> Clock : now(), addMinutes()
 DBModule --> Storage : persist after commit / load on start

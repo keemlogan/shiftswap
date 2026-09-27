@@ -4,7 +4,7 @@ import { tx, all, get, run } from './db.js';
 import { now, addMinutes } from './clock.js';
 import {
   addDays, isoWeekday, weekStartOf, durationHours, overlaps, round2,
-  isEligibleCandidate, validateRequest, contractHours, computeWeeklySummary,
+  isEligibleCandidate, hasNoTaker, validateRequest, contractHours, computeWeeklySummary,
   minimumWageFor, probationApplies, computePayrollRow,
 } from './rules.js';
 
@@ -118,10 +118,6 @@ export function listWorkers(viewer = null) {
 
 export function getFixedSchedules(workerId) {
   return all('SELECT * FROM FixedSchedule WHERE workerId = ? ORDER BY weekday, startTime', [workerId]);
-}
-
-export function getAvailability(workerId) {
-  return all('SELECT * FROM Availability WHERE workerId = ? ORDER BY weekday, startTime', [workerId]);
 }
 
 /** Shifts of the week (Mon–Sun) with worker names, attendance and the open request flag. */
@@ -241,7 +237,6 @@ function eligibleCandidates(shift, requesterId) {
     requesterId,
     shift,
     workerShifts: all('SELECT * FROM Shift WHERE workerId = ? AND workDate = ?', [w.id, shift.workDate]),
-    availability: getAvailability(w.id),
   }));
 }
 
@@ -276,6 +271,8 @@ function weekStatus(workerId, weekStart, policy) {
  * - incoming: PENDING targets of REQUESTED requests, with the effect of accepting on this worker's week;
  * - taken: requests this worker was asked for that someone else accepted and the owner has not decided yet;
  * - myOpen: the worker's own REQUESTED / ACCEPTED requests with their candidates' answers;
+ * - failed: the worker's unread REQUEST_FAILED notifications for their own requests (BR-13), acknowledged
+ *   with markNotificationsRead(workerId, [notificationId]);
  * - nextShift: the next own future SCHEDULED shift; week: this week's hours and holiday allowance;
  * - toRecord: own shifts that have started but have no attendance record yet.
  */
@@ -314,19 +311,31 @@ export function getWorkerHome(workerId) {
     incoming,
     taken,
     myOpen,
+    failed: unreadFailed(workerId, 'AND r.requesterId = n.workerId'),
     nextShift,
     week: { weekStart, ...weekStatus(workerId, weekStart, policy) },
     toRecord,
   };
 }
 
+/** BR-13: unread REQUEST_FAILED notifications of a user, oldest shift first. */
+function unreadFailed(userId, extra = '') {
+  return all(
+    `SELECT n.id AS notificationId, r.id AS requestId, rq.name AS requesterName, s.workDate, s.startTime, s.endTime
+     FROM Notification n JOIN SubRequest r ON r.id = n.subRequestId JOIN Shift s ON s.id = r.shiftId
+     JOIN Worker rq ON rq.id = r.requesterId
+     WHERE n.workerId = ? AND n.kind = 'REQUEST_FAILED' AND n.readAt IS NULL ${extra}
+     ORDER BY s.workDate, s.startTime, n.id`, [userId]);
+}
+
 /**
  * Owner Home (NFR-13, prompt §2.5): decisions and checks waiting for the owner, in one call.
  * - decisions: ACCEPTED requests with the before/after effect for requester and acceptor;
  * - open: REQUESTED requests with their candidates' answers;
+ * - failed: the owner's unread REQUEST_FAILED notifications (BR-13), acknowledge-only;
  * - toConfirm: recorded, unconfirmed attendance; payWarnings: unacknowledged minimum-wage warnings of DRAFT payrolls;
  * - today: today's shifts; week: this week's shifts, hours and the estimated holiday-allowance total.
- * `taskCount` counts the items only the owner can act on (decisions, attendance, pay warnings).
+ * `taskCount` counts the items only the owner can act on (decisions, failed requests, attendance, pay warnings).
  */
 export function getOwnerHome() {
   const t = now();
@@ -342,6 +351,7 @@ export function getOwnerHome() {
   const payWarnings = all(
     `SELECT p.*, w.name AS workerName, w.hourlyWage FROM Payroll p JOIN Worker w ON w.id = p.workerId
      WHERE p.status = 'DRAFT' AND p.minWageWarning = 1 AND p.minWageAck = 0 ORDER BY p.yearMonth, w.id`);
+  const failed = unreadFailed(ownerId());
   const weekStart = weekStartOf(today);
   const weekShifts = getWeekShifts(weekStart);
   const people = [...new Set(weekShifts.flatMap((s) => [s.workerId, s.originalWorkerId]).filter(Boolean))];
@@ -350,9 +360,10 @@ export function getOwnerHome() {
     today,
     decisions,
     open,
+    failed,
     toConfirm,
     payWarnings,
-    taskCount: decisions.length + toConfirm.length + payWarnings.length,
+    taskCount: decisions.length + failed.length + toConfirm.length + payWarnings.length,
     todayShifts: weekShifts.filter((s) => s.workDate === today),
     week: {
       weekStart,
@@ -446,21 +457,6 @@ function validateSlots(slots) {
   }
 }
 
-// ---- UC-02 Register availability -----------------------------------------
-
-/** UC-02 / FR-03: replace the worker's availability slots. An availability slot must end after it starts. */
-export function saveAvailability(workerId, slots) {
-  return tx(() => {
-    validateSlots(slots);
-    for (const s of slots) {
-      if (s.endTime <= s.startTime) throw new ServiceError('AVAIL_END_BEFORE_START', `The slot ${s.startTime}–${s.endTime} ends before it starts. Availability must end on the same day; enter a later end time.`, { range: `${s.startTime}–${s.endTime}` });
-    }
-    run('DELETE FROM Availability WHERE workerId = ?', [workerId]);
-    for (const s of slots) run('INSERT INTO Availability (workerId, weekday, startTime, endTime) VALUES (?, ?, ?, ?)', [workerId, s.weekday, s.startTime, s.endTime]);
-    return getAvailability(workerId);
-  });
-}
-
 // ---- UC-03 Generate weekly schedule ---------------------------------------
 
 /** UC-03 / FR-04: create the week's shifts from all active fixed schedules; existing ones are not duplicated. */
@@ -541,8 +537,9 @@ export function defaultDeadline(shift) {
 
 /**
  * UC-04 / FR-06–FR-08: validate (BR-03), find eligible candidates (BR-01), create one target and one
- * REQUEST_RECEIVED notification per candidate, or a NO_CANDIDATE notification to the owner.
- * @returns {{id:number, candidates:Array<{id:number,name:string}>}}
+ * REQUEST_RECEIVED notification per candidate. Without any candidate the request ends FAILED at once (BR-13)
+ * and the requester and the owner receive REQUEST_FAILED.
+ * @returns {{id:number, status:'REQUESTED'|'FAILED', candidates:Array<{id:number,name:string}>}}
  */
 export function createSubRequest({ shiftId, requesterId, reason = '', deadline }) {
   return tx(() => {
@@ -562,10 +559,8 @@ export function createSubRequest({ shiftId, requesterId, reason = '', deadline }
       run("INSERT INTO SubRequestTarget (subRequestId, workerId, response) VALUES (?, ?, 'PENDING')", [id, c.id]);
       notify(c.id, id, 'REQUEST_RECEIVED', `${requester} asks for a substitute on ${label}. Reply by ${deadline.replace('T', ' ')}.`);
     }
-    if (!candidates.length) {
-      notify(ownerId(), id, 'NO_CANDIDATE', `No worker is available for ${requester}'s shift on ${label}. Contact workers directly or change the shift.`);
-    }
-    return { id, candidates: candidates.map((c) => ({ id: c.id, name: c.name })) };
+    const status = hasNoTaker(candidates.map(() => 'PENDING')) ? failRequest({ ...shift, id, requesterId }, t) : 'REQUESTED';
+    return { id, status, candidates: candidates.map((c) => ({ id: c.id, name: c.name })) };
   });
 }
 
@@ -586,9 +581,11 @@ function requestError(code, shift) {
 // ---- UC-05 Respond to substitute request ----------------------------------
 
 /**
- * UC-05 / FR-09, FR-10, BR-02: a candidate accepts or declines. The request state is re-read inside
- * the transaction, so only the first acceptance can succeed.
+ * UC-05 / FR-09, FR-10, FR-22, BR-02, BR-13: a candidate accepts or answers can't (DECLINED). The request state is
+ * re-read inside the transaction, so only the first acceptance can succeed. The decline that leaves every target
+ * DECLINED ends the request FAILED. Answering a FAILED (or any other closed) request is refused with REQUEST_CLOSED.
  * @param {'ACCEPTED'|'DECLINED'} response
+ * @returns {{status:'REQUESTED'|'ACCEPTED'|'FAILED'}}
  */
 export function respondToRequest(requestId, workerId, response) {
   return throwIfExpired(tx(() => {
@@ -606,7 +603,8 @@ export function respondToRequest(requestId, workerId, response) {
     const t = now();
     if (response === 'DECLINED') {
       run("UPDATE SubRequestTarget SET response = 'DECLINED', respondedAt = ? WHERE id = ?", [t, target.id]);
-      return { status: r.status };
+      const responses = targetsOf(requestId).map((x) => x.response);
+      return { status: hasNoTaker(responses) ? failRequest(r, t) : r.status };
     }
     if (response !== 'ACCEPTED') throw new ServiceError('RESPONSE_INVALID', 'Choose accept or decline.');
     const clash = acceptorClash(r, workerId);
@@ -625,6 +623,19 @@ export function respondToRequest(requestId, workerId, response) {
     notify(ownerId(), requestId, 'REQUEST_ACCEPTED', msg);
     return { status: 'ACCEPTED' };
   }));
+}
+
+/**
+ * BR-13 / FR-08 / FR-22: end a REQUESTED request as FAILED and send REQUEST_FAILED to the requester (contact the
+ * owner) and to the owner (acknowledge only). `r` needs id, requesterId, workDate, startTime, endTime.
+ */
+function failRequest(r, t) {
+  run("UPDATE SubRequest SET status = 'FAILED', decidedAt = ? WHERE id = ? AND status = 'REQUESTED'", [t, r.id]);
+  const label = shiftLabel(r);
+  const requester = workerName(r.requesterId);
+  notify(r.requesterId, r.id, 'REQUEST_FAILED', `No co-worker can take your shift on ${label}. Please contact the owner.`);
+  notify(ownerId(), r.id, 'REQUEST_FAILED', `No co-worker can take ${requester}'s shift on ${label}. Please contact ${requester} directly.`);
+  return 'FAILED';
 }
 
 // ---- UC-06 Approve or reject substitution --------------------------------
@@ -962,8 +973,20 @@ function receivedState(n, workerId) {
   return n.requestStatus;
 }
 
-/** FR-21: mark all of the user's notifications as read. */
-export function markNotificationsRead(workerId) {
-  return tx(() => run('UPDATE Notification SET readAt = ? WHERE workerId = ? AND readAt IS NULL', [now(), workerId]).changes);
+/**
+ * FR-21: mark the user's notifications as read — all of them, or only `ids` (e.g. acknowledging one REQUEST_FAILED
+ * card with markNotificationsRead(workerId, [notificationId])). Ids of other users' notifications are ignored.
+ * @param {number} workerId
+ * @param {number[]} [ids]
+ * @returns {number} the number of notifications that became read
+ */
+export function markNotificationsRead(workerId, ids = null) {
+  return tx(() => {
+    if (ids == null) return run('UPDATE Notification SET readAt = ? WHERE workerId = ? AND readAt IS NULL', [now(), workerId]).changes;
+    const list = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(Number.isInteger);
+    if (!list.length) return 0;
+    return run(`UPDATE Notification SET readAt = ? WHERE workerId = ? AND readAt IS NULL AND id IN (${list.map(() => '?').join(',')})`,
+      [now(), workerId, ...list]).changes;
+  });
 }
 

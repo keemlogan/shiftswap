@@ -1,0 +1,200 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>ShiftSwap — NFR-03 measurement</title>
+<link rel="stylesheet" href="web.css"></head><body><main class="doc"><h1
+id="nfr-03-measurement--render-time-with-20-workers-and-12-weeks-of-shifts">NFR-03
+measurement — render time with 20 workers and 12 weeks of shifts</h1>
+<p><strong>Requirement (spec §5, NFR-03):</strong> with 20 workers and
+12 weeks of shifts, any screen renders in under 1 second on a mid-range
+laptop.</p>
+<p><strong>Result:</strong> met with a wide margin. Measured on the v4
+interface, the slowest screen took 18.0 ms from the route change to the
+rendered DOM, and 42.5 ms including paint. The limit is 1,000 ms.</p>
+<p><strong>Reproduce:</strong> <code>node tools/nfr03.mjs</code> (starts
+its own static server and headless Chrome, prints the numbers below as
+JSON).</p>
+<h2 id="environment">Environment</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Apple M2 (<code>sysctl -n machdep.cpu.brand_string</code>), 24 GB
+RAM, macOS 26.5.2</td>
+</tr>
+<tr>
+<td>Browser</td>
+<td>Google Chrome 153.0.8010.54, headless (<code>--headless=new</code>),
+viewport 1280×800</td>
+</tr>
+<tr>
+<td>App</td>
+<td>ShiftSwap v4 (<code>app/</code>), served by the script's own static
+server from the repository root</td>
+</tr>
+<tr>
+<td>Date</td>
+<td>2026-09-27</td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-set">Data set</h2>
+<p>The data was built in a throwaway browser profile through the
+application services (<code>registerWorker</code>,
+<code>saveFixedSchedule</code>, <code>saveAvailability</code>,
+<code>generateWeek</code>, <code>recordAttendance</code>,
+<code>confirmAttendance</code>, <code>generatePayroll</code>). It starts
+from the normal seed, which is not modified in the repository.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Workers (role WORKER)</td>
+<td>20: the 4 seed workers + 16 load workers with 2–3 fixed shifts
+each</td>
+</tr>
+<tr>
+<td>Generated weeks</td>
+<td>12: Mondays 2026-08-10 … 2026-10-26</td>
+</tr>
+<tr>
+<td>Shifts</td>
+<td>588 (49 per week)</td>
+</tr>
+<tr>
+<td>Confirmed attendance records</td>
+<td>334: every shift that started before the demo clock,
+2026-09-28T09:00</td>
+</tr>
+<tr>
+<td>Payroll</td>
+<td>September 2026 draft for 20 workers</td>
+</tr>
+<tr>
+<td>Saved database size</td>
+<td>about 100 KB</td>
+</tr>
+<tr>
+<td>Time to build the data set</td>
+<td>about 0.5 s (one-off; not part of the requirement)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="method">Method</h2>
+<ul>
+<li><strong>Signed-in user:</strong> the owner (the owner's screens do
+the most work).</li>
+<li><strong>Screens:</strong> the schedule, Pay → Weekly and Pay →
+Monthly.</li>
+<li><strong>Before each run:</strong> the app is first sent to
+<code>#/notifications</code>, so every run is a real route change.</li>
+<li><strong>t0:</strong> read just before <code>location.hash</code> is
+set to the target route.</li>
+<li><strong>DOM rendered:</strong> read in a <code>hashchange</code>
+listener registered after the app's router. The router renders
+synchronously, so at that moment the screen's DOM is complete. The
+listener also checks that the screen's marker element exists (all runs:
+yes).</li>
+<li><strong>Painted:</strong> read after two
+<code>requestAnimationFrame</code> callbacks, i.e. after the browser has
+laid out and painted the new screen.</li>
+<li><strong>Runs:</strong> 1 warm-up run, then 10 measured runs per
+screen. The table shows the median and the maximum.</li>
+<li><strong>What each route change includes:</strong> the full router
+path.
+<ul>
+<li>The System Clock expiry check (<code>expireOverdue</code>, a
+transaction that also saves the database).</li>
+<li>The header and navigation.</li>
+<li>The screen itself. The weekly summary also recomputes and stores the
+week's WeeklySummary rows for all 20 workers
+(<code>recomputeWeek</code>) and saves the database.</li>
+</ul></li>
+</ul>
+<h2 id="results">Results</h2>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Route</th>
+<th>Items on screen</th>
+<th>Route change → DOM, median</th>
+<th>max</th>
+<th>Route change → painted, median</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Schedule (owner)</td>
+<td><code>#/schedule/2026-09-28</code></td>
+<td>49 shift blocks</td>
+<td>7.6 ms</td>
+<td>7.9 ms</td>
+<td>27.5 ms</td>
+<td>42.5 ms</td>
+</tr>
+<tr>
+<td>Pay → Weekly</td>
+<td><code>#/pay/week/2026-09-21</code></td>
+<td>20 worker cards</td>
+<td>16.2 ms</td>
+<td>18.0 ms</td>
+<td>26.1 ms</td>
+<td>36.1 ms</td>
+</tr>
+<tr>
+<td>Pay → Monthly (existing draft)</td>
+<td><code>#/pay/month/2026-09</code></td>
+<td>20 worker rows + 1 warning row</td>
+<td>13.4 ms</td>
+<td>14.8 ms</td>
+<td>27.1 ms</td>
+<td>28.5 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Additional measurement on the same data set:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Measured</th>
+<th>Median</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cold start: page reload → sql.js initialised → saved database loaded
+→ schedule rendered</td>
+<td>5 reloads, warm HTTP cache</td>
+<td>30 ms</td>
+<td>26–31 ms</td>
+</tr>
+</tbody>
+</table>
+<p>The v3 interface, measured the same way before the redesign, gave the
+same picture: route change → DOM at most 16.6 ms, painted at most 36.7
+ms. There were no console errors in any run.</p>
+<h2 id="limits-of-this-measurement">Limits of this measurement</h2>
+<ul>
+<li>The machine is an Apple M2, which is faster than many mid-range
+laptops. Even a 20-fold slowdown would keep every screen under 1
+second.</li>
+<li>Chrome ran headless. Paint times in a visible window can be somewhat
+higher; DOM times are unaffected.</li>
+<li>The cold-start figure uses the HTTP cache, so
+<code>sql-wasm.wasm</code> (about 650 KB) was already local. A first
+visit over the network also includes the download time.</li>
+</ul>
+</main></body></html>

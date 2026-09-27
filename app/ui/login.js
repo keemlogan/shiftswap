@@ -1,7 +1,7 @@
 // UC-13 Sign-in as a guided demo: a three-step tour plus the list of all accounts (prompt §2.2).
 import * as svc from '../core/services.js';
 import { contractHours } from '../core/rules.js';
-import { t, esc, dayName, getLang } from './i18n.js';
+import { t, esc, dayName, getLang, displayName, initial } from './i18n.js';
 import { icon, button, openSheet } from './components.js';
 
 /** '월·수 18:00–23:00' / 'Mon, Wed 18:00–23:00' — fixed shifts grouped by identical time range. */
@@ -18,7 +18,7 @@ function fixedSummary(fixed) {
 
 function summary(w, workers) {
   if (w.role === 'OWNER') {
-    return t('login.ownerSummary', { store: svc.getWorkplace().name, n: workers.filter((x) => x.role === 'WORKER').length });
+    return t('login.ownerSummary', { store: displayName(svc.getWorkplace().name), n: workers.filter((x) => x.role === 'WORKER').length });
   }
   const fixed = svc.getFixedSchedules(w.id);
   if (!fixed.length) return t('login.noFixed');
@@ -83,9 +83,9 @@ export function render(view, { signIn, tour, resetDemo }) {
           ${accounts.map((w) => `
             <li>
               <button type="button" class="account" data-id="${w.id}">
-                <span class="avatar avatar-lg" aria-hidden="true">${esc(w.name.split(' ').pop().slice(0, 1))}</span>
+                <span class="avatar avatar-lg" aria-hidden="true">${esc(initial(w.name))}</span>
                 <span class="account-main">
-                  <span class="account-name">${esc(w.name)} <span class="chip ${w.role === 'OWNER' ? 'chip-ink' : ''}">${esc(t(`role.${w.role}`))}</span></span>
+                  <span class="account-name">${esc(displayName(w.name))} <span class="chip ${w.role === 'OWNER' ? 'chip-ink' : ''}">${esc(t(`role.${w.role}`))}</span></span>
                   <span class="account-summary">${esc(summary(w, accounts))}</span>
                 </span>
                 ${icon('chevronRight', 'chev')}

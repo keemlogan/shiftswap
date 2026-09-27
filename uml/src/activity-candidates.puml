@@ -13,11 +13,11 @@ skinparam activity {
   DiamondBorderColor #1C2230
 }
 
-title AD-2 Find eligible candidates for shift S (date d, start s, end e) — BR-01\n(included by UC-04 Request substitute)
+title AD-2 Find eligible candidates for shift S (date d, start s, end e) - BR-01\n(included by UC-04 Request substitute)
 
 start
 :eligible := empty list;
-:candidates := all Worker of the workplace;
+:candidates := all active Worker of the workplace\n(availability is not used - retired in iteration 6);
 
 while (more candidates?) is (yes)
   :W := next candidate;
@@ -31,18 +31,16 @@ while (more candidates?) is (yes)
       if (W has a shift on date d\noverlapping [s, e)?) then (yes)
         :reject W (schedule conflict);
       else (no)
-        if (W has an Availability slot on weekday(d)\nwith slotStart <= s and slotEnd >= e?) then (no)
-          :reject W (not available);
-        else (yes)
-          :add W to eligible;
-        endif
+        :add W to eligible\n(every other co-worker without\na conflicting shift is asked);
       endif
     endif
   endif
 endwhile (no more candidates)
 
 if (eligible is empty?) then (yes)
-  :notify Owner: NO_CANDIDATE (FR-08);
+  :SubRequest.status := FAILED (BR-13);
+  :notify requester: REQUEST_FAILED\n("no co-worker can take it - contact the owner") (FR-08, FR-22);
+  :notify owner: REQUEST_FAILED\n(acknowledge only);
 else (no)
   :create one SubRequestTarget per\neligible candidate (FR-07);
   :notify each eligible candidate\n(REQUEST_RECEIVED) at once (FR-07);

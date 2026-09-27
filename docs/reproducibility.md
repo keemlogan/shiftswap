@@ -57,3 +57,31 @@ The test files become part of the input: the prompt now states that `tests/rules
 14. Fonts load from CDNs; offline falls back to system fonts.
 
 Items 1–6 and 8–14 are consistent with the reference implementation or are presentation choices; with the acceptance tests supplied in v5, the API-level choices (2, 4, 9) are fixed by the tests.
+
+---
+
+# Reproducibility check — run 2 (prompt v5 + spec + supplied tests)
+
+Date: 2026-09-27. Method: a new assistant session with no history, working only inside an empty folder, received PROMPT.md (prompts/final-prompt.md v5 followed by spec/spec.md) and the two supplied test files tests/rules.test.js and tests/services.test.js (77 tests). It was told to do what the prompt says and to report the checksums of the supplied test files at the start and at the end.
+
+## Result
+
+- `npm test`: 85 tests, 85 pass, 0 fail — the 77 supplied tests plus 8 tests the session added in tests/extra.test.js. The supplied tests passed on the first run of the core modules.
+- Supplied test files unchanged (shasum at start = at end): rules.test.js 93d3c5c8168255b20a2d0013f513fb1d899d2204, services.test.js b6846b7233733db054bbb71883bf863c01c544f5. The team independently re-ran the 77 supplied tests in the rebuilt folder: 77/77 pass, same checksums.
+- Done criteria: 1 PASS, 2 PASS (seed and S7), 3 PASS (sign-in, 0 console errors), 4 PASS (tour walkthrough at 360 and 1280 px), 5 PASS (exactly one primary button per screen, visible reasons on disabled buttons, targets ≥ 44 px, no horizontal scroll at 360 px).
+
+## Comparison with run 1
+
+| | Run 1 (v3) | Run 2 (v5) |
+|---|---|---|
+| Rebuild's own tests | 54/54 | 85/85 |
+| Team's rules tests against the rebuild | 13/25 | all pass |
+| Team's services tests against the rebuild | did not load (API mismatch) | all pass |
+
+Supplying the acceptance tests as part of the input removed the API-level divergence found in run 1.
+
+## Ambiguities reported in run 2 (19) — main ones
+
+1. No UI module named for the Home screens (added home.js). 2. Spec kept English names while the prompt's examples used Korean names — the prompt was afterwards clarified with a Korean display-name map (added after run 2 had started). 3. Primary-button placement on Home vs the sticky bottom bar. 4. "Reset demo data" both in the header menu and in Demo tools. 5. Late accept/approve saves EXPIRED and then fails with REQUEST_CLOSED (required by the tests). 6. Expiry closes only PENDING targets. The remaining points (storage keys, month-end probation date, payroll row set, settings save semantics) are consistent with the reference build.
+
+Limits: one run; the user interface is compared through the done criteria, not pixel by pixel.

@@ -10,12 +10,12 @@
   <caption>Table {{tab}}. Achievement of objectives G1–G6</caption>
   <thead><tr><th style="width:6%">ID</th><th style="width:24%">Objective</th><th>Evidence</th><th style="width:14%">Assessment</th></tr></thead>
   <tbody>
-    <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts</td><td><code>createSubRequest</code> notifies every eligible worker in the transaction that creates the request (TC-024, TC-016); with no candidate, the owner is told at once (TC-025). The owner's only action in the workflow is one approve or reject decision (TC-061, TC-062).</td><td>Achieved in the system; effect in a store not measured</td></tr>
+    <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts</td><td><code>createSubRequest</code> notifies every eligible worker in the transaction that creates the request (TC-024, TC-016); when no co-worker can be asked or every one of them answers that they can't, the request ends at once and the requester and the owner are told (TC-025, TC-13A). The owner's only action in the workflow is one approve or reject decision (TC-061, TC-062).</td><td>Achieved in the system; effect in a store not measured</td></tr>
     <tr><td class="req-id">G2</td><td>Let a candidate answer quickly</td><td>A pending request appears as a card on the candidate's Home screen with <i>Accept</i> on the card, so accepting takes one tap after opening the application (NFR-01, NFR-13). Only the first acceptance succeeds (TC-051).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G3</td><td>Keep schedule and weekly hours of both workers correct after a swap</td><td>Approval reassigns the shift, keeps the original worker and recomputes both weekly summaries in one transaction (TC-061). The approval panel shows before and after values for both workers — Choi Minho 16 → 21 scheduled hours, eligibility unchanged (TC-063) — and highlights a change of eligibility (TC-08B).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G4</td><td>Apply the legal pay rules and flag violations before payday</td><td>BR-06 to BR-11 are pure functions tested at their boundary values (Section 6.5), and every business rule BR-01 to BR-12 has at least one test (Section 6.8). The payroll warns for Kang Doyun's wage and blocks confirmation until the owner acknowledges it (TC-104, TC-105).</td><td>Achieved</td></tr>
-    <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires</td><td>13 use cases (9 core) against a minimum of 5; 12 database tables against a minimum of 4.</td><td>Achieved</td></tr>
-    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly</td><td>The application is deployed at <code>https://keemlogan.github.io/shiftswap/app/</code> (NFR-07). The final prompt and the specification are in the repository (Chapter 5); the reproduction run of the final prompt in an empty folder and its test result are reported in Chapter 5.</td><td>Deployment achieved; reproduction see Chapter 5</td></tr>
+    <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires</td><td>12 use cases (8 core) against a minimum of 5; 11 database tables against a minimum of 4.</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly</td><td>The application is deployed at <code>https://keemlogan.github.io/shiftswap/app/</code> (NFR-07). The final prompt and the specification are in the repository (Chapter 5). In reproduction run 2, a new assistant session given only prompt version 5, the specification and the two test files in an empty folder built a system that passed all 77 supplied tests unchanged and met done criteria 1–5 (Section 5.6.2).</td><td>Achieved; reproduction shown by a single run</td></tr>
   </tbody>
 </table>
 
@@ -28,24 +28,24 @@
   <thead><tr><th style="width:40%">Item</th><th style="width:14%">Count</th><th>Remark</th></tr></thead>
   <tbody>
     <tr><td>Actors</td><td class="num">3</td><td>Worker, Owner, System Clock</td></tr>
-    <tr><td>Use cases</td><td class="num">13</td><td>9 core (UC-01–UC-09), 4 supporting; 9 Must, 4 Should</td></tr>
-    <tr><td>Functional requirements</td><td class="num">21</td><td>FR-01–FR-21</td></tr>
+    <tr><td>Use cases</td><td class="num">12</td><td>8 core (UC-01, UC-03–UC-09), 4 supporting; 8 Must, 4 Should; UC-02 retired in iteration 6</td></tr>
+    <tr><td>Functional requirements</td><td class="num">21</td><td>FR-01, FR-02, FR-04–FR-22; FR-03 retired in iteration 6</td></tr>
     <tr><td>Non-functional requirements</td><td class="num">13</td><td>7 product, 3 organisational, 3 external</td></tr>
-    <tr><td>Business rules</td><td class="num">12</td><td>5 of them derived from labour law (BR-06–BR-10)</td></tr>
-    <tr><td>Database tables</td><td class="num">12</td><td>SQLite schema of spec §8</td></tr>
-    <tr><td>State machines / states</td><td class="num">5 / 17</td><td>SubRequest (6), SubRequestTarget (4), Shift (3), Attendance (2), Payroll (2)</td></tr>
+    <tr><td>Business rules</td><td class="num">13</td><td>5 of them derived from labour law (BR-06–BR-10)</td></tr>
+    <tr><td>Database tables</td><td class="num">11</td><td>SQLite schema of spec §8; Availability removed in iteration 6</td></tr>
+    <tr><td>State machines / states</td><td class="num">5 / 18</td><td>SubRequest (7), SubRequestTarget (4), Shift (3), Attendance (2), Payroll (2)</td></tr>
     <tr><td>Notification kinds</td><td class="num">8</td><td>With a fixed recipients table (spec §8)</td></tr>
     <tr><td>UML diagrams of the system</td><td class="num">16</td><td>2 use-case, 1 class, 1 ER, 1 component, 1 deployment, 5 sequence (SD-1, SD-2, SD-3a, SD-3b, SD-4), 3 state, 2 activity</td></tr>
     <tr><td>Screens</td><td class="num">11</td><td>Sign-in and ten working screens (Section 4.9)</td></tr>
-    <tr><td>Automated tests</td><td class="num">58</td><td>25 rule tests, 33 service tests; all pass</td></tr>
-    <tr><td>Lines of application code</td><td class="num">3,652</td><td>Core modules 1,271 (services 754, rules 257, db 219, clock 41); presentation 2,381 (router, eleven screen modules, translations and style sheet)</td></tr>
-    <tr><td>Lines of test code</td><td class="num">705</td><td><code>tests/rules.test.js</code> 214, <code>tests/services.test.js</code> 491</td></tr>
+    <tr><td>Automated tests</td><td class="num">84</td><td>28 rule tests, 56 service tests; all pass</td></tr>
+    <tr><td>Lines of application code</td><td class="num">5,465</td><td>Core modules 1,507 (services 992, rules 258, db 216, clock 41); presentation 3,958 (router, 15 UI modules including translations and shared components, page skeleton and style sheet)</td></tr>
+    <tr><td>Lines of test code</td><td class="num">1,051</td><td><code>tests/rules.test.js</code> 240, <code>tests/services.test.js</code> 811</td></tr>
   </tbody>
 </table>
 
-<p class="small">Line counts were taken with <code>wc -l</code> after the UI work of iteration 3 was finished.</p>
+<p class="small">Line counts were taken with <code>wc -l</code> on the final build (prompt version 6).</p>
 
-<p>By the measures the course names — use cases and tables — the system is well above the minimum. Its complexity lies less in the number of screens than in the interaction of rules: a single approval changes a shift, two weekly summaries, possibly two holiday allowances and later a payroll, and each of these depends on settings that the owner can change. The 17 states and the 12 business rules are where most of the analysis and test effort went.</p>
+<p>By the measures the course names — use cases and tables — the system is well above the minimum. Its complexity lies less in the number of screens than in the interaction of rules: a single approval changes a shift, two weekly summaries, possibly two holiday allowances and later a payroll, and each of these depends on settings that the owner can change. The 18 states and the 13 business rules are where most of the analysis and test effort went.</p>
 
 <h2 id="conclusion-limitations">8.3 Limitations</h2>
 
@@ -59,7 +59,7 @@
   <li><b>Demo clock.</b> Expiry is triggered by navigation and by changes of the demo clock, not by the passage of real time. A request can expire only when someone uses the application.</li>
   <li><b>Legal scope.</b> The pay rules cover the minimum wage, the weekly holiday allowance, overtime and night premiums and the probation reduction. Holiday-work premium, annual leave, severance pay, tax and social insurance are outside the scope, and the four-week average of the 15-hour rule is simplified to the weekly contractual value (BR-06). The treatment of a handed-over shift is a setting because the law does not decide it. The system applies these rules consistently but is not legal advice.</li>
   <li><b>Evaluation.</b> The requirements came from one reference store, and the interviews and prototype sessions were used to confirm requirements, not to measure them. No store has used the system in operation, so the effect on the number of contacts per request (problem P1) has not been measured.</li>
-  <li><b>Test gaps.</b> Registering a worker (FR-01) and the role menus (FR-20) have no automated test (Section 6.8), and the browser checks of NFR-06 are recorded only for Chrome.</li>
+  <li><b>Test and reproduction gaps.</b> The browser checks of NFR-06 are recorded only for Chrome. The reproducibility of the final prompt rests on one run (Section 5.6.2), and a generative assistant does not produce the same code twice.</li>
 </ul>
 
 <h2 id="conclusion-future">8.4 Future Work</h2>
@@ -72,7 +72,7 @@
   <li>expiry driven by a scheduled job on the server instead of navigation;</li>
   <li>a test of the first-acceptance rule with genuinely parallel transactions against the shared database;</li>
   <li>a field trial in the reference store, measuring the number of contacts per request and the time to fill a shift before and after, which is the measurement G1 ultimately stands for;</li>
-  <li>automated tests for FR-01 and FR-20, and recorded checks in Edge, Safari and Firefox;</li>
+  <li>recorded checks in Edge, Safari and Firefox, and repeated reproduction runs of the final prompt;</li>
   <li>export of confirmed payroll as a payslip, and several stores per owner.</li>
 </ol>
 
@@ -87,6 +87,10 @@
 <p><b>Models find what text hides.</b> The state diagram of the substitute request made it easy to see that every open state needs an exit by time and by the requester, and the traceability matrix showed which requirements had no test. The demonstration walkthrough S7 was added because the team noticed that no scenario ever changed a worker's eligibility, so the highlight required by FR-11 had never been exercised. Chapter 2 of the lecture presents models as a means of discussion, documentation and implementation [6]; in this project they served mostly as a means of checking.</p>
 
 <p><b>The incremental model suited the course.</b> Placing all Must use cases in the first increment meant that the substitute workflow, the core of the project, was working and testable before the payroll rules were built, as the lecture's description of the incremental model promises [6]. The weakness the lecture warns of, degradation of structure as increments are added, was contained by fixing the layered architecture before the first increment; the second increment added functions to the existing layers and did not change their boundaries.</p>
+
+<p><b>Names are not interfaces.</b> Reproduction run 1 rebuilt a system that behaved as specified but passed only 13 of the team's 25 rule tests, because the prompt fixed the names of functions but not their signatures and return shapes. Supplying the acceptance tests as part of the input closed this gap: run 2 passed all 77 supplied tests unchanged. For vibe coding, the lesson is that the executable tests belong to the contract, not only to the verification of one build.</p>
+
+<p><b>Retire requirements; do not reuse their numbers.</b> The change request of iteration 6 removed a use case, a functional requirement and a table after the product owner had used the running system. Because the traceability links were part of the specification, the impact analysis was a search for identifiers, and the change reached the code, the tests and this report within one iteration. Keeping the retired numbers FR-03 and UC-02 unused preserved the meaning of every earlier record that mentions them.</p>
 
 <p><b>Documents need the same discipline as code.</b> Because code can be regenerated in hours, the documents became the slower part of the project, and they drifted more easily than the code. Several corrections in this report — the recipients of a cancelled request, the storage of the minimum-wage acknowledgement, the course calendar — were found by checking documents against the specification and the tests. A team using vibe coding should plan as much time for keeping the requirements, models and report consistent as for generating the software.</p>
 

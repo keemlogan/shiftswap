@@ -48,6 +48,12 @@ def build_prompts():
         out = ROOT / "prompts" / f"{name}.html"
         out.write_text(PAGE_HEAD.format(title=title, css="../docs/web.css") + '<main class="doc">' + body + "</main></body></html>")
         print(f"  {out.relative_to(ROOT)}")
+    for name, title in [("reproducibility", "ShiftSwap — Reproducibility check"), ("nfr03-measurement", "ShiftSwap — NFR-03 measurement")]:
+        src = DOCS / f"{name}.md"
+        if src.exists():
+            body = subprocess.run(["pandoc", "-f", "gfm", "-t", "html", str(src)], capture_output=True, text=True, check=True).stdout
+            (DOCS / f"{name}.html").write_text(PAGE_HEAD.format(title=title, css="web.css") + '<main class="doc">' + body + "</main></body></html>")
+            print(f"  docs/{name}.html")
 
 
 # ------------------------------------------------------------------ tests

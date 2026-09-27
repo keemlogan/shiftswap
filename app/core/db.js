@@ -10,14 +10,12 @@ CREATE TABLE Worker (id INTEGER PRIMARY KEY, workplaceId INTEGER NOT NULL REFERE
   simpleLabor INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE FixedSchedule (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REFERENCES Worker(id), weekday INTEGER NOT NULL CHECK (weekday BETWEEN 1 AND 7),
   startTime TEXT NOT NULL, endTime TEXT NOT NULL);
-CREATE TABLE Availability (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REFERENCES Worker(id), weekday INTEGER NOT NULL CHECK (weekday BETWEEN 1 AND 7),
-  startTime TEXT NOT NULL, endTime TEXT NOT NULL);
 CREATE TABLE Shift (id INTEGER PRIMARY KEY, workDate TEXT NOT NULL, startTime TEXT NOT NULL, endTime TEXT NOT NULL,
   workerId INTEGER NOT NULL REFERENCES Worker(id), originalWorkerId INTEGER REFERENCES Worker(id), fixedScheduleId INTEGER REFERENCES FixedSchedule(id),
   status TEXT NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED','WORKED','ABSENT')));
 CREATE TABLE SubRequest (id INTEGER PRIMARY KEY, shiftId INTEGER NOT NULL REFERENCES Shift(id), requesterId INTEGER NOT NULL REFERENCES Worker(id),
   acceptorId INTEGER REFERENCES Worker(id), reason TEXT, deadline TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','EXPIRED','CANCELLED')), createdAt TEXT NOT NULL, decidedAt TEXT);
+  status TEXT NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','FAILED','EXPIRED','CANCELLED')), createdAt TEXT NOT NULL, decidedAt TEXT);
 CREATE TABLE SubRequestTarget (id INTEGER PRIMARY KEY, subRequestId INTEGER NOT NULL REFERENCES SubRequest(id), workerId INTEGER NOT NULL REFERENCES Worker(id),
   response TEXT NOT NULL DEFAULT 'PENDING' CHECK (response IN ('PENDING','ACCEPTED','DECLINED','CLOSED')), respondedAt TEXT);
 CREATE TABLE Attendance (id INTEGER PRIMARY KEY, shiftId INTEGER NOT NULL UNIQUE REFERENCES Shift(id), clockIn TEXT NOT NULL, clockOut TEXT NOT NULL,
@@ -70,10 +68,15 @@ export function openDatabase(SQL, store) {
   return db;
 }
 
-/** A saved database from before spec v2 lacks Payroll.minWageAck; such a copy is replaced by the seed. */
+/**
+ * A saved database from before spec v2 lacks Payroll.minWageAck, and one from before iteration 6 does not allow
+ * SubRequest.status FAILED (and still has the Availability table); such a copy is replaced by the seed.
+ */
 function hasCurrentSchema() {
   const columns = db.exec('PRAGMA table_info(Payroll)');
-  return columns.length > 0 && columns[0].values.some((c) => c[1] === 'minWageAck');
+  if (!(columns.length > 0 && columns[0].values.some((c) => c[1] === 'minWageAck'))) return false;
+  const request = db.exec("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'SubRequest'");
+  return request.length > 0 && String(request[0].values[0][0]).includes("'FAILED'");
 }
 
 /** "Reset demo data": drop the saved copy and rebuild schema + seed. */
@@ -179,13 +182,6 @@ function seedDatabase() {
     [5, 6, '10:00', '16:00'], [5, 7, '16:00', '22:00'],
   ];
   for (const f of fixed) db.run('INSERT INTO FixedSchedule (workerId, weekday, startTime, endTime) VALUES (?, ?, ?, ?)', f);
-  const availability = [
-    [2, 2, '17:00', '23:00'], [2, 4, '17:00', '23:00'], [2, 6, '10:00', '22:00'],
-    [3, 1, '17:00', '23:00'], [3, 3, '17:00', '23:00'],
-    [4, 1, '18:00', '23:00'], [4, 6, '10:00', '18:00'],
-    [5, 3, '18:00', '23:00'], [5, 4, '18:00', '23:00'], [5, 5, '17:00', '23:00'],
-  ];
-  for (const a of availability) db.run('INSERT INTO Availability (workerId, weekday, startTime, endTime) VALUES (?, ?, ?, ?)', a);
 
   const schedules = all('SELECT * FROM FixedSchedule ORDER BY id');
   for (const week of SEED_WEEKS) {
@@ -209,7 +205,8 @@ function seedDatabase() {
     "INSERT INTO SubRequest (id, shiftId, requesterId, reason, deadline, status, createdAt) VALUES (1, ?, 2, 'Midterm exam', '2026-09-29T21:00', 'REQUESTED', ?)",
     [shift.id, createdAt],
   );
-  for (const workerId of [3, 5]) {
+  // Every co-worker without an overlapping Wednesday shift is a target (BR-01): Minho, Hana and Doyun.
+  for (const workerId of [3, 4, 5]) {
     db.run("INSERT INTO SubRequestTarget (subRequestId, workerId, response) VALUES (1, ?, 'PENDING')", [workerId]);
     db.run(
       "INSERT INTO Notification (workerId, subRequestId, kind, message, createdAt) VALUES (?, 1, 'REQUEST_RECEIVED', ?, ?)",

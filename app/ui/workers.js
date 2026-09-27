@@ -1,9 +1,9 @@
 // Staff (owner, prompt §2.8; UC-01): worker cards and a worker detail with the fixed-schedule editor.
 import * as svc from '../core/services.js';
 import { contractHours } from '../core/rules.js';
-import { t, esc, fmtHours, fmtWon, fmtYMD, given, showFormError } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, fmtYMD, given, displayName, initial, showFormError } from './i18n.js';
 import { icon, button, pageHead } from './components.js';
-import { slotEditorHtml, bindSlotEditor, readSlots } from './availability.js';
+import { slotEditorHtml, bindSlotEditor, readSlots } from './slots.js';
 
 export function render(view, ctx) {
   const id = ctx.args[0];
@@ -20,9 +20,9 @@ function renderList(view, ctx) {
       ${workers.map((w) => `
         <li>
           <a class="card link-card" href="#/staff/${w.id}">
-            <span class="avatar avatar-lg" aria-hidden="true">${esc(w.name.split(' ').pop().slice(0, 1))}</span>
+            <span class="avatar avatar-lg" aria-hidden="true">${esc(initial(w.name))}</span>
             <span class="link-main">
-              <span class="card-title">${esc(w.name)} ${w.active ? '' : `<span class="chip">${esc(t('staff.inactive'))}</span>`}</span>
+              <span class="card-title">${esc(displayName(w.name))} ${w.active ? '' : `<span class="chip">${esc(t('staff.inactive'))}</span>`}</span>
               <span class="muted num">${esc(t('staff.card', { h: fmtHours(contractHours(svc.getFixedSchedules(w.id))), wage: fmtWon(w.hourlyWage) }))}</span>
               <span class="muted num">${esc(t('staff.period', { from: fmtYMD(w.contractStart), to: w.contractEnd ? fmtYMD(w.contractEnd) : t('staff.openEnded') }))}</span>
             </span>
@@ -44,7 +44,7 @@ function renderDetail(view, ctx, w) {
   const cta = button({ label: w ? t('staff.save') : t('staff.create'), kind: 'primary', block: true, id: 'save-worker' });
   const back = `<a class="back-link" href="#/staff">${icon('chevronLeft')}<span>${esc(t('staff.back'))}</span></a>`;
   view.innerHTML = `
-    ${pageHead({ title: w ? w.name : t('staff.newTitle'), back, cta })}
+    ${pageHead({ title: w ? displayName(w.name) : t('staff.newTitle'), back, cta })}
     <form class="stack-sections" id="worker-form" novalidate>
       <section class="section">
         <h2 class="section-title">${esc(t('staff.info'))}</h2>

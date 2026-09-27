@@ -2,7 +2,7 @@
 // both people (FR-11) and the full before/after table behind "Details". Also the effect sentences reused by
 // the worker's accept card (NFR-13: consequence before commitment).
 import * as svc from '../core/services.js';
-import { t, esc, fmtShift, fmtWhen, fmtHours, fmtWon, given, dayLong } from './i18n.js';
+import { t, esc, fmtShift, fmtWhen, fmtHours, fmtWon, given, displayName, dayLong } from './i18n.js';
 import { icon, button } from './components.js';
 
 /**
@@ -44,7 +44,7 @@ function detailsTable(d) {
   ];
   return d.rows.map((row) => `
     <table class="compare">
-      <caption>${esc(row.name)}</caption>
+      <caption>${esc(displayName(row.name))}</caption>
       <thead><tr><th scope="col"><span class="sr-only">${esc(t('table.person'))}</span></th><th scope="col">${esc(t('table.before'))}</th><th scope="col">${esc(t('table.after'))}</th></tr></thead>
       <tbody>${items.map(([key, f]) => {
         const b = f(row.before);

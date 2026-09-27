@@ -2,13 +2,13 @@
 // request flow (choose shift → reason and deadline → review and send → result), prompt §2.4.
 import * as svc from '../core/services.js';
 import { addMinutes } from '../core/clock.js';
-import { t, esc, fmtShift, fmtDate, fmtWhen, dday, given, joinPeople, dayLong, showFormError } from './i18n.js';
+import { t, esc, fmtShift, fmtDate, fmtWhen, dday, given, displayName, initial, joinPeople, dayLong, showFormError, errorText } from './i18n.js';
 import { icon, button, pageHead, sectionHead, emptyState, tracker } from './components.js';
 import { effectLines } from './approvals.js';
 
 // ---- Cards shared with Home -----------------------------------------------------
 
-/** A request sent to me: who asks, the shift, reason, deadline, the effect of accepting, Accept / Decline. */
+/** A request sent to me: who asks, the shift, reason, deadline, the effect of accepting, Accept / Can't (DECLINED). */
 export function incomingCard(r, { now, primary }) {
   return `
     <article class="card req-card" aria-labelledby="in-${r.id}">
@@ -22,7 +22,7 @@ export function incomingCard(r, { now, primary }) {
       ${effectLines(r.effect, 'accept')}
       <div class="actions">
         ${button({ label: t('home.accept'), kind: primary ? 'primary' : 'secondary', attrs: `data-accept="${r.id}" data-day="${esc(dayLong(r.workDate))}"`, block: true })}
-        ${button({ label: t('home.decline'), kind: 'text', attrs: `data-decline="${r.id}" data-name="${esc(given(r.requesterName))}"` })}
+        ${button({ label: t('home.decline'), kind: 'text', attrs: `data-decline="${r.id}"` })}
       </div>
     </article>`;
 }
@@ -41,11 +41,22 @@ function answersLine(r) {
   return `<ul class="answers">${r.targets.map((x) => `<li class="answer answer-${x.response.toLowerCase()}">${esc(t('answer.line', { name: given(x.workerName), answer: t(`answer.${x.response}`) }))}</li>`).join('')}</ul>`;
 }
 
+/** BR-13: one of my requests that ended FAILED, shown until I acknowledge its notification. */
+export function failedCard(f, { primary }) {
+  return `
+    <article class="card req-card">
+      <div class="card-row"><h3 class="card-title num">${esc(fmtShift(f))}</h3></div>
+      ${tracker('FAILED')}
+      <div class="actions">${button({ label: t('failed.ack'), kind: primary ? 'primary' : 'secondary', block: true, attrs: `data-ack-failed="${f.notificationId}"` })}</div>
+    </article>`;
+}
+
 /** One of my requests, as a tracker card; open ones can be cancelled. */
 export function myRequestCard(r, { now }) {
   const open = r.status === 'REQUESTED' || r.status === 'ACCEPTED';
   let status = '';
   if (r.status === 'REQUESTED') status = `<p class="status-line">${esc(t('status.waitingReplies'))} · ${esc(t('common.until', { when: fmtWhen(r.deadline, now) }))}</p>${answersLine(r)}`;
+  if (r.status === 'FAILED') status = answersLine(r);
   if (r.status === 'ACCEPTED') status = `<p class="status-line">${esc(t('status.waitingOwner', { name: given(r.acceptorName) }))}</p>`;
   if (r.status === 'APPROVED') status = `<p class="status-line">${esc(t('status.approved', { name: given(r.acceptorName) }))}</p>`;
   return `
@@ -68,22 +79,42 @@ export function bindRequestActions(view, ctx) {
       if (err.code === 'ALREADY_TAKEN') {
         ctx.toast(t('home.taken', { name: given(err.params.name) }), 'alert');
         ctx.refresh();
+      } else if (err.code === 'REQUEST_CLOSED') {
+        ctx.toast(errorText(err), 'alert');
+        ctx.refresh();
       } else ctx.fail(err);
     }
   }));
   view.querySelectorAll('[data-decline]').forEach((b) => b.addEventListener('click', () => {
     try {
       svc.respondToRequest(Number(b.dataset.decline), ctx.user.id, 'DECLINED');
-      ctx.toast(t('home.declined', { name: b.dataset.name }));
+      ctx.toast(t('home.declined'));
       ctx.refresh();
     } catch (err) {
-      ctx.fail(err);
+      if (err.code === 'ALREADY_TAKEN' || err.code === 'REQUEST_CLOSED') {
+        ctx.toast(errorText(err), 'alert');
+        ctx.refresh();
+      } else ctx.fail(err);
     }
   }));
   view.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', () => {
     try {
       svc.cancelRequest(Number(b.dataset.cancel), ctx.user.id);
       ctx.toast(t('swaps.cancelled'));
+      ctx.refresh();
+    } catch (err) {
+      ctx.fail(err);
+    }
+  }));
+  bindFailedAck(view, ctx);
+}
+
+/** 확인했어요 on a FAILED card (worker or owner, BR-13): marks that one notification read. */
+export function bindFailedAck(view, ctx) {
+  view.querySelectorAll('[data-ack-failed]').forEach((b) => b.addEventListener('click', () => {
+    try {
+      svc.markNotificationsRead(ctx.user.id, [Number(b.dataset.ackFailed)]);
+      ctx.toast(t('failed.acked'));
       ctx.refresh();
     } catch (err) {
       ctx.fail(err);
@@ -116,8 +147,10 @@ export function render(view, ctx) {
     : emptyState(t('swaps.receivedEmpty'))}
     </section>
     <section class="section">
-      ${sectionHead(t('swaps.sent'), home.myOpen.length || null)}
-      ${home.myOpen.length ? `<div class="stack">${home.myOpen.map((r) => myRequestCard(r, ctx)).join('')}</div>` : emptyState(t('swaps.sentEmpty'))}
+      ${sectionHead(t('swaps.sent'), home.myOpen.length + home.failed.length || null)}
+      ${home.myOpen.length || home.failed.length
+    ? `<div class="stack">${home.failed.map((f) => failedCard(f, { primary: false })).join('')}${home.myOpen.map((r) => myRequestCard(r, ctx)).join('')}</div>`
+    : emptyState(t('swaps.sentEmpty'))}
     </section>
     ${past.length ? `
     <section class="section">
@@ -356,7 +389,7 @@ function flowStep3(view, ctx, draft, shift) {
       <section class="section">
         ${sectionHead(t('flow.to'), candidates.length || null)}
         ${candidates.length ? `
-          <ul class="card people">${candidates.map((c) => `<li><span class="avatar" aria-hidden="true">${esc(given(c.name).slice(0, 1))}</span><span>${esc(c.name)}</span></li>`).join('')}</ul>
+          <ul class="card people">${candidates.map((c) => `<li><span class="avatar" aria-hidden="true">${esc(initial(c.name))}</span><span>${esc(displayName(c.name))}</span></li>`).join('')}</ul>
           <p class="hint">${esc(t('flow.toCount', { n: candidates.length }))}</p>`
     : `<p class="notice notice-warn">${icon('alert')}<span>${esc(t('flow.toNone'))}</span></p>`}
       </section>
@@ -364,7 +397,7 @@ function flowStep3(view, ctx, draft, shift) {
   view.querySelector('#send').addEventListener('click', () => {
     try {
       const res = svc.createSubRequest({ shiftId: shift.id, requesterId: ctx.user.id, reason, deadline: draft.deadline });
-      saveDraft({ result: { id: res.id, candidates: res.candidates.map((c) => c.name), shift: { workDate: shift.workDate, startTime: shift.startTime, endTime: shift.endTime } } });
+      saveDraft({ result: { id: res.id, status: res.status, candidates: res.candidates.map((c) => c.name), shift: { workDate: shift.workDate, startTime: shift.startTime, endTime: shift.endTime } } });
       ctx.go('#/swaps/new/done');
     } catch (err) {
       showFormError(view.querySelector('#s3'), err);
@@ -378,14 +411,15 @@ function flowDone(view, ctx, draft) {
     ctx.go('#/swaps');
     return;
   }
+  const failed = res.status === 'FAILED';
   const cta = button({ label: t('common.goHome'), kind: 'primary', block: true, id: 'home' });
   view.innerHTML = `
     ${flowHead(4, null, ctx)}
     <div class="flow-body flow-done">
-      <div class="done-mark" aria-hidden="true">${icon('check')}</div>
-      ${pageHead({ title: t('flow.doneTitle'), sub: fmtShift(res.shift), cta })}
-      <div class="card">${tracker('REQUESTED')}
-        <p class="status-line">${esc(res.candidates.length ? t('flow.doneSent', { names: joinPeople(res.candidates) }) : t('flow.doneNone'))}</p>
+      <div class="done-mark ${failed ? 'is-alert' : ''}" aria-hidden="true">${icon(failed ? 'alert' : 'check')}</div>
+      ${pageHead({ title: t(failed ? 'flow.doneFailedTitle' : 'flow.doneTitle'), sub: fmtShift(res.shift), cta })}
+      <div class="card">${tracker(failed ? 'FAILED' : 'REQUESTED')}
+        <p class="status-line">${esc(failed ? t('flow.doneNone') : t('flow.doneSent', { names: joinPeople(res.candidates) }))}</p>
       </div>
     </div>`;
   view.querySelector('#home').addEventListener('click', () => { clearDraft(); ctx.go('#/home'); });

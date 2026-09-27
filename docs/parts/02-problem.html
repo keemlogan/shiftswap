@@ -200,7 +200,7 @@
 <p>ShiftSwap targets the part of the problem that general scheduling products do not address for small Korean stores. Its contribution is the combination of four elements in one workflow:</p>
 
 <ol>
-  <li>candidate selection from recorded availability and existing shifts, so that a request reaches only the workers who can take it (addresses P1);</li>
+  <li>candidate selection from the existing shifts, so that a request reaches at once every co-worker who is not already working at that time, and ends with a clear message to the owner when none of them can take it (addresses P1). The proposal planned selection by recorded availability; this was replaced in iteration 6 (Section 3.11.4);</li>
   <li>a first-acceptance-wins rule enforced in a single database transaction, so that two acceptances can never both succeed (addresses the double-acceptance variation of P1);</li>
   <li>an approval step that shows, for both workers, contractual hours, scheduled hours and holiday-allowance eligibility before and after the swap, and recomputes the weekly summaries on approval (addresses P2);</li>
   <li>pay rules taken from Korean law and stored as data where they change (minimum wage by year, number of regular employees, substitution-attendance policy), with warnings before payroll confirmation (addresses P3).</li>

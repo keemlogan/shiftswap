@@ -78,7 +78,7 @@ const STEPS = ['REQUESTED', 'ACCEPTED', 'APPROVED'];
 
 /** The three-step tracker 요청 → 수락 → 승인, or a labelled end state (prompt §2.0 rule 6). */
 export function tracker(status) {
-  if (['REJECTED', 'EXPIRED', 'CANCELLED'].includes(status)) {
+  if (['REJECTED', 'EXPIRED', 'CANCELLED', 'FAILED'].includes(status)) {
     return `<div class="endstate endstate-${status.toLowerCase()}" role="status">
       ${icon(status === 'CANCELLED' ? 'x' : 'alert')}
       <div><strong>${esc(t(`end.${status}`))}</strong><span>${esc(t(`end.${status}why`))}</span></div>

@@ -1,8 +1,8 @@
 <h1 id="appendix-prompt">Appendix A. Final Vibe-Coding Prompt (v5)</h1>
 <p>The complete prompt, verbatim. To reproduce the system it is given to the coding assistant together with the two test files and followed by the specification file spec/spec.md (all in the repository). Source file: <code>prompts/final-prompt.md</code>.</p>
 <div class="appendix small"><h3
-id="appendix-prompt-shiftswap--final-vibe-coding-prompt-v5">ShiftSwap —
-Final Vibe-Coding Prompt (v5)</h3>
+id="appendix-prompt-shiftswap--final-vibe-coding-prompt-v6">ShiftSwap —
+Final Vibe-Coding Prompt (v6)</h3>
 <blockquote>
 <p>Version history: v1 was built in iteration 1; v2 (iteration 2)
 resolved the build ambiguities and document-review gaps; v3 (iteration
@@ -12,9 +12,13 @@ team (task-first home screens, one primary action per screen,
 consequences shown before committing); v5 (iteration 5) makes the
 acceptance test files part of the input after reproduction run 1 showed
 that two correct rebuilds disagree on function signatures (see
-<code>docs/reproducibility.md</code>). Earlier versions are kept as
-<code>prompts/prompt-v1.md</code> … <code>prompts/prompt-v4.md</code>;
-the reasons for every change are in
+<code>docs/reproducibility.md</code>); v6 (iteration 6) applies a
+requirements change from the product-owner review: availability is no
+longer collected, every co-worker is asked, a "can't" answer lets a
+request end as FAILED with a message to the requester and an
+acknowledge-only card for the owner (spec §15). Earlier versions are
+kept as <code>prompts/prompt-v1.md</code> …
+<code>prompts/prompt-v5.md</code>; the reasons for every change are in
 <code>prompts/prompt-log.md</code>.</p>
 <p>How to use: in an empty folder, place
 <code>tests/rules.test.js</code> and <code>tests/services.test.js</code>
@@ -27,12 +31,13 @@ href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/sh
 <hr />
 <p>You are building <strong>ShiftSwap</strong>, a shift schedule and
 substitute management web application for a small café with part-time
-workers. The complete specification (actors, use cases UC-01…UC-13,
-functional requirements FR-01…FR-21, non-functional requirements
-NFR-01…NFR-13, business rules BR-01…BR-12, states, SQLite schema, seed
-data, test IDs) follows this prompt. Treat the specification as the
-contract: use its identifiers, table and column names, state names and
-seed data exactly. Do not add features that are not in it.</p>
+workers. The complete specification (actors, use cases UC-01…UC-13
+(UC-02 retired), functional requirements FR-01…FR-22 (FR-03 retired),
+non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-13,
+states, SQLite schema, seed data, test IDs) follows this prompt. Treat
+the specification as the contract: use its identifiers, table and column
+names, state names and seed data exactly. Do not add features that are
+not in it.</p>
 <h4 id="appendix-prompt-0-acceptance-tests-supplied--read-them-first">0.
 Acceptance tests (supplied — read them first)</h4>
 <p>The folder already contains <code>tests/rules.test.js</code> and
@@ -91,19 +96,18 @@ the BR it implements.</li>
 <li><code>app/core/services.js</code> — one exported function per
 use-case step, each running inside <code>tx()</code>:
 <code>registerWorker</code>, <code>saveFixedSchedule</code>,
-<code>saveAvailability</code>, <code>generateWeek</code>,
-<code>editShift</code>, <code>createSubRequest</code>,
-<code>respondToRequest</code>, <code>decideRequest</code>,
-<code>cancelRequest</code>, <code>expireOverdue</code>,
-<code>recordAttendance</code>, <code>confirmAttendance</code>,
-<code>markAbsent</code>, <code>recomputeWeek</code>,
-<code>generatePayroll</code>, <code>confirmPayroll</code>,
-<code>updateSettings</code>, <code>listNotifications</code>,
-<code>markNotificationsRead</code>, <code>acknowledgeMinWage</code>.
-Services call rules for every decision and write Notification rows
-exactly as the recipients table in spec §8 says.
-<code>services.js</code> also exports read-only query functions for the
-screens (not wrapped in <code>tx</code>), e.g.
+<code>generateWeek</code>, <code>editShift</code>,
+<code>createSubRequest</code>, <code>respondToRequest</code>,
+<code>decideRequest</code>, <code>cancelRequest</code>,
+<code>expireOverdue</code>, <code>recordAttendance</code>,
+<code>confirmAttendance</code>, <code>markAbsent</code>,
+<code>recomputeWeek</code>, <code>generatePayroll</code>,
+<code>confirmPayroll</code>, <code>updateSettings</code>,
+<code>listNotifications</code>, <code>markNotificationsRead</code>,
+<code>acknowledgeMinWage</code>. Services call rules for every decision
+and write Notification rows exactly as the recipients table in spec §8
+says. <code>services.js</code> also exports read-only query functions
+for the screens (not wrapped in <code>tx</code>), e.g.
 <code>getWeekShifts</code>, <code>listMyRequests</code>,
 <code>listOwnerRequests</code>, <code>getApprovalPreview</code>,
 <code>getPayroll</code>, <code>unreadCount</code>,
@@ -117,15 +121,19 @@ may not open, FR-20), and home-screen queries
 that return, in one call, every item §2.3 / §2.5 needs (including the
 before/after effect of accepting or approving).</li>
 <li><code>app/ui/</code> — one module per screen: <code>login.js</code>,
+<code>home.js</code> (worker and owner Home, §2.3/§2.5),
+<code>me.js</code> (worker Me: profile + attendance),
 <code>schedule.js</code> (weekly board, both roles),
 <code>requests.js</code> (worker: my requests + new request form),
 <code>inbox.js</code>, <code>approvals.js</code> (owner),
 <code>attendance.js</code>, <code>weekly.js</code> (owner weekly
 summary), <code>payroll.js</code>, <code>workers.js</code> (owner:
-workers, fixed schedules), <code>availability.js</code> (worker),
-<code>settings.js</code> (owner: workplace + minimum wage),
-<code>i18n.js</code> (translations plus shared helpers: HTML escaping,
-number/date/money formatting, the form error box).</li>
+workers, fixed schedules), <code>settings.js</code> (owner: workplace +
+minimum wage), <code>components.js</code> (shared UI pieces: icons,
+buttons with disabled reasons, page header, tracker, sheets, toasts),
+<code>slots.js</code> (weekday + time slot editor used for fixed
+schedules), <code>i18n.js</code> (translations plus shared helpers: HTML
+escaping, number/date/money formatting, the form error box).</li>
 <li><code>tests/rules.test.js</code> and
 <code>tests/services.test.js</code> run with <code>node --test</code>
 (use the <code>sql.js</code> npm package in Node for service tests).
@@ -158,15 +166,15 @@ action button, so the user never has to find the right menu.</li>
 <li><strong>Show the consequence before the commitment.</strong>
 Whenever an action changes someone's hours or pay (accepting, approving,
 confirming payroll), the screen states the effect in one plain sentence
-plus numbers before the button — e.g. "민호님 이번 주 16시간 → 21시간 ·
-주휴수당 변화 없음 (33,024원 유지)".</li>
+plus numbers before the button — e.g. "최민호님 이번 주 16시간 → 21시간
+· 주휴수당 변화 없음 (33,024원 유지)".</li>
 <li><strong>Ask one thing at a time.</strong> Requesting a substitute is
 a three-step flow (choose shift → reason and deadline → review and send)
 with a step indicator ("1/3"), a back button, and a review screen that
 names the people who will receive the request.</li>
 <li><strong>Say what happened and what happens next.</strong> After
 every action show a result screen or a toast that states the outcome and
-the next step — e.g. "민호님, 도윤님에게 요청을 보냈어요. 누군가
+the next step — e.g. "최민호님, 강도윤님에게 요청을 보냈어요. 누군가
 수락하면 알려 드릴게요." — never a silent state change.</li>
 <li><strong>Status as progress.</strong> A substitute request is shown
 everywhere as a three-step tracker 요청 → 수락 → 승인 (Requested →
@@ -190,7 +198,7 @@ always has a one-line explanation beneath it (e.g. "최저임금 경고 1건을
 <ul>
 <li>Worker tabs: <strong>홈</strong> (Home), <strong>근무표</strong>
 (Schedule), <strong>대타</strong> (Swaps), <strong>내 정보</strong> (Me:
-availability and attendance). Owner tabs: <strong>홈</strong>,
+profile and attendance). Owner tabs: <strong>홈</strong>,
 <strong>근무표</strong>, <strong>직원</strong> (Staff: workers and fixed
 schedules), <strong>급여</strong> (Pay: weekly summary and monthly
 payroll). <strong>설정</strong> (Settings), language and sign-out are in
@@ -229,18 +237,22 @@ fixed shifts and weekly contract hours, e.g. "월·수 18:00–23:00 · 주
 <h5 id="appendix-prompt-23-worker-home">2.3 Worker Home</h5>
 <p>In this order, each section omitted when empty:</p>
 <ol type="1">
-<li>Greeting "서연님, 안녕하세요" and today's date.</li>
+<li>Greeting "이서연님, 안녕하세요" and today's date.</li>
 <li><strong>대타 요청이 왔어요</strong> — one card per PENDING target:
 who asks, the shift ("9월 30일(수) 18:00–23:00"), reason, deadline
 countdown ("내일 21:00까지 답해 주세요"), the effect on me ("수락하면
 이번 주 16시간 → 21시간 · 주휴수당 그대로"), and two buttons
-<strong>수락하기</strong> (primary) / <strong>거절</strong> (text).
-Accept is one tap (NFR-01). After accepting: result toast "수요일 근무를
-맡았어요. 사장님 승인을 기다려요." If someone else was faster: "민호님이
-먼저 수락했어요" and the card closes.</li>
+<strong>수락하기</strong> (primary) / <strong>불가</strong> (text,
+"can't" = DECLINED). Accept is one tap (NFR-01); 불가 is one tap and the
+card closes with the toast "불가로 답했어요". After accepting: result
+toast "수요일 근무를 맡았어요. 사장님 승인을 기다려요." If someone else
+was faster: "최민호님이 먼저 수락했어요" and the card closes.</li>
 <li><strong>내가 보낸 요청</strong> — tracker cards for the worker's
-open requests with who has answered so far and a text button
-<strong>요청 취소</strong>.</li>
+open requests with each co-worker's answer so far (대기 중 / 불가 /
+수락) and a text button <strong>요청 취소</strong>. A request that ended
+FAILED shows, until the worker taps <strong>확인했어요</strong>, the
+card "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요."
+(BR-13).</li>
 <li><strong>다음 근무</strong> — a large card with date, time, D-day and
 the button <strong>이 근무 대타 구하기</strong> (starts the flow with
 this shift preselected).</li>
@@ -263,10 +275,11 @@ disabled with "이미 대타를 구하고 있어요".</li>
 "근무 2시간 전" / "직접 선택", default = the earlier of now + 24 h and
 shift start (BR-03); the chosen deadline is shown as a sentence.</li>
 <li>Step 3 "이렇게 보낼게요": summary of shift, reason and deadline, and
-<strong>받는 사람</strong> — the eligible candidates computed now
-(BR-01) with names, or the warning "지금 가능한 사람이 없어요. 보내면
-사장님께 알려 드려요." (FR-08). Primary <strong>대타 요청
-보내기</strong>.</li>
+<strong>받는 사람</strong> — the co-workers who will be asked (BR-01:
+every active co-worker except those already working at that time) with
+names, or — when nobody can be asked — the warning "지금 근무가 비어
+있는 동료가 없어요. 보내면 바로 사장님께 알려 드려요." (FR-08). Primary
+<strong>대타 요청 보내기</strong>.</li>
 <li>Result screen: the tracker at step 1, the recipients, and
 <strong>홈으로</strong>.</li>
 <li><strong>대타</strong> tab: sections <strong>받은 요청</strong> (same
@@ -279,15 +292,20 @@ action of the tab: <strong>대타 구하기</strong>.</li>
 <li>Heading "오늘 처리할 일 N개" (or "지금 처리할 일이 없어요" with the
 week's summary).</li>
 <li><strong>승인 기다리는 대타</strong> — a decision card per ACCEPTED
-request: the sentence "서연님의 9월 30일(수) 18:00–23:00 근무를 민호님이
-대신해요", then one impact line per person (scheduled hours before →
-after this week, holiday allowance status and amount before → after; a
-changed eligibility is highlighted in amber with the words "주휴수당이
-바뀌어요"), then <strong>승인하기</strong> (primary) /
+request: the sentence "이서연님의 9월 30일(수) 18:00–23:00 근무를
+최민호님이 대신해요", then one impact line per person (scheduled hours
+before → after this week, holiday allowance status and amount before →
+after; a changed eligibility is highlighted in amber with the words
+"주휴수당이 바뀌어요"), then <strong>승인하기</strong> (primary) /
 <strong>거절</strong> (text). A <strong>자세히</strong> toggle shows the
 full FR-11 before/after table.</li>
 <li><strong>답을 기다리는 요청</strong> — open REQUESTED requests with
-deadline countdown and each candidate's response.</li>
+deadline countdown and each co-worker's answer (대기 중 / 불가).
+<strong>대타를 못 구했어요</strong> — one card per unacknowledged
+REQUEST_FAILED notification: "정하나님의 10월 4일(일) 10:00–16:00 근무는
+동료 모두 불가예요. 직접 연락해 주세요." with only
+<strong>확인했어요</strong> (marks the notification read; no other
+action).</li>
 <li><strong>확인할 출근 기록</strong> — recorded but unconfirmed
 attendance with <strong>확인</strong> / <strong>결근 처리</strong>.</li>
 <li><strong>급여 경고</strong> — unacknowledged minimum-wage warnings of
@@ -304,11 +322,12 @@ hourly lines, today marked, blocks positioned by time, overlapping
 shifts side by side). &lt; 900 px: day-by-day list with today first
 expanded.</li>
 <li>Tapping a shift opens a detail sheet (mobile) or side panel
-(desktop) with its details, its history ("서연 → 민호 · 9/28 승인") and
-only the actions relevant to the viewer: the worker's own future shift →
-<strong>대타 구하기</strong>; owner → <strong>시간 바꾸기</strong>,
-<strong>담당자 바꾸기</strong>, <strong>삭제</strong> (refused with the
-reason when it has a request or attendance, FR-05).</li>
+(desktop) with its details, its history ("이서연 → 최민호 · 9/28 승인")
+and only the actions relevant to the viewer: the worker's own future
+shift → <strong>대타 구하기</strong>; owner → <strong>시간
+바꾸기</strong>, <strong>담당자 바꾸기</strong>, <strong>삭제</strong>
+(refused with the reason when it has a request or attendance,
+FR-05).</li>
 <li>Owner: when the displayed week has no shifts, the empty state's
 primary button is <strong>이번 주 근무표 만들기</strong> (FR-04);
 otherwise the primary button is <strong>근무 추가</strong>. Week
@@ -328,7 +347,7 @@ scheduled/actual hours, eligibility as words with the reason ("계약 주
 no draft exists; then one card (mobile) / row (desktop) per worker with
 base hours, base pay, holiday pay, premium, total and flags (예상치 =
 estimated, 수습 최저임금 90 %, 최저임금 미만). A below-minimum row shows
-the sentence "도윤님 시급 10,000원이 2026년 최저임금 10,320원보다
+the sentence "강도윤님 시급 10,000원이 2026년 최저임금 10,320원보다
 낮아요" and <strong>확인했어요</strong>
 (<code>acknowledgeMinWage</code>). The sticky primary <strong>9월 급여
 확정하기</strong> is disabled with its reason until all warnings are
@@ -342,10 +361,11 @@ per week, hourly wage, contract period); tapping opens the worker's
 detail with the fixed-schedule editor: weekday chips + start/end time
 selects, one row per weekday, add/remove; save shows the resulting
 weekly contract hours. Primary <strong>직원 추가</strong>.</li>
-<li><strong>내 정보</strong> (UC-02, UC-07): availability editor with
-the same weekday-chip pattern ("대타 가능한 시간") and the list of
-attendance records; the worker's own phone and wage are visible here
-only.</li>
+<li><strong>내 정보</strong> (UC-07): the worker's profile (contract,
+weekly contract hours, hourly wage, phone — visible only here and to the
+owner) and the list of attendance records with <strong>기록하기</strong>
+for ended shifts. There is no availability editor (removed in iteration
+6).</li>
 <li><strong>설정</strong> (UC-10): store name, number of regular
 employees with the sentence of what it changes ("5명 이상이면 연장·야간
 가산수당이 붙어요"), the substitution-attendance policy as two radio
@@ -410,8 +430,8 @@ premium zero at 4 employees and non-zero at 5; probation applies only
 when all BR-10 conditions hold; the worked example of spec §10 (Choi
 Minho 3.2 h, 33,024 KRW).</li>
 <li>The seed state reproduces spec §10 exactly, including the open
-request with two candidates, and the S7 walkthrough of §10 works (a test
-proves it).</li>
+request with three candidates (Choi Minho, Jung Hana, Kang Doyun), and
+the S7 walkthrough of §10 works (a test proves it).</li>
 <li>Serving the repository root with any static server and opening
 <code>/app/</code> shows the sign-in screen with no console errors.</li>
 <li>Walking through the sign-in tour in the browser: as Lee Seoyeon the
@@ -422,6 +442,11 @@ says Minho was faster; as the owner, Home shows the decision card for
 Minho (16 → 21 h, holiday allowance unchanged) and
 <strong>승인하기</strong> approves it; the schedule then shows the
 handover marker.</li>
+<li>The S8 walkthrough of spec §10 works in the browser: as Jung Hana
+request Sun 10-04 10:00–16:00; as Lee Seoyeon, Choi Minho and Kang Doyun
+tap 불가; Hana's Swaps tab shows the FAILED card with the
+contact-the-owner message; the owner's Home shows the "대타를 못
+구했어요" card and 확인했어요 removes it.</li>
 <li>Every screen has exactly one filled primary button (a headless check
 counts them), every disabled button has a visible reason, and all touch
 targets are at least 44 × 44 px.</li>

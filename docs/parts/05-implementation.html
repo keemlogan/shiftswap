@@ -11,7 +11,7 @@
     <tr><td>AI coding assistant</td><td>agent mode with file and shell access</td><td>Generated and modified all application and test code from the prompt and the specification; ran the tests and the browser checks; recorded ambiguities in the prompt log.</td></tr>
     <tr><td>Node.js / npm</td><td>v24.14.0 / 11.9.0</td><td>Running the test suite (<code>node:test</code>) and installing the one development dependency.</td></tr>
     <tr><td>sql.js</td><td>1.14.2</td><td>SQLite compiled to WebAssembly; the npm package provides the files copied into <code>app/vendor/</code> and the database for the Node tests [9].</td></tr>
-    <tr><td>Google Chrome (headless)</td><td>current stable</td><td>Browser checks of every screen at 1440 px and 360 px; printing the reports to PDF.</td></tr>
+    <tr><td>Google Chrome (headless)</td><td>current stable</td><td>Browser checks of every screen at a desktop and a phone width (1440 px and 360 px up to version 3; 1280 px and 390 px, later 360 px, with <code>tools/check.mjs</code> from version 4 on); printing the reports to PDF.</td></tr>
     <tr><td>PlantUML</td><td>1.2025.2</td><td>Drawing the UML diagrams of Chapters 3 and 4 from text sources in <code>uml/src/</code> [14].</td></tr>
     <tr><td>Git / GitHub</td><td>2.48.1</td><td>Version control of specification, prompts, code, models and reports in the repository <code>keemlogan/shiftswap</code>.</td></tr>
     <tr><td>GitHub Pages</td><td>—</td><td>Static hosting of the application at <code>https://keemlogan.github.io/shiftswap/app/</code> [13].</td></tr>
@@ -67,7 +67,7 @@
   <li><b>Specify.</b> Everything the system must do is first written into <code>spec/spec.md</code>: actors, use cases, requirements, business rules, states, the SQL schema, the seed data and the test groups. The file is not reproduced in this report; it is <code>spec/spec.md</code> in the repository (<a href="https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md">https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md</a>). The specification is the contract. A behaviour that is not in it is not requested, and a behaviour that is in it may not be changed by the prompt.</li>
   <li><b>Prompt.</b> The prompt tells the AI coding assistant <i>how</i> to build what the specification defines: the technology, the file layout, the names of the functions, the screens, the visual design and the conditions under which the work is finished. It refers to the specification by identifier rather than repeating it.</li>
   <li><b>Build.</b> The prompt, followed by the complete specification, is given to the AI coding assistant in an empty folder. The assistant creates the files, installs sql.js, vendors its WebAssembly files, writes the tests and runs them.</li>
-  <li><b>Verify.</b> The team runs <code>npm test</code> and walks through the scenarios of Section 3.8 in the browser, including the done criteria of the prompt. Browser checks at 1440 px and 360 px are scripted with headless Chrome.</li>
+  <li><b>Verify.</b> The team runs <code>npm test</code> and walks through the scenarios of Section 3.8 in the browser, including the done criteria of the prompt. Browser checks at a desktop and a phone width are scripted with headless Chrome; from version 4 on, the script <code>tools/check.mjs</code> is part of the repository.</li>
   <li><b>Log.</b> Whenever the specification was silent or ambiguous, the assistant was instructed to make a reasonable choice, implement it, and record it in the prompt log in the form "what was unclear → what the implementation does → suggested wording for the next version". Review findings from the team were added to the same log.</li>
   <li><b>Decide.</b> For each logged item the team decided whether it belongs in the specification (it changes what the system does) or only in the prompt (it changes how the system is built), made the change, and started the next version. The rule of Section 3.11.3 applies: requirements change in the specification first.</li>
 </ol>
@@ -76,20 +76,20 @@
 
 <h2 id="final-prompt">5.3 Structure of the Final Prompt</h2>
 
-<p>The final prompt is version 5. It is 125 lines of Markdown and is used together with the 252-line specification, which is appended to it verbatim, and with the two acceptance test files, which are placed in the empty folder before the build starts. The full text is reproduced in Appendix A. The table below describes its parts in order and the reason each exists.</p>
+<p>The final prompt is version 6. It is 127 lines of Markdown and is used together with the 258-line specification, which is appended to it verbatim, and with the two acceptance test files, which are placed in the empty folder before the build starts. The full text is reproduced in Appendix A. The table below describes its parts in order and the reason each exists.</p>
 
 <table>
-  <caption>Table {{tab}}. Parts of the final prompt (version 5) and their purpose</caption>
+  <caption>Table {{tab}}. Parts of the final prompt (version 6) and their purpose</caption>
   <thead><tr><th style="width:21%">Part</th><th style="width:40%">Content</th><th>Why it is there</th></tr></thead>
   <tbody>
-    <tr><td>Header and usage note</td><td>Version history (v1 → … → v5, with the reason for each version and pointers to the earlier versions and the log); how to use the prompt: place the two test files in an empty folder, then paste the prompt followed by the complete specification into a coding agent.</td><td>Makes the prompt self-contained and states the reproduction procedure, so that anyone can repeat the build (Section 5.6).</td></tr>
+    <tr><td>Header and usage note</td><td>Version history (v1 → … → v6, with the reason for each version and pointers to the earlier versions and the log); how to use the prompt: place the two test files in an empty folder, then paste the prompt followed by the complete specification into a coding agent.</td><td>Makes the prompt self-contained and states the reproduction procedure, so that anyone can repeat the build (Section 5.6).</td></tr>
     <tr><td>Role and contract paragraph</td><td>What is being built and for whom; the instruction to treat the specification as the contract, to use its identifiers, table and column names, state names and seed data exactly, and not to add features that are not in it.</td><td>Prevents the most common failure of generated code: plausible but unrequested features and renamed identifiers that break traceability.</td></tr>
     <tr><td>§0 Acceptance tests</td><td>The supplied files <code>tests/rules.test.js</code> and <code>tests/services.test.js</code> are the executable form of the specification and fix the API: module paths, exported names, argument order, return shapes, error codes and the Node-side database factory. They must be read first and must not be modified; where a test and the prose disagree on an API detail the test wins, and a disagreement on behaviour must be reported, not guessed.</td><td>Added in version 5 after reproduction run 1 (Section 5.6.2): names alone did not fix the interfaces, so two correct rebuilds disagreed at the API level. Tests are an unambiguous contract for signatures that prose cannot state compactly.</td></tr>
     <tr><td>§1 Technology constraints</td><td>Static site with ES modules and no build step; sql.js vendored into <code>app/vendor/</code>; persistence keys; the complete folder layout with the name of every module and every exported function; test files, test naming and the test script; when <code>expireOverdue()</code> runs.</td><td>Fixes the architecture of Chapter 4 before any code exists. Naming every service and rule function makes the code predictable across rebuilds, lets the tests of one build run against another, and keeps the traceability matrix valid.</td></tr>
     <tr><td>§2 Screens and behaviour</td><td>§2.0 eight UX principles that override any individual screen description (one primary action per screen, consequence before commitment, one question at a time, and others); §2.1 navigation per role and the Demo tools panel; §2.2–§2.8 the sign-in demo guide, worker Home, request flow, owner Home, Schedule, Pay, and Staff / Me / Settings, each with its sections in order and the exact Korean wording of key labels.</td><td>The specification says what the system must do; this part says how the user meets each function. Stating the principles first gives the assistant a rule for every case the screen descriptions do not cover. It carries NFR-01, NFR-11 and NFR-13 into concrete screen behaviour.</td></tr>
     <tr><td>§3 Visual design</td><td>Fonts, type scale, colour tokens, the single decorative element (the amber handover marker), layout widths and breakpoints, copy rules, accessibility rules; the heading says "do not deviate".</td><td>Without exact values, each generation produced a different look. Fixed tokens make the result reproducible and keep the interface consistent with the design of Section 4.9.</td></tr>
-    <tr><td>§4 Done criteria</td><td>Five checkable conditions: all test groups pass, including named boundary cases; the seed state and walkthrough S7 are reproduced; the app starts without console errors; the sign-in tour works from Seoyeon's tracker through Minho's one-tap acceptance to the owner's approval and the handover marker; every screen has exactly one primary button, every disabled button a visible reason, and all touch targets at least 44 × 44 px.</td><td>Tells the assistant when it has finished and gives the team the acceptance tests of Section 6.1. The service part of criterion 4 is automated as TC-063; criterion 5 is a headless count.</td></tr>
-    <tr><td>Specification (appended)</td><td>The complete <code>spec/spec.md</code>: §0–§14.</td><td>The contract itself. Keeping it in a separate file lets the reports and the UML models refer to the same text.</td></tr>
+    <tr><td>§4 Done criteria</td><td>Six checkable conditions: all test groups pass, including named boundary cases; the seed state (with three candidates for the seed request) and walkthrough S7 are reproduced; the app starts without console errors; the sign-in tour works from Seoyeon's tracker through Minho's one-tap acceptance to the owner's approval and the handover marker; walkthrough S8 works in the browser, from Hana's request through three answers of can't to the owner's acknowledgement; every screen has exactly one primary button, every disabled button a visible reason, and all touch targets at least 44 × 44 px.</td><td>Tells the assistant when it has finished and gives the team the acceptance tests of Section 6.1. The service parts of criteria 4 and 5 are automated as TC-063 and TC-13E; criterion 6 is a headless count.</td></tr>
+    <tr><td>Specification (appended)</td><td>The complete <code>spec/spec.md</code>: §0–§15.</td><td>The contract itself. Keeping it in a separate file lets the reports and the UML models refer to the same text.</td></tr>
   </tbody>
 </table>
 
@@ -97,7 +97,7 @@
 
 <h2 id="impl-iterations">5.4 Iterations of the Prompt</h2>
 
-<p>The prompt went through five iterations, summarised in the table below and recorded in detail in the prompt log (Appendix B). Each of the first three iterations ended with the full test suite passing and a set of browser checks.</p>
+<p>The prompt went through six iterations, summarised in the table below and recorded in detail in the prompt log (Appendix B). Each iteration ended with the full test suite passing. The first five iterations changed how the system is built or corrected it; the sixth changed what the system is required to do.</p>
 
 <table>
   <caption>Table {{tab}}. Overview of the prompt iterations</caption>
@@ -105,9 +105,10 @@
   <tbody>
     <tr><td>1</td><td>v1 → build</td><td>First build of the whole system from prompt v1; 21 ambiguities recorded by the AI coding assistant</td><td>Working system; 52 tests, all passing</td></tr>
     <tr><td>2</td><td>v1 → v2</td><td>The 21 build ambiguities, plus gaps found in the document review of the proposal and interim report against the specification (20 numbered changes)</td><td>58 tests (6 new), 58 passing; headless Chrome 70 of 70 checks passed, 0 console errors</td></tr>
-    <tr><td>3</td><td>v2 → v3</td><td>UI review of the running v2 application (8 changes to screens and visual design; specification unchanged)</td><td>58 tests, 58 passing (no test changes needed); headless Chrome 82 of 82 checks passed, 0 console errors</td></tr>
-    <tr><td>4</td><td>v3 → v4</td><td>UX redesign review of the running v3 application: task-first Home per role, one primary action per screen, consequence shown before commitment, three-step request flow, sign-in as a guided demo tour, Korean as default language; specification gains NFR-13 and a new wording of FR-20</td><td><!-- ITER4-RESULT --> Reported in Section 5.4.4 after the rebuild</td></tr>
-    <tr><td>5</td><td>v4 → v5</td><td>Reproduction run 1 (Section 5.6.2): a clean rebuild passed its own tests but not the team's, because the prompt fixed function names but not signatures and return shapes; the acceptance test files become part of the input. An independent code review found six defects, fixed in the same iteration. Specification: BR-02 (acceptor re-checked for overlap, ACCEPTOR_BUSY) and BR-10 (exact three-month window) clarified</td><td><!-- ITER5-RESULT --> Reported in Section 5.4.5</td></tr>
+    <tr><td>3</td><td>v2 → v3</td><td>UI review of the running v2 application (8 changes to screens and visual design; specification unchanged)</td><td>62 tests (4 new from a traceability check), 62 passing; headless Chrome 82 of 82 checks passed, 0 console errors</td></tr>
+    <tr><td>4</td><td>v3 → v4</td><td>UX redesign review of the running v3 application: task-first Home per role, one primary action per screen, consequence shown before commitment, three-step request flow, sign-in as a guided demo tour, Korean as default language; specification gains NFR-13 and a new wording of FR-20</td><td>Application rebuilt as v4; 77 tests, 77 passing; headless check <code>tools/check.mjs</code> 115 of 115 (26 scenes × Korean/English × 1280/390 px: exactly one filled primary button, disabled buttons with a visible reason, touch targets ≥ 44 px, no horizontal scroll; walkthrough of done criterion 4 in Korean)</td></tr>
+    <tr><td>5</td><td>v4 → v5</td><td>Reproduction run 1 (Section 5.6.2): a clean rebuild passed its own tests but not the team's, because the prompt fixed function names but not signatures and return shapes; the acceptance test files become part of the input. An independent code review found seven defects, fixed in the same iteration. Specification: BR-02 (acceptor re-checked for overlap, ACCEPTOR_BUSY), BR-10 (exact three-month window), BR-12, FR-04, FR-05 and FR-13 clarified; Korean display names for the seed people</td><td>7 defects fixed with 12 new regression tests; 77 tests, 77 passing; test files become part of the input; reproduction run 2 passed all 77 supplied tests</td></tr>
+    <tr><td>6</td><td>v5 → v6</td><td>Product-owner review of the running v5 application: availability removed (UC-02, FR-03 and table Availability retired); every free co-worker is asked; candidates can answer can't; a request nobody can take ends FAILED with a message to the requester and an acknowledge-only card for the owner (BR-13, FR-22, walkthrough S8)</td><td>84 tests, 84 passing (77 updated, 7 new: TC-13A–TC-13F, TC-003); headless check <code>tools/check.mjs</code> 128 of 128 at 1280/360 px, no console errors</td></tr>
   </tbody>
 </table>
 
@@ -139,7 +140,7 @@
 
 <h3 id="impl-iter3">5.4.3 Iteration 3: version 3 (UI review)</h3>
 
-<p>The team reviewed the running version 2 on desktop and mobile screens. The review found three problems: the text was too small, the content sat in a narrow centred column with large empty areas on wide screens, and the weekly board read as a list of cards rather than a schedule. All changes were made in sections 2 and 3 of the prompt; the specification did not change, so the service layer and the tests did not change either. The table below lists the eight changes.</p>
+<p>The team reviewed the running version 2 on desktop and mobile screens. The review found three problems: the text was too small, the content sat in a narrow centred column with large empty areas on wide screens, and the weekly board read as a list of cards rather than a schedule. All changes were made in sections 2 and 3 of the prompt, and the specification did not change. The table below lists the eight changes. A traceability check made in the same iteration found that FR-01 and FR-20 had no automated test; the role-to-menu table was therefore moved from the router into the pure service function <code>menuFor(role)</code>, and four tests were added (TC-01C, TC-01D, TC-134, TC-135), which raised the count to 62.</p>
 
 <table>
   <caption>Table {{tab}}. Changes of iteration 3 (UI review)</caption>
@@ -175,15 +176,29 @@
   </tbody>
 </table>
 
-<p>The results of the version 4 build — the number of changes made to the code, the test results and the browser checks — are recorded in the prompt log (Appendix B).</p>
+<p>The build of version 4 changed sixteen items, recorded row by row in the prompt log. Most were confined to the presentation layer: every screen places its page-level action in a shared page header with one primary button, which is fixed above the tab bar on phones; a disabled button renders the reason beneath it; the sign-in screen became a numbered three-step tour; the request flow became three steps with a review screen that lists the recipients; and the style sheet, the Korean and English text tables and the date formats were rewritten. The service layer received only read queries — <code>getWorkerHome</code>, <code>getOwnerHome</code>, <code>previewCandidates</code>, <code>getShiftDetail</code> and <code>routesFor</code> — so the business rules, the schema and the existing service commands were not touched. Three tests were added for the new queries (TC-064 to TC-066), and TC-134 was updated for the new menus. The browser checks moved into the repository as <code>tools/check.mjs</code>, which checks done criteria 3, 4 and 5 on 26 named screen states.</p>
 
-<!-- ITER4-DETAILS -->
+<p>The build also recorded eleven new ambiguities. Examples are the missing module for the Home screens and for shared components (the build added <code>ui/home.js</code> and <code>ui/components.js</code>), the conflict between §1, which placed "Reset demo data" in the header menu, and §2.1, which placed it in the demo tools, and the question of which button is the primary one when a Home screen lists several items that need action. A review of the screenshots in both languages at 1280 px and 390 px found a further eleven presentation defects, such as a toast of the previous person that stayed visible after switching accounts, weekday chips 39 px wide at phone width and English plural errors ("1 shifts"); all were fixed before the result below was taken.</p>
+
+<p>Result of iteration 4: the application was rebuilt as version 4; <code>npm test</code> ran 77 tests, all passing (this count already includes the twelve regression tests of iteration 5, which were written in parallel); and <code>tools/check.mjs</code> passed 115 of 115 checks with no console errors. The checks cover 26 scenes in Korean and English at 1280 px and 390 px — exactly one filled primary button, a visible reason on every disabled button, touch targets of at least 44 px and no horizontal scroll — and the walkthrough of done criterion 4 in Korean. The phone width of the check was later changed to 360 px, the width that NFR-02 names; the final check of Section 6.7 uses it.</p>
 
 <h3 id="impl-iter5">5.4.5 Iteration 5: version 5 (acceptance tests as input)</h3>
 
-<p>The fifth iteration followed the first reproduction run, described in Section 5.6.2. The rebuilt system worked and passed its own 54 tests, but only 13 of the team's 25 rule tests passed against it, and the team's service tests could not be loaded at all, because the rebuild had given the database factory a different name. The diagnosis was that the prompt fixed the names of modules and functions but not their signatures and return shapes, so two implementations that both satisfy the specification disagreed at the level of the interfaces. Version 5 therefore adds a section 0 to the prompt: the two test files are supplied with the prompt, must be read first and must not be changed, and they define the API. The same iteration folded two points reported by the clean session into the specification — the acceptor is re-checked for an overlapping shift at acceptance and at approval (BR-02, error ACCEPTOR_BUSY), and the three-month probation window is defined exactly (BR-10) — and fixed six defects found by an independent code review of the reference implementation. The defects and their fixes are listed in the prompt log (Appendix B).</p>
+<p>The fifth iteration followed the first reproduction run, described in Section 5.6.2. The rebuilt system worked and passed its own 54 tests, but only 13 of the team's 25 rule tests passed against it, and the team's service tests could not be loaded at all, because the rebuild had given the database factory a different name. The diagnosis was that the prompt fixed the names of modules and functions but not their signatures and return shapes, so two implementations that both satisfy the specification disagreed at the level of the interfaces. Version 5 therefore adds a section 0 to the prompt: the two test files are supplied with the prompt, must be read first and must not be changed, and they define the API. The same iteration folded two points reported by the clean session into the specification — the acceptor is re-checked for an overlapping shift at acceptance and at approval (BR-02, error ACCEPTOR_BUSY), and the three-month probation window is defined exactly (BR-10) — and fixed seven defects found by an independent code review of the reference implementation. The defects and their fixes are listed in the prompt log (Appendix B).</p>
 
-<!-- ITER5-DETAILS -->
+<p>The seven defects — among them the missing re-check of the acceptor, attendance records that could be changed after they were final, and a 90 % probation floor computed in floating point — were fixed with twelve new regression tests: TC-01E, TC-01F, TC-01G, TC-054, TC-055, TC-072, TC-073, TC-08C, TC-106, TC-107, TC-124 and TC-125. The specification was clarified in BR-02, BR-10 and BR-12 and in FR-04, FR-05 and FR-13 (the last table of Section 6.9 lists each defect with its fix and its tests). After reproduction run 2 had started, the prompt was also given a Korean display-name map: in the Korean interface the seed people and the store are shown with their Korean names from spec §10 (for example 최민호님), while the stored names remain English.</p>
+
+<p>Result of iteration 5: <code>npm test</code> runs 77 tests, all passing; prompt version 5 makes the two test files part of the input; and reproduction run 2 (Section 5.6.2) passed all 77 supplied tests unchanged.</p>
+
+<h3 id="impl-iter6">5.4.6 Iteration 6: version 6 (requirements change: nobody can take the shift)</h3>
+
+<p>The sixth iteration was a change of the requirements, not a correction of the build. The product owner used the running version 5 and found a dead end: when no co-worker's availability matched a request, the owner received only a notice that there was no candidate and had nothing to do, and the availability slots were extra data that workers had to keep up to date. The change request, its impact analysis and the updated traceability are described in Section 3.11.4. In short, availability is removed (UC-02, FR-03 and the table Availability retired), every other active co-worker without an overlapping shift is asked (BR-01), candidates can answer <i>can't</i>, and a request that nobody can take ends as FAILED (BR-13, FR-22). The requester is then told to contact the owner, and the owner receives a notification whose only action is to acknowledge it.</p>
+
+<p>The specification changed first, as the change procedure requires (spec §15), and prompt version 6 followed. In the prompt, the worker Home card offers <b>불가</b> ("can't") next to <b>수락하기</b>; the requester's tracker shows each co-worker's answer and, for a failed request, the card "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요."; the owner Home gains the card <b>대타를 못 구했어요</b> with only <b>확인했어요</b>; the <i>Me</i> screen shows the worker's profile instead of an availability editor; and a new done criterion 5 requires walkthrough S8 to work in the browser, so the former criterion 5 (one primary action per screen) became criterion 6.</p>
+
+<p>The prompt log lists nine changes, each with its code change and its tests. In <code>rules.js</code>, <code>isEligibleCandidate</code> lost its availability argument, and a new pure function <code>hasNoTaker</code> decides BR-13. In <code>db.js</code>, the table Availability was dropped, FAILED was added to the status check, and a database saved by version 5 is recognised as outdated and replaced by the seed. In <code>services.js</code>, <code>saveAvailability</code> and <code>getAvailability</code> were removed; <code>createSubRequest</code> and <code>respondToRequest</code> end a request FAILED through one shared function, and they return the new status; the two Home queries return unacknowledged REQUEST_FAILED notifications; and <code>markNotificationsRead</code> accepts a list of notification ids, so that acknowledging one card does not mark everything read. Because the seed request now has three candidates instead of two, several existing tests had to change their expected values.</p>
+
+<p>Result of iteration 6: <code>npm test</code> runs 84 tests, all passing — the 77 tests of iteration 5, updated where they assumed availability, plus TC-13A to TC-13F and TC-003 (Section 6.9); and <code>tools/check.mjs</code> passes 128 of 128 checks at 1280 px and 360 px in Korean and English with no console errors: the sign-in screen (done criterion 3), the Korean tour walkthrough (criterion 4), five checks of walkthrough S8 (criterion 5), and the audit of 28 screen states for one filled primary button, visible reasons on disabled buttons, touch targets of at least 44 px and no horizontal scroll (criterion 6).</p>
 
 <h2 id="impl-mapping">5.5 From Prompt to Code</h2>
 
@@ -191,36 +206,40 @@
 
 <pre>shiftswap/
 ├── app/
-│   ├── index.html                 22   page skeleton, loads vendor/sql-wasm.js and main.js
-│   ├── main.js                   225   bootstrap, hash router, header, role menus, System Clock tick
-│   ├── styles.css                358   design tokens, layout, board, responsive rules
+│   ├── index.html                  22   page skeleton, loads vendor/sql-wasm.js and main.js
+│   ├── main.js                    287   bootstrap, hash router, header, role menus, demo tools, System Clock tick
+│   ├── styles.css                 664   design tokens, layout, board, responsive rules
 │   ├── core/
-│   │   ├── clock.js               41   demo clock (A3)
-│   │   ├── db.js                 219   schema (spec §8), seed (spec §10), tx(), persistence
-│   │   ├── rules.js              257   BR-01 … BR-11 as pure functions
-│   │   └── services.js           754   one function per use-case step; read queries
+│   │   ├── clock.js                41   demo clock (A3)
+│   │   ├── db.js                  216   schema (spec §8), seed (spec §10), tx(), persistence
+│   │   ├── rules.js               258   BR-01 … BR-11 and BR-13 as pure functions
+│   │   └── services.js            992   one function per use-case step; read queries
 │   ├── ui/
-│   │   ├── login.js               48   UC-13
-│   │   ├── schedule.js           232   UC-03 weekly board (time grid), overview strip
-│   │   ├── requests.js           104   UC-04, UC-12
-│   │   ├── inbox.js               59   UC-05, FR-21
-│   │   ├── approvals.js          110   UC-06
-│   │   ├── attendance.js          79   UC-07
-│   │   ├── weekly.js              37   UC-08
-│   │   ├── payroll.js            107   UC-09
-│   │   ├── workers.js            100   UC-01
-│   │   ├── availability.js        71   UC-02 (and the shared slot editor)
-│   │   ├── settings.js            65   UC-10
-│   │   └── i18n.js               764   English and Korean text, formatting helpers
+│   │   ├── approvals.js           111   UC-06 decision card with before/after comparison
+│   │   ├── attendance.js          102   UC-07
+│   │   ├── components.js          185   icons, buttons, page header with its primary action, tracker, sheets
+│   │   ├── home.js                146   worker and owner Home (NFR-13, FR-22)
+│   │   ├── i18n.js               1083   Korean and English text, formatting helpers
+│   │   ├── inbox.js                34   notifications (FR-21)
+│   │   ├── login.js               120   UC-13 sign-in as demo tour
+│   │   ├── me.js                   31   Me screen: own profile and attendance (UC-07)
+│   │   ├── payroll.js             146   Pay route, UC-09 monthly payroll
+│   │   ├── requests.js            427   UC-04 three-step flow, UC-05, UC-12, FAILED card (Swaps)
+│   │   ├── schedule.js            301   UC-03 time grid, day list, shift detail
+│   │   ├── settings.js             80   UC-10
+│   │   ├── slots.js                76   fixed-schedule slot editor used by workers.js
+│   │   ├── weekly.js               35   UC-08 weekly summary cards
+│   │   └── workers.js             108   UC-01 (Staff)
 │   └── vendor/                         sql-wasm.js, sql-wasm.wasm (sql.js 1.14.2)
 ├── tests/
-│   ├── rules.test.js             214   unit tests of rules.js
-│   └── services.test.js          491   integration tests of services.js
-├── package.json                   13
-├── spec/spec.md                  252   the contract (not reproduced; see the repository)
-└── prompts/                            final-prompt.md (v5), prompt-v1.md … prompt-v4.md, prompt-log.md</pre>
+│   ├── rules.test.js              240   unit tests of rules.js
+│   └── services.test.js           811   integration tests of services.js
+├── tools/                              headless browser checks (check.mjs), screenshots, NFR-03 measurement
+├── package.json                    13
+├── spec/spec.md                   258   the contract (not reproduced; see the repository)
+└── prompts/                            final-prompt.md (v6), prompt-v1.md … prompt-v5.md, spec-v5.md, prompt-log.md</pre>
 
-<p class="small">Line counts from <code>wc -l</code>; application code 3,652 lines (core 1,271, presentation 2,381) and test code 705 lines, excluding the vendored sql.js files.</p>
+<p class="small">Line counts from <code>wc -l</code>; application code 5,465 lines (core 1,507, presentation 3,958) and test code 1,051 lines, excluding the vendored sql.js files.</p>
 
 <p>Because the prompt names the modules and functions, the mapping from prompt to code is exact: the contract paragraph and spec §8 and §10 produce <code>core/db.js</code> (checked by TC-001 and TC-002); the rule and service lists of §1 produce <code>core/rules.js</code> and <code>core/services.js</code> (checked by the two test files); §2 produces the screen modules and the router; §3 produces the style sheet (checked in the headless browser); and §4 defines the acceptance checks of Section 5.6. This exactness is the reason the traceability matrix of Section 6.8 could be derived from the code by searching for function names.</p>
 
@@ -235,7 +254,7 @@
   <li><b>Input.</b> The session receives exactly what Appendix A prescribes: the text of the final prompt followed by the complete specification, the specification file <code>spec/spec.md</code> in the repository (<a href="https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md">https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md</a>). From version 5 on, the two team test files are placed in the folder before the session starts, as the prompt prescribes. No other instruction is given, apart from answering "continue" if the session stops before it reports completion.</li>
   <li><b>Build.</b> The assistant builds the system on its own, including its own tests, and reports when it considers the done criteria of the prompt met. The number of interventions and the elapsed time are recorded.</li>
   <li><b>Own tests.</b> The rebuilt system's own <code>npm test</code> is run and its result recorded.</li>
-  <li><b>Team test suite.</b> The team's test files <code>tests/rules.test.js</code> and <code>tests/services.test.js</code> are run against the rebuilt code. In run 1 (prompt v3) they were copied into the rebuilt folder after the build, replacing the rebuilt tests; from run 2 (prompt v5) they are part of the input and must pass unchanged. Because the prompt fixes the module paths, the exported function names and the schema, the team's tests can call the rebuilt code directly. This is the decisive measurement: it checks the rebuilt system against the same 58 or more test cases that the reference implementation passes, including the boundary values of Section 6.5, the concurrency test of Section 6.6 and the notification recipients of spec §8.</li>
+  <li><b>Team test suite.</b> The team's test files <code>tests/rules.test.js</code> and <code>tests/services.test.js</code> are run against the rebuilt code. In run 1 (prompt v3) they were copied into the rebuilt folder after the build, replacing the rebuilt tests; from run 2 (prompt v5) they are part of the input and must pass unchanged. Because the prompt fixes the module paths, the exported function names and the schema, the team's tests can call the rebuilt code directly. This is the decisive measurement: it checks the rebuilt system against the same test cases that the reference implementation passes (77 for prompt version 5, 84 for version 6), including the boundary values of Section 6.5, the concurrency test of Section 6.6 and the notification recipients of spec §8.</li>
   <li><b>Done criteria 2–4.</b> The rebuilt application is served with a static server and opened in headless Chrome: the sign-in screen must appear without console errors (criterion 3), and the walkthrough of criterion 4 is performed. Criterion 2 (seed state and walkthrough S7) is covered by TC-001 and TC-08B of the team suite.</li>
   <li><b>Comparison.</b> Any failing team test is traced to its cause and classified as (a) a genuine deviation from the specification, (b) an ambiguity in the prompt or specification that the rebuild resolved differently, or (c) a difference that the tests over-specify (for example the wording of an error message) and that does not affect a requirement. Categories (a) and (b) are defects of the prompt or specification and are reported as such.</li>
 </ol>
@@ -268,4 +287,26 @@
 
 <h4 id="repro-run2">Run 2 (prompt version 5)</h4>
 
-<!-- REPRO-RESULTS -->
+<p>The second run was made with prompt version 5. As in run 1, a new assistant session with no conversation history worked only inside an empty folder. It received <code>PROMPT.md</code>, containing the final prompt of version 5 followed by the specification, and the two supplied test files <code>tests/rules.test.js</code> and <code>tests/services.test.js</code>. The table below gives the results.</p>
+
+<table>
+  <caption>Table {{tab}}. Results of reproduction run 2 (prompt v5)</caption>
+  <thead><tr><th style="width:36%">Measurement</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm test</code> of the rebuilt system</td><td>85 tests, 85 passed: the 77 supplied tests and 8 tests the session added in <code>tests/extra.test.js</code></td></tr>
+    <tr><td>Supplied tests on the first run of the core modules</td><td>All 77 passed</td></tr>
+    <tr><td>Supplied test files unchanged</td><td>Byte-identical before and after the build: <code>shasum</code> of <code>rules.test.js</code> 93d3c5c8168255b20a2d0013f513fb1d899d2204, of <code>services.test.js</code> b6846b7233733db054bbb71883bf863c01c544f5</td></tr>
+    <tr><td>Done criteria 1–2</td><td>Pass</td></tr>
+    <tr><td>Done criterion 3</td><td>Pass: the application opens without console errors</td></tr>
+    <tr><td>Done criterion 4</td><td>Pass: tour walkthrough at 360 px and 1280 px, including "16시간 → 21시간" on the candidate's card, acceptance in one tap, "먼저 수락했어요" for the second candidate, the owner's approval and the handover marker on the schedule</td></tr>
+    <tr><td>Done criterion 5</td><td>Pass: exactly one primary button on 17 screens at each width plus the steps of the request flow; every disabled button with its reason; touch targets of at least 44 px; no horizontal scroll at 360 px; no FR or UC identifiers in the interface</td></tr>
+  </tbody>
+</table>
+
+<p>The session reported 19 ambiguities. The notable ones were the following. The module list of §1 names no module for the Home screens, so the session added <code>home.js</code>. The specification said that the English names are shown unchanged, while the example sentences of the prompt used Korean names; the session followed the specification, and the prompt was then clarified with a Korean display-name map (iteration 5, Section 5.4.5). The placement of the primary button on Home, on its card or in the sticky bottom bar, was left open. "Reset demo data" appeared both in the header menu and in the demo tools. A late accept or approval saves the request as EXPIRED and then throws REQUEST_CLOSED. And expiry closes only the targets that are still PENDING.</p>
+
+<p>Compared with run 1, in which 13 of the 25 rule tests passed and the service tests did not load, run 2 passed all 77 supplied tests. Supplying the acceptance tests as part of the input therefore fixed the reproducibility of the system at the API level, which was the gap identified in run 1. Three limits apply to this conclusion. It rests on a single run. The interface was compared with the reference by the done criteria, not pixel by pixel. And the Korean display-name clarification was added to the prompt after run 2 had started, so run 2 was made without it.</p>
+
+<h4 id="repro-run3">Run 3 (prompt version 6)</h4>
+
+<!-- REPRO3-RESULTS -->

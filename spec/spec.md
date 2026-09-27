@@ -37,7 +37,7 @@ In small stores (cafés, convenience stores, restaurants) with fewer than ten pa
 
 | ID | Actor | Type | Description |
 |---|---|---|---|
-| A1 | Worker | Primary, human | Part-time employee. Views own schedule, registers availability, requests substitutes, responds to requests, records attendance. |
+| A1 | Worker | Primary, human | Part-time employee. Views own schedule, requests substitutes, accepts or declines requests from co-workers, records attendance. |
 | A2 | Owner | Primary, human | Store owner (also acts as manager). Registers workers and fixed schedules, approves/rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll, edits settings. |
 | A3 | System Clock | Secondary, system | Time-triggered actor. Expires unanswered/unapproved requests at their deadline and closes weeks for weekly summary. (In the demo app this is driven by the adjustable "demo clock".) |
 
@@ -46,10 +46,10 @@ In small stores (cafés, convenience stores, restaurants) with fewer than ten pa
 | ID | Name | Primary actor | Priority | Main tables |
 |---|---|---|---|---|
 | UC-01 | Register worker and fixed schedule | Owner | Must | Worker, FixedSchedule |
-| UC-02 | Register availability | Worker | Must | Availability |
+| ~~UC-02~~ | ~~Register availability~~ — **removed in iteration 6** (see §15) | — | — | — |
 | UC-03 | Generate weekly schedule | Owner | Must | Shift |
 | UC-04 | Request substitute | Worker | Must | SubRequest, SubRequestTarget, Notification |
-| UC-05 | Respond to substitute request (accept / decline) | Worker (candidate) | Must | SubRequestTarget, SubRequest |
+| UC-05 | Respond to substitute request (accept / can't) | Worker (candidate) | Must | SubRequestTarget, SubRequest, Notification |
 | UC-06 | Approve or reject substitution | Owner | Must | SubRequest, Shift, WeeklySummary |
 | UC-07 | Record and confirm attendance | Worker, Owner | Should | Attendance, Shift |
 | UC-08 | Compute weekly hours and holiday allowance | Owner (System) | Must | WeeklySummary, Workplace |
@@ -73,13 +73,13 @@ Relationships for the use case diagram:
 |---|---|---|
 | FR-01 | The owner shall register a worker with name, phone, hourly wage (KRW), contract start date, contract end date, probation end date (optional), simple-labor flag, and active flag. | UC-01 |
 | FR-02 | The owner shall register one or more fixed weekly shifts per worker (weekday, start time, end time); fixed shifts of the same worker must not overlap. Deleting a fixed-schedule row keeps the shifts it already generated (their fixedScheduleId becomes NULL). | UC-01 |
-| FR-03 | A worker shall register availability slots (weekday, start, end) during which they can take substitute shifts. | UC-02 |
+| ~~FR-03~~ | Removed in iteration 6: availability slots are no longer collected (§15). | — |
 | FR-04 | The system shall generate the shifts of a given week (Mon–Sun) from all active fixed schedules; generating the same week twice shall not create duplicates: a fixed-schedule slot is skipped when that fixed schedule already produced a shift in the week, or when the worker already has an overlapping shift on that date (e.g. after the owner moved or re-created it). | UC-03 |
 | FR-05 | The owner shall be able to add, move or delete a single shift of a generated week. Deleting a shift that has a substitute request or an attendance record is refused with an explanatory message; changing the worker, date or time of a shift that has an open (REQUESTED/ACCEPTED) request is refused (SHIFT_OPEN_REQUEST). | UC-03 |
 | FR-06 | A worker shall create a substitute request for one of their own future SCHEDULED shifts, with an optional reason and a response deadline. | UC-04 |
 | FR-07 | On creation the system shall compute the eligible candidates (BR-01), create one SubRequestTarget per candidate, and put a notification in each candidate's inbox at once. | UC-04 |
-| FR-08 | If no worker is eligible, the system shall still create the request and notify the owner that no candidate exists. | UC-04 |
-| FR-09 | A candidate shall accept or decline a request from their inbox. The first acceptance makes that candidate the request's acceptor (BR-02); later acceptances shall be refused with an explanatory message. | UC-05 |
+| FR-08 | If no worker is eligible, the system shall still create the request and end it at once as FAILED (BR-13): the requester is told that no co-worker can take the shift and to contact the owner, and the owner receives a REQUEST_FAILED notification. | UC-04 |
+| FR-09 | A candidate shall accept a request, or answer **can't** (decline), from their inbox or Home. The first acceptance makes that candidate the request's acceptor (BR-02); later acceptances shall be refused with an explanatory message. | UC-05 |
 | FR-10 | When a request is accepted, the system shall notify the requester and the owner, and close all other pending targets. | UC-05 |
 | FR-11 | The approval screen shall show, for both the requester and the acceptor, the weekly contractual hours, weekly scheduled hours and holiday-allowance eligibility **before and after** the swap, and highlight any eligibility change. | UC-06 |
 | FR-12 | On approval the system shall reassign the shift to the acceptor (keeping the original worker), recompute the weekly summaries of both workers, and notify both. On rejection the shift stays unchanged and both are notified. | UC-06 |
@@ -88,6 +88,7 @@ Relationships for the use case diagram:
 | FR-15 | The owner shall generate a monthly payroll draft per worker (base pay, holiday allowance, premium pay, total) and confirm it; a confirmed payroll is read-only. | UC-09 |
 | FR-16 | The payroll screen shall warn when a worker's hourly wage is below the applicable minimum wage (BR-09), and apply the probation reduction only when BR-10 holds. | UC-09 |
 | FR-17 | The owner shall edit workplace settings: store name, number of regular employees, substitution-attendance policy (BR-06), and yearly minimum wage rows. | UC-10 |
+| FR-22 | When every target of a REQUESTED request has answered can't (DECLINED), the request ends as FAILED (BR-13): the requester receives "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." and the owner receives a REQUEST_FAILED notification whose only action is **확인했어요** (mark as read). | UC-05 |
 | FR-18 | When a request's deadline passes, or its shift starts, while it is still REQUESTED or ACCEPTED, the system shall mark it EXPIRED, close its targets and notify requester and owner. | UC-11 |
 | FR-19 | A requester shall cancel their own request while it is REQUESTED or ACCEPTED; all PENDING targets become CLOSED, and every target that was PENDING or ACCEPTED receives a REQUEST_CANCELLED notification. | UC-12 |
 | FR-20 | Users shall sign in by choosing a demo account, either from a guided three-step demo tour or from the list of all accounts; the UI shows only the menus of that role. | UC-13 |
@@ -113,7 +114,7 @@ Relationships for the use case diagram:
 
 ## 6. Business rules
 
-- **BR-01 Eligible candidates.** A worker W is eligible for a request on shift S (date d, start s, end e) iff: W is active; W ≠ requester; W has no shift on date d overlapping [s, e); W has an availability slot on weekday(d) with slotStart ≤ s and slotEnd ≥ e.
+- **BR-01 Eligible candidates.** A worker W is eligible for a request on shift S (date d, start s, end e) iff: W is an active WORKER; W ≠ requester; W has no shift on date d overlapping [s, e) (someone already working then cannot take it). Availability is not used (removed in iteration 6): every other co-worker is asked.
 - **BR-02 First acceptance wins.** Acceptance succeeds only if the request is REQUESTED at the moment of the transaction and the candidate still has no overlapping shift on that date (re-checked at acceptance and again at approval, error ACCEPTOR_BUSY); it sets request.status = ACCEPTED, request.acceptorId = W, target(W).response = ACCEPTED, and all other PENDING targets → CLOSED.
 - **BR-03 Request validity.** Only the shift's current worker can request; shift must be SCHEDULED and start in the future; at most one open (REQUESTED/ACCEPTED) request per shift; deadline must be after now and no later than the shift start.
 - **BR-04 Approval effect.** Approve: shift.workerId = acceptor; shift.originalWorkerId keeps the first worker (set only if null); request → APPROVED. Reject: request → REJECTED, shift unchanged. Owner can approve only an ACCEPTED request.
@@ -125,10 +126,11 @@ Relationships for the use case diagram:
 - **BR-10 Probation reduction.** The minimum may be reduced to 90 % only if all hold: contract length ≥ 1 year (contractEnd − contractStart ≥ 365 days, or contractEnd empty = open-ended), the date is within 3 months of contractStart and ≤ probationEnd, and simpleLabor = false (Minimum Wage Act Art. 5 ②, Enforcement Decree Art. 3). In a monthly payroll the conditions are evaluated on the first day of the month, or on contractStart if later. "Within 3 months" means from contractStart (inclusive) to the same calendar date three months later (exclusive); a worker without probationEnd is never on probation.
 - **BR-11 Monthly payroll.** Month = calendar month. Base pay = Σ actual hours of WORKED shifts in the month × wage for WORKED shifts (recorded clock-in/out); SCHEDULED shifts in the month count with their scheduled hours and set estimated = 1 on the row; ABSENT shifts count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.
 - **BR-12 Expiry.** A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED. Accept and approve check this themselves inside their transaction (REQUEST_CLOSED), independent of the periodic expiry run.
+- **BR-13 No taker.** A REQUESTED request ends as FAILED (final) when it has no eligible candidate at creation, or when every SubRequestTarget has response DECLINED. FAILED sends REQUEST_FAILED to the requester and the owner; the owner's only action is to acknowledge (mark the notification read). Accepting a FAILED request is refused (REQUEST_CLOSED).
 
 ## 7. States
 
-**SubRequest.status**: `REQUESTED` → `ACCEPTED` (UC-05) → `APPROVED` | `REJECTED` (UC-06). `REQUESTED`/`ACCEPTED` → `EXPIRED` (UC-11) | `CANCELLED` (UC-12). Final states: APPROVED, REJECTED, EXPIRED, CANCELLED.
+**SubRequest.status**: `REQUESTED` → `ACCEPTED` (UC-05) → `APPROVED` | `REJECTED` (UC-06). `REQUESTED` → `FAILED` when there is no eligible candidate or every target answered can't (BR-13). `REQUESTED`/`ACCEPTED` → `EXPIRED` (UC-11) | `CANCELLED` (UC-12). Final states: APPROVED, REJECTED, FAILED, EXPIRED, CANCELLED.
 
 **SubRequestTarget.response**: `PENDING` → `ACCEPTED` | `DECLINED` | `CLOSED`.
 
@@ -138,7 +140,7 @@ Relationships for the use case diagram:
 
 **Payroll.status**: `DRAFT` → `CONFIRMED`. Re-generating a month replaces DRAFT rows only.
 
-## 8. Data model (SQLite; 12 tables)
+## 8. Data model (SQLite; 11 tables)
 
 ```sql
 CREATE TABLE Workplace (id INTEGER PRIMARY KEY, name TEXT NOT NULL, regularEmployees INTEGER NOT NULL DEFAULT 4,
@@ -148,14 +150,12 @@ CREATE TABLE Worker (id INTEGER PRIMARY KEY, workplaceId INTEGER NOT NULL REFERE
   simpleLabor INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE FixedSchedule (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REFERENCES Worker(id), weekday INTEGER NOT NULL CHECK (weekday BETWEEN 1 AND 7),
   startTime TEXT NOT NULL, endTime TEXT NOT NULL);
-CREATE TABLE Availability (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REFERENCES Worker(id), weekday INTEGER NOT NULL CHECK (weekday BETWEEN 1 AND 7),
-  startTime TEXT NOT NULL, endTime TEXT NOT NULL);
 CREATE TABLE Shift (id INTEGER PRIMARY KEY, workDate TEXT NOT NULL, startTime TEXT NOT NULL, endTime TEXT NOT NULL,
   workerId INTEGER NOT NULL REFERENCES Worker(id), originalWorkerId INTEGER REFERENCES Worker(id), fixedScheduleId INTEGER REFERENCES FixedSchedule(id),
   status TEXT NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED','WORKED','ABSENT')));
 CREATE TABLE SubRequest (id INTEGER PRIMARY KEY, shiftId INTEGER NOT NULL REFERENCES Shift(id), requesterId INTEGER NOT NULL REFERENCES Worker(id),
   acceptorId INTEGER REFERENCES Worker(id), reason TEXT, deadline TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','EXPIRED','CANCELLED')), createdAt TEXT NOT NULL, decidedAt TEXT);
+  status TEXT NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','FAILED','EXPIRED','CANCELLED')), createdAt TEXT NOT NULL, decidedAt TEXT);
 CREATE TABLE SubRequestTarget (id INTEGER PRIMARY KEY, subRequestId INTEGER NOT NULL REFERENCES SubRequest(id), workerId INTEGER NOT NULL REFERENCES Worker(id),
   response TEXT NOT NULL DEFAULT 'PENDING' CHECK (response IN ('PENDING','ACCEPTED','DECLINED','CLOSED')), respondedAt TEXT);
 CREATE TABLE Attendance (id INTEGER PRIMARY KEY, shiftId INTEGER NOT NULL UNIQUE REFERENCES Shift(id), clockIn TEXT NOT NULL, clockOut TEXT NOT NULL,
@@ -181,14 +181,14 @@ Notification recipients:
 | kind | recipients |
 |---|---|
 | REQUEST_RECEIVED | each eligible candidate (UC-04) |
-| NO_CANDIDATE | owner (UC-04, FR-08) |
+| REQUEST_FAILED | requester ("no co-worker can take it — contact the owner") and owner (acknowledge only) when the request ends FAILED (FR-08, FR-22, BR-13) |
 | REQUEST_ACCEPTED | requester and owner (UC-05) |
 | TARGET_CLOSED | the other PENDING targets when someone accepts (UC-05) |
 | REQUEST_APPROVED / REQUEST_REJECTED | requester and acceptor (UC-06) |
 | REQUEST_EXPIRED | requester and owner; pending targets are closed silently (UC-11) |
 | REQUEST_CANCELLED | every target that was PENDING or ACCEPTED (UC-12) |
 
-A decline notifies no one.
+A single can't (decline) notifies no one; the last one that makes every target DECLINED triggers REQUEST_FAILED.
 
 ## 9. Design (architecture)
 
@@ -202,7 +202,7 @@ Layered, client-only architecture:
 | Data access | `app/core/db.js` | sql.js initialisation, schema, seed, persistence to `localStorage`, `tx()` helper |
 | Clock | `app/core/clock.js` | Demo clock (`now()`), adjustable from the UI; System Clock actor ticks expiry on every navigation |
 
-Key classes for the class diagram (domain view): Workplace, Worker (role OWNER/WORKER), FixedSchedule, Availability, Shift, SubRequest, SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage, Notification; services: ScheduleService, SubstituteService, AttendanceService, PayrollService, NotificationService; rule object: LaborRules.
+Key classes for the class diagram (domain view): Workplace, Worker (role OWNER/WORKER), FixedSchedule, Shift, SubRequest, SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage, Notification; services: ScheduleService, SubstituteService, AttendanceService, PayrollService, NotificationService; rule object: LaborRules.
 
 Sequence diagrams required: SD-1 Request substitute (UC-04), SD-2 Accept request with concurrent second acceptance (UC-05), SD-3 Approve substitution with weekly recomputation (UC-06), SD-4 Generate monthly payroll (UC-09).
 
@@ -212,17 +212,19 @@ State diagrams: SubRequest, Shift, Payroll. Activity diagrams: AD-1 Holiday-allo
 
 - Workplace: **Dalbit Café (달빛카페)**, regularEmployees = 4, policy EXCUSED.
 - MinimumWage: 2025 → 10,030; 2026 → 10,320.
-- Names are stored in English (e.g. `Park Jiyoung`, `Dalbit Café`); the Korean UI shows them unchanged. Phone numbers (fictional): ids 1–5 → `010-3827-1150`, `010-4172-2083`, `010-5290-3316`, `010-6631-4427`, `010-7748-5539`.
+- Names are stored in English (e.g. `Park Jiyoung`, `Dalbit Café`); the Korean UI displays the seed people and store with the Korean names given below (display map only; names not in the map are shown as stored). Phone numbers (fictional): ids 1–5 → `010-3827-1150`, `010-4172-2083`, `010-5290-3316`, `010-6631-4427`, `010-7748-5539`.
 - Owner: **Park Jiyoung (박지영)**, id 1.
-- Workers (hourly wage KRW, contract, fixed shifts, availability):
-  - id 2 **Lee Seoyeon (이서연)** 10,500; 2026-03-02 ~ 2027-02-28; Mon & Wed 18:00–23:00 (10 h/wk); avail Tue 17:00–23:00, Thu 17:00–23:00, Sat 10:00–22:00.
-  - id 3 **Choi Minho (최민호)** 10,320; 2026-06-01 ~ 2026-12-31; Tue & Thu 18:00–23:00, Sat 12:00–18:00 (16 h/wk); avail Mon 17:00–23:00, Wed 17:00–23:00.
-  - id 4 **Jung Hana (정하나)** 10,320; 2026-09-01 ~ open-ended, probationEnd 2026-11-30, simpleLabor 0; Fri 17:00–23:00, Sun 10:00–16:00 (12 h/wk); avail Mon 18:00–23:00, Sat 10:00–18:00.
-  - id 5 **Kang Doyun (강도윤)** 10,000 (below minimum — triggers BR-09 warning); 2026-08-15 ~ 2026-11-15, simpleLabor 1; Sat 10:00–16:00 & Sun 16:00–22:00 (12 h/wk); avail Wed 18:00–23:00, Thu 18:00–23:00, Fri 17:00–23:00.
+- Workers (hourly wage KRW, contract, fixed shifts):
+  - id 2 **Lee Seoyeon (이서연)** 10,500; 2026-03-02 ~ 2027-02-28; Mon & Wed 18:00–23:00 (10 h/wk).
+  - id 3 **Choi Minho (최민호)** 10,320; 2026-06-01 ~ 2026-12-31; Tue & Thu 18:00–23:00, Sat 12:00–18:00 (16 h/wk).
+  - id 4 **Jung Hana (정하나)** 10,320; 2026-09-01 ~ open-ended, probationEnd 2026-11-30, simpleLabor 0; Fri 17:00–23:00, Sun 10:00–16:00 (12 h/wk).
+  - id 5 **Kang Doyun (강도윤)** 10,000 (below minimum — triggers BR-09 warning); 2026-08-15 ~ 2026-11-15, simpleLabor 1; Sat 10:00–16:00 & Sun 16:00–22:00 (12 h/wk).
 - Demo clock default: **2026-09-28T09:00** (Monday). Weeks of 2026-09-21 and 2026-09-28 are generated; week of 2026-09-21 has confirmed attendance for all shifts.
-- Seed request: Lee Seoyeon requests a substitute for Wed 2026-09-30 18:00–23:00, deadline 2026-09-29T21:00, reason "Midterm exam", createdAt 2026-09-28T08:30 → eligible: Choi Minho (avail Wed 17–23). Kang Doyun also has Wed 18:00–23:00 availability → also eligible. Status REQUESTED.
+- Seed request: Lee Seoyeon requests a substitute for Wed 2026-09-30 18:00–23:00, deadline 2026-09-29T21:00, reason "Midterm exam", createdAt 2026-09-28T08:30 → eligible: Choi Minho, Jung Hana and Kang Doyun (all co-workers; none works Wed 18–23). Status REQUESTED.
 
-Demo walkthrough S7 (ABSENT policy, used in the reports): the owner sets the policy to ABSENT; Choi Minho requests a substitute for Sat 2026-10-03 12:00–18:00 → eligible: Lee Seoyeon (avail Sat 10–22) and Jung Hana (avail Sat 10–18); Kang Doyun is excluded because his Sat 10:00–16:00 shift overlaps. If the swap is approved, Minho's week of 2026-09-28 loses perfect attendance and he is not eligible for holiday allowance that week.
+Demo walkthrough S7 (ABSENT policy, used in the reports): the owner sets the policy to ABSENT; Choi Minho requests a substitute for Sat 2026-10-03 12:00–18:00 → eligible: Lee Seoyeon and Jung Hana; Kang Doyun is excluded because his Sat 10:00–16:00 shift overlaps. If the swap is approved, Minho's week of 2026-09-28 loses perfect attendance and he is not eligible for holiday allowance that week.
+
+Demo walkthrough S8 (no taker, iteration 6): Jung Hana requests a substitute for Sun 2026-10-04 10:00–16:00 → targets Lee Seoyeon, Choi Minho and Kang Doyun (Doyun's Sun 16:00–22:00 does not overlap); all three answer can't → the request ends FAILED; Hana sees "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." and the owner's Home shows a "대타를 못 구했어요" card with only 확인했어요.
 
 Worked example used in the reports (must match the app): if Choi Minho takes Seoyeon's Wednesday shift, Seoyeon's contractual hours stay 10 (not eligible either way, < 15), Minho's contractual hours stay 16 (eligible, holiday hours = 16/40×8 = 3.2 h → 3.2 × 10,320 = 33,024 KRW) while his scheduled hours for the week rise from 16 to 21.
 
@@ -250,3 +252,7 @@ Every FR maps to ≥1 UC, every UC to ≥1 screen and service function, every BR
 ## 14. Course calendar (fixed)
 
 Week n runs Monday–Sunday starting 2026-08-31 (Week 1 = 08-31…09-06). Deadlines are Fridays: Week 3 team formation **2026-09-18**, Week 5 proposal **2026-10-02**, Week 7 interim report **2026-10-16**, Week 14 final report + slides + presentation **2026-12-04** (Week 14 = 11-30…12-06). Topic comparison ran in Week 4 (09-21…09-27); the topic was selected on 2026-09-27. Increment 1 (Must) is due end of Week 10 (11-06), Increment 2 (Should) end of Week 11 (11-13).
+
+## 15. Requirements change in iteration 6 (product-owner review, 2026-09-27)
+
+Finding: when no co-worker's availability matched, the owner was only told "no candidate" and had nothing to do; availability slots were extra data workers had to maintain. Decision: availability is removed (UC-02, FR-03, table Availability, availability condition of BR-01 retired; IDs are kept retired, not reused). Every other active co-worker without an overlapping shift is asked; the first acceptance still wins (BR-02); a new "can't" answer lets the request end early as FAILED when nobody can take it (BR-13, FR-22), with a message to the requester to contact the owner and an acknowledge-only notification for the owner. Counts after the change: use cases 12 (UC-01, UC-03…UC-13), functional requirements 21 (FR-01, FR-02, FR-04…FR-22), business rules 13, tables 11.

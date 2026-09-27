@@ -15,7 +15,7 @@ skinparam sequence {
   BoxBorderColor #1C2230
 }
 
-title UC-05 Respond to substitute request — first acceptance wins (FR-09, FR-10, BR-02, NFR-04)
+title UC-05 Respond to substitute request - accept / can't (FR-09, FR-22, BR-02, BR-13, NFR-04)
 
 actor "A1 Worker\n(candidate 1)" as W1
 actor "A1 Worker\n(candidate 2)" as W2
@@ -73,10 +73,47 @@ end
 note over DB
   the WHERE status='REQUESTED' clause and the changes
   check happen inside the same transaction as the update,
-  so only one of the two UPDATEs can affect a row — the
+  so only one of the two UPDATEs can affect a row - the
   other always affects 0 rows and is refused (BR-02).
   (a request already fully settled before this call even
   starts is instead caught earlier as ALREADY_TAKEN /
   REQUEST_CLOSED, by the initial status read above)
+end note
+
+== Later: last remaining candidate answers can't (BR-13, FR-22) ==
+
+W1 -> UI : Can't (requestId=R2, workerId=W1)
+UI -> Svc : respondToRequest(R2, W1, 'DECLINED')
+activate Svc
+Svc -> DB : tx(fn) begin
+activate DB
+Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R2, W1)
+DB --> Svc : r.status = 'REQUESTED', target.response = 'PENDING'
+Svc -> DB : UPDATE target(W1).response = 'DECLINED', respondedAt = now
+Svc -> DB : SELECT response FROM SubRequestTarget WHERE subRequestId=R2
+DB --> Svc : all other targets already DECLINED
+
+alt every target now DECLINED (BR-13)
+  Svc -> DB : UPDATE SubRequest SET status='FAILED'\nWHERE id=R2 AND status='REQUESTED' (failRequest)
+  Svc -> DB : insert Notification(REQUEST_FAILED) to requester\n("no co-worker can take it - contact the owner")
+  Svc -> DB : insert Notification(REQUEST_FAILED) to owner\n(acknowledge only)
+  Svc -> DB : commit + persist
+  deactivate DB
+  Svc --> UI : {status: 'FAILED'}
+  deactivate Svc
+  UI --> W1 : "You can't take this shift"\n(request closed - no one could take it)
+else at least one target still PENDING
+  Svc -> DB : commit + persist
+  deactivate DB
+  Svc --> UI : {status: 'REQUESTED'}
+  deactivate Svc
+  UI --> W1 : "You can't take this shift"
+end
+
+note over Svc, DB
+  a single can't (DECLINED) notifies no one; only the
+  decline that makes every target DECLINED triggers
+  REQUEST_FAILED (BR-13). Accepting a FAILED request
+  afterwards is refused as ServiceError('REQUEST_CLOSED').
 end note
 @enduml

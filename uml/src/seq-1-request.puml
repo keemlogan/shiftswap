@@ -15,7 +15,7 @@ skinparam sequence {
   BoxBorderColor #1C2230
 }
 
-title UC-04 Request substitute (FR-06, FR-07, FR-08, BR-01, BR-03)
+title UC-04 Request substitute (FR-06, FR-07, FR-08, FR-22, BR-01, BR-03, BR-13)
 
 actor "A1 Worker\n(requester)" as Worker
 boundary "requests.js\n(Request substitute form)" as UI
@@ -44,12 +44,12 @@ alt request invalid (BR-03)
   UI --> Worker : show error message
 else request valid
   Svc -> DB : all Worker where active
-  DB --> Svc : candidate pool
+  DB --> Svc : candidate pool (no availability lookup - retired in iteration 6)
 
   loop for each candidate W in pool
     Svc -> Rules : isEligibleCandidate(W, shift) <<include UC "Find eligible candidates" (BR-01)>>
     activate Rules
-    Rules --> Svc : eligible? true/false
+    Rules --> Svc : eligible? true/false\n(active, W != requester, no overlapping shift)
     deactivate Rules
   end
 
@@ -59,14 +59,19 @@ else request valid
   alt at least one eligible candidate (FR-07)
     Svc -> DB : insert SubRequestTarget per eligible candidate
     Svc -> DB : insert Notification(REQUEST_RECEIVED) per candidate
-  else no eligible candidate (FR-08)
-    Svc -> DB : insert Notification(NO_CANDIDATE) for Owner
+    Svc -> DB : commit + persist to localStorage
+    deactivate DB
+    Svc --> UI : {id, status: 'REQUESTED', candidates}
+    UI --> Worker : show notified candidates
+  else no eligible candidate (FR-08, BR-13)
+    Svc -> DB : UPDATE SubRequest SET status='FAILED'\nWHERE id AND status='REQUESTED' (failRequest)
+    Svc -> DB : insert Notification(REQUEST_FAILED) for requester\n("no co-worker can take it - contact the owner")
+    Svc -> DB : insert Notification(REQUEST_FAILED) for owner\n(acknowledge only)
+    Svc -> DB : commit + persist to localStorage
+    deactivate DB
+    Svc --> UI : {id, status: 'FAILED', candidates: []}
+    UI --> Worker : show "no eligible worker - contact the owner"
   end
-
-  Svc -> DB : commit + persist to localStorage
-  deactivate DB
-  Svc --> UI : subRequest, notifiedCandidates[]
-  UI --> Worker : show notified candidates / "no eligible worker"
 end
 deactivate Svc
 @enduml

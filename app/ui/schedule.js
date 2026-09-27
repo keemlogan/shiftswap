@@ -2,7 +2,7 @@
 // with its history and only the actions relevant to the viewer.
 import * as svc from '../core/services.js';
 import { addDays, weekStartOf, toMinutes } from '../core/rules.js';
-import { t, esc, fmtDate, fmtDateShort, fmtShift, given, showFormError, num } from './i18n.js';
+import { t, esc, fmtDate, fmtDateShort, fmtShift, given, displayName, showFormError, num } from './i18n.js';
 import { icon, button, pageHead, emptyState, shiftChips, shiftClasses, openSheet, timeOptions } from './components.js';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -149,12 +149,12 @@ function board(week, shifts, ctx) {
 function shiftBlock({ s, span: [a, b], lane, lanes }, px, user) {
   const handedOver = s.originalWorkerId && s.originalWorkerId !== s.workerId;
   const style = `--top:${px(a)}px;--height:${px(b) - px(a)}px;--lane:${lane};--lanes:${lanes}`;
-  const label = `${fmtShift(s)}, ${s.workerName}${handedOver ? `, ${t('schedule.covering', { name: s.originalWorkerName })}` : ''}${s.openRequestId ? `, ${t('schedule.pending')}` : ''}`;
+  const label = `${fmtShift(s)}, ${displayName(s.workerName)}${handedOver ? `, ${t('schedule.covering', { name: displayName(s.originalWorkerName) })}` : ''}${s.openRequestId ? `, ${t('schedule.pending')}` : ''}`;
   return `
     <button type="button" class="shift ${shiftClasses(s, user)}" style="${style}" data-shift="${s.id}" aria-label="${esc(label)}">
       <span class="shift-time num">${esc(`${s.startTime}–${s.endTime}`)}</span>
-      <span class="shift-worker">${handedOver ? `<strong>${esc(s.workerName)}</strong>` : esc(s.workerName)}</span>
-      ${handedOver ? `<s class="shift-original">${esc(s.originalWorkerName)}</s>` : ''}
+      <span class="shift-worker">${handedOver ? `<strong>${esc(displayName(s.workerName))}</strong>` : esc(displayName(s.workerName))}</span>
+      ${handedOver ? `<s class="shift-original">${esc(displayName(s.originalWorkerName))}</s>` : ''}
       ${shiftChips(s)}
     </button>`;
 }
@@ -195,7 +195,7 @@ function openDetail(ctx, shiftId, week) {
     body: `
       <div>
         <dl class="summary-list detail ${shiftClasses(d, ctx.user)}">
-          <div><dt>${esc(t('detail.worker'))}</dt><dd>${handedOver ? `<strong>${esc(d.workerName)}</strong> <s class="muted">${esc(d.originalWorkerName)}</s>` : esc(d.workerName)}</dd></div>
+          <div><dt>${esc(t('detail.worker'))}</dt><dd>${handedOver ? `<strong>${esc(displayName(d.workerName))}</strong> <s class="muted">${esc(displayName(d.originalWorkerName))}</s>` : esc(displayName(d.workerName))}</dd></div>
           <div><dt>${esc(t('detail.status'))}</dt><dd>${esc(t(`shift.${d.status}`))} ${shiftChips(d)}</dd></div>
           ${d.clockIn ? `<div><dt>${esc(t('record.title'))}</dt><dd>${num(`${d.clockIn}–${d.clockOut}`)}</dd></div>` : ''}
         </dl>
@@ -235,7 +235,7 @@ function openDetail(ctx, shiftId, week) {
         area.innerHTML = `
           <form class="form" id="worker-form" novalidate>
             <label class="field"><span class="field-label">${esc(t('detail.worker'))}</span>
-              <select name="workerId">${workers.map((w) => `<option value="${w.id}" ${w.id === d.workerId ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></label>
+              <select name="workerId">${workers.map((w) => `<option value="${w.id}" ${w.id === d.workerId ? 'selected' : ''}>${esc(displayName(w.name))}</option>`).join('')}</select></label>
             ${button({ label: t('detail.saveWorker'), kind: 'primary', block: true, id: 'save-worker' })}
           </form>`;
         const form = area.querySelector('#worker-form');
@@ -281,7 +281,7 @@ function openAdd(ctx, week) {
           <label class="field"><span class="field-label">${esc(t('detail.end'))}</span><select name="endTime" class="num">${timeOptions('15:00')}</select></label>
         </div>
         <label class="field"><span class="field-label">${esc(t('detail.worker'))}</span>
-          <select name="workerId">${workers.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></label>
+          <select name="workerId">${workers.map((w) => `<option value="${w.id}">${esc(displayName(w.name))}</option>`).join('')}</select></label>
         ${button({ label: t('detail.addSave'), kind: 'primary', block: true, id: 'add-save' })}
       </form>`,
     onMount: (panel, close) => {

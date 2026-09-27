@@ -63,7 +63,7 @@ const ko = {
   'tour.title': '3분 체험',
   'tour.sub': '순서대로 따라 하면 대타 요청부터 승인까지 한 번에 볼 수 있어요.',
   'tour.step1': '이서연으로 대타 요청 보기',
-  'tour.step1Hint': '서연님이 보낸 요청이 어디까지 왔는지 봐요.',
+  'tour.step1Hint': '이서연님이 보낸 요청이 어디까지 왔는지 봐요.',
   'tour.step2': '최민호로 수락하기',
   'tour.step2Hint': '홈에서 요청을 한 번에 수락해요.',
   'tour.step3': '박지영 사장님으로 승인하기',
@@ -84,9 +84,9 @@ const ko = {
   'home.replyBy': '{when}까지 답해 주세요',
   'home.reason': '사유: {text}',
   'home.accept': '수락하기',
-  'home.decline': '거절',
+  'home.decline': '불가',
   'home.accepted': '{day} 근무를 맡았어요. 사장님 승인을 기다려요.',
-  'home.declined': '거절했어요. {name}님에게 따로 알림은 가지 않아요.',
+  'home.declined': '불가로 답했어요',
   'home.taken': '{name}님이 먼저 수락했어요',
   'home.takenSub': '{shift} · 따로 할 일은 없어요.',
   'home.myRequests': '내가 보낸 요청',
@@ -114,6 +114,8 @@ const ko = {
   'track.REQUESTED': '요청',
   'track.ACCEPTED': '수락',
   'track.APPROVED': '승인',
+  'end.FAILED': '대타를 못 구했어요',
+  'end.FAILEDwhy': '모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요.',
   'end.REJECTED': '반려됐어요',
   'end.REJECTEDwhy': '사장님이 반려했어요. 근무는 그대로예요.',
   'end.EXPIRED': '만료됐어요',
@@ -125,10 +127,12 @@ const ko = {
   'status.approved': '{name}님이 대신 근무해요.',
   'answer.PENDING': '대기 중',
   'answer.ACCEPTED': '수락',
-  'answer.DECLINED': '거절',
+  'answer.DECLINED': '불가',
   'answer.CLOSED': '마감',
   'answer.line': '{name}님 {answer}',
-  'answer.none': '가능한 사람이 없어 사장님께 알렸어요',
+  'answer.none': '근무가 비어 있는 동료가 없어 사장님께 알렸어요',
+  'failed.ack': '확인했어요',
+  'failed.acked': '확인했어요. 이 카드는 이제 보이지 않아요.',
   'swaps.title': '대타',
   'swaps.sub': '받은 요청에 답하고, 내 근무의 대타를 구해요.',
   'swaps.received': '받은 요청',
@@ -169,11 +173,12 @@ const ko = {
   'flow.reasonNone': '적지 않음',
   'flow.to': '받는 사람',
   'flow.toCount': '{n}명에게 바로 알림이 가요.',
-  'flow.toNone': '지금 가능한 사람이 없어요. 보내면 사장님께 알려 드려요.',
+  'flow.toNone': '지금 근무가 비어 있는 동료가 없어요. 보내면 바로 사장님께 알려 드려요.',
   'flow.send': '대타 요청 보내기',
   'flow.doneTitle': '요청을 보냈어요',
   'flow.doneSent': '{names}에게 요청을 보냈어요. 누군가 수락하면 알려 드릴게요.',
-  'flow.doneNone': '지금은 가능한 사람이 없어 사장님께 알렸어요. 사장님과 직접 이야기해 보세요.',
+  'flow.doneFailedTitle': '대타를 못 구했어요',
+  'flow.doneNone': '지금 근무가 비어 있는 동료가 없어 사장님께 알렸어요. 사장님께 연락드려 보세요.',
   'owner.tasks': '오늘 처리할 일 {n}개',
   'owner.task1': '오늘 처리할 일 1개',
   'owner.noTasks': '지금 처리할 일이 없어요',
@@ -189,6 +194,8 @@ const ko = {
   'owner.eligibilityChanges': '주휴수당이 바뀌어요',
   'owner.open': '답을 기다리는 요청',
   'owner.openLine': '{name}님 · {shift}',
+  'owner.failed': '대타를 못 구했어요',
+  'owner.failedLine': '{name}님의 {shift} 근무는 동료 모두 불가예요. 직접 연락해 주세요.',
   'owner.toConfirm': '확인할 출근 기록',
   'owner.recorded': '기록 {range}',
   'owner.confirm': '확인',
@@ -330,16 +337,12 @@ const ko = {
   'staff.saved': '저장했어요. {name}님은 주 {h} 계약이에요.',
   'staff.created': '{name}님을 추가했어요. 주 {h} 계약이에요.',
   'me.title': '내 정보',
-  'me.sub': '대타 가능한 시간과 출근 기록을 관리해요.',
+  'me.sub': '내 계약 정보와 출근 기록을 봐요.',
   'me.contract': '계약 기간',
   'me.hours': '계약 시간',
   'me.wage': '시급',
   'me.phone': '전화번호',
   'me.privacy': '전화번호와 시급은 나와 사장님만 볼 수 있어요.',
-  'me.availability': '대타 가능한 시간',
-  'me.availabilityHint': '고른 시간 안에 완전히 들어가는 근무만 대타 요청이 와요.',
-  'me.save': '가능한 시간 저장하기',
-  'me.saved': '저장했어요. 이제 이 시간에 맞는 대타 요청이 와요.',
   'me.attendance': '출근 기록',
   'me.attendanceEmpty': '아직 기록할 근무가 없어요.',
   'me.record': '기록하기',
@@ -370,7 +373,8 @@ const ko = {
   'notif.REQUEST_REJECTED': '{shift} 대타가 반려됐어요. {requester}님이 그대로 근무해요.',
   'notif.REQUEST_EXPIRED': '{shift} 대타 요청이 승인 없이 만료됐어요. {requester}님이 그대로 근무해요.',
   'notif.REQUEST_CANCELLED': '{requester}님이 {shift} 대타 요청을 취소했어요.',
-  'notif.NO_CANDIDATE': '{requester}님의 {shift} 근무를 맡을 수 있는 사람이 없어요. 직접 연락하거나 근무를 조정해 주세요.',
+  'notif.REQUEST_FAILED': '{shift} 근무는 모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요.',
+  'notif.REQUEST_FAILEDowner': '{requester}님의 {shift} 근무는 동료 모두 불가예요. 직접 연락해 주세요.',
   'notif.TARGET_CLOSED': '{acceptor}님이 먼저 수락했어요: {shift}',
   'settings.title': '설정',
   'settings.sub': '매장 정보와 급여 계산 기준을 정해요.',
@@ -513,9 +517,9 @@ const en = {
   'home.replyBy': 'Please reply by {when}',
   'home.reason': 'Reason: {text}',
   'home.accept': 'Accept',
-  'home.decline': 'Decline',
+  'home.decline': "Can't",
   'home.accepted': "You took the {day} shift. Waiting for the owner's approval.",
-  'home.declined': 'Declined. {name} is not notified.',
+  'home.declined': "You answered can't",
   'home.taken': '{name} was faster',
   'home.takenSub': '{shift} · Nothing to do.',
   'home.myRequests': 'Your requests',
@@ -543,6 +547,8 @@ const en = {
   'track.REQUESTED': 'Requested',
   'track.ACCEPTED': 'Accepted',
   'track.APPROVED': 'Approved',
+  'end.FAILED': 'No one can cover',
+  'end.FAILEDwhy': "Every co-worker said they can't cover this shift. Please contact the owner.",
   'end.REJECTED': 'Rejected',
   'end.REJECTEDwhy': 'The owner rejected it. The shift stays as it was.',
   'end.EXPIRED': 'Expired',
@@ -554,10 +560,12 @@ const en = {
   'status.approved': '{name} covers the shift.',
   'answer.PENDING': 'waiting',
   'answer.ACCEPTED': 'accepted',
-  'answer.DECLINED': 'declined',
+  'answer.DECLINED': "can't",
   'answer.CLOSED': 'closed',
   'answer.line': '{name} {answer}',
-  'answer.none': 'No one was available; the owner was told',
+  'answer.none': 'No co-worker was free at that time; the owner was told',
+  'failed.ack': 'Got it',
+  'failed.acked': 'Noted. This card is now hidden.',
   'swaps.title': 'Swaps',
   'swaps.sub': 'Answer requests and find cover for your shifts.',
   'swaps.received': 'Requests for you',
@@ -598,11 +606,12 @@ const en = {
   'flow.reasonNone': 'None',
   'flow.to': 'Sent to',
   'flow.toCount': 'Everyone listed is notified right away.',
-  'flow.toNone': "No one is available right now. If you send it, we'll tell the owner.",
+  'flow.toNone': "No co-worker is free at that time. If you send it, we'll tell the owner right away.",
   'flow.send': 'Send swap request',
   'flow.doneTitle': 'Request sent',
   'flow.doneSent': "We asked {names}. We'll let you know when someone accepts.",
-  'flow.doneNone': 'No one is available right now, so we told the owner. Talk to the owner directly.',
+  'flow.doneFailedTitle': 'No one can cover',
+  'flow.doneNone': 'No co-worker is free at that time, so we told the owner. Please contact the owner.',
   'owner.tasks': '{n} things to handle today',
   'owner.task1': '1 thing to handle today',
   'owner.noTasks': 'Nothing to handle right now',
@@ -618,6 +627,8 @@ const en = {
   'owner.eligibilityChanges': 'Holiday allowance changes',
   'owner.open': 'Waiting for replies',
   'owner.openLine': '{name} · {shift}',
+  'owner.failed': 'No one can cover',
+  'owner.failedLine': "No co-worker can take {name}'s shift on {shift}. Please contact them directly.",
   'owner.toConfirm': 'Attendance to confirm',
   'owner.recorded': 'Recorded {range}',
   'owner.confirm': 'Confirm',
@@ -759,16 +770,12 @@ const en = {
   'staff.saved': 'Saved. {name} has a contract of {h} a week.',
   'staff.created': '{name} added with a contract of {h} a week.',
   'me.title': 'Me',
-  'me.sub': 'Your availability for swaps and your attendance records.',
+  'me.sub': 'Your contract and your attendance records.',
   'me.contract': 'Contract',
   'me.hours': 'Hours',
   'me.wage': 'Hourly wage',
   'me.phone': 'Phone',
   'me.privacy': 'Only you and the owner can see your phone number and wage.',
-  'me.availability': 'When you can cover',
-  'me.availabilityHint': 'You are asked only for shifts that fit completely inside these times.',
-  'me.save': 'Save availability',
-  'me.saved': 'Saved. You will be asked for swaps that fit these times.',
   'me.attendance': 'Attendance',
   'me.attendanceEmpty': 'No shifts to record yet.',
   'me.record': 'Record',
@@ -799,7 +806,8 @@ const en = {
   'notif.REQUEST_REJECTED': 'The swap for {shift} was rejected. {requester} keeps the shift.',
   'notif.REQUEST_EXPIRED': 'The swap request for {shift} expired without approval. {requester} keeps the shift.',
   'notif.REQUEST_CANCELLED': '{requester} cancelled the swap request for {shift}.',
-  'notif.NO_CANDIDATE': "No one is available for {requester}'s shift on {shift}. Contact someone directly or change the shift.",
+  'notif.REQUEST_FAILED': "No co-worker can cover your shift on {shift}. Please contact the owner.",
+  'notif.REQUEST_FAILEDowner': "No co-worker can cover {requester}'s shift on {shift}. Please contact them directly.",
   'notif.TARGET_CLOSED': '{acceptor} was faster: {shift}',
   'settings.title': 'Settings',
   'settings.sub': 'Store details and the rules pay is calculated with.',
@@ -910,18 +918,40 @@ export function dayLong(date) {
   return t('weekday.long').split(',')[isoWeekday(date)];
 }
 
+/** Korean display names for the seed people and store (spec §10). Stored names stay English. */
+const KO_NAMES = {
+  'Park Jiyoung': '박지영',
+  'Lee Seoyeon': '이서연',
+  'Choi Minho': '최민호',
+  'Jung Hana': '정하나',
+  'Kang Doyun': '강도윤',
+  'Dalbit Café': '달빛카페',
+};
+
+/** A person or store name as shown: '최민호' in Korean for the seed data; names not in the map as stored. */
+export function displayName(name) {
+  const stored = String(name || '').trim();
+  return (lang === 'ko' && KO_NAMES[stored]) || stored;
+}
+
 /**
- * Given name for sentences: 'Choi Minho' → 'Minho' (names are stored family name first). Korean templates add
- * the honorific 님 themselves, so callers pass the bare given name.
+ * Name for sentences: in English the given name ('Choi Minho' → 'Minho'; names are stored family name first), in
+ * Korean the full display name ('최민호'). Korean templates add the honorific 님 themselves.
  */
 export function given(name) {
+  if (lang === 'ko') return displayName(name);
   const parts = String(name || '').trim().split(/\s+/);
   return parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
 }
 
-/** '민호님' / 'Minho'. */
-export function person(name) {
+/** '최민호님' / 'Minho'. */
+export function honorific(name) {
   return t('common.nameSuffix', { name: given(name) });
+}
+
+/** One letter for an avatar: '최' / 'M'. */
+export function initial(name) {
+  return given(name).slice(0, 1);
 }
 
 /** '9월 30일(수)' / 'Wed, Sep 30'. */
@@ -1004,9 +1034,9 @@ export function num(text) {
   return `<span class="num">${esc(text)}</span>`;
 }
 
-/** Join names as '민호님, 도윤님' / 'Minho, Doyun'. */
+/** Join names as '최민호님, 강도윤님' / 'Minho, Doyun'. */
 export function joinPeople(names) {
-  return names.map(person).join(t('common.listJoin'));
+  return names.map(honorific).join(t('common.listJoin'));
 }
 
 /** Text of a failed service call. */
@@ -1025,9 +1055,10 @@ export function errorText(err) {
 }
 
 /** Text of a notification, rebuilt from its request so it follows the language switch. */
-export function notificationText(n, nowIso) {
+export function notificationText(n, nowIso, viewer = null) {
   if (!n.workDate) return n.message;
-  return t(`notif.${n.kind}`, {
+  const owner = n.kind === 'REQUEST_FAILED' && viewer && viewer.role === 'OWNER';
+  return t(`notif.${n.kind}${owner ? 'owner' : ''}`, {
     requester: given(n.requesterName),
     acceptor: n.acceptorName ? given(n.acceptorName) : '',
     shift: fmtShift(n),

@@ -3,7 +3,7 @@
 import { openDatabase, resetDatabase } from './core/db.js';
 import { attachClockStorage, now, setNow, advance, resetClock } from './core/clock.js';
 import * as svc from './core/services.js';
-import { t, esc, getLang, setLang, errorText, fmtClock, given } from './ui/i18n.js';
+import { t, esc, getLang, setLang, errorText, fmtClock, displayName, initial } from './ui/i18n.js';
 import { icon, openSheet, closeSheet, toast, button } from './ui/components.js';
 import * as login from './ui/login.js';
 import * as home from './ui/home.js';
@@ -12,11 +12,11 @@ import * as requests from './ui/requests.js';
 import * as inbox from './ui/inbox.js';
 import * as payroll from './ui/payroll.js';
 import * as workers from './ui/workers.js';
-import * as availability from './ui/availability.js';
+import * as me from './ui/me.js';
 import * as settings from './ui/settings.js';
 
 const SCREENS = {
-  home, schedule, swaps: requests, me: availability, staff: workers, pay: payroll, notifications: inbox, settings,
+  home, schedule, swaps: requests, me, staff: workers, pay: payroll, notifications: inbox, settings,
 };
 const NAV_ICONS = { home: 'home', schedule: 'calendar', swaps: 'swap', me: 'user', staff: 'users', pay: 'pay' };
 const SESSION_KEY = 'shiftswap.user';
@@ -161,14 +161,14 @@ function renderShell(user, route, flow) {
   document.body.classList.toggle('signed-in', !!user);
   root.innerHTML = `
     <header class="topbar">
-      <a class="brand" href="#/${user ? 'home' : 'login'}">${esc(wp.name)}</a>
+      <a class="brand" href="#/${user ? 'home' : 'login'}">${esc(displayName(wp.name))}</a>
       <div class="top-actions">
         <button type="button" class="clock-chip" id="open-demo" aria-label="${esc(t('header.clock', { when: fmtClock(now()) }))}">${icon('clock')}<span class="num">${esc(fmtClock(now()))}</span></button>
         ${user ? `
         <a class="icon-btn bell" href="#/notifications" aria-label="${esc(unread ? t('header.bellCount', { n: unread }) : t('header.bell'))}" ${route === 'notifications' ? 'aria-current="page"' : ''}>${icon('bell')}${unread ? `<span class="badge num" aria-hidden="true">${unread}</span>` : ''}</a>
-        <button type="button" class="person-btn" id="switch-person" aria-label="${esc(`${user.name}, ${t('header.switch')}`)}">
-          <span class="avatar" aria-hidden="true">${esc(given(user.name).slice(0, 1))}</span>
-          <span class="person-name">${esc(user.name)}</span>
+        <button type="button" class="person-btn" id="switch-person" aria-label="${esc(`${displayName(user.name)}, ${t('header.switch')}`)}">
+          <span class="avatar" aria-hidden="true">${esc(initial(user.name))}</span>
+          <span class="person-name">${esc(displayName(user.name))}</span>
         </button>` : ''}
         <button type="button" class="icon-btn" id="open-menu" aria-label="${esc(t('header.menu'))}">${icon('more')}</button>
       </div>

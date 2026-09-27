@@ -14,6 +14,13 @@ beforeEach(() => {
 
 const wedShiftId = () => get("SELECT id FROM Shift WHERE COALESCE(originalWorkerId, workerId) = 2 AND workDate = '2026-09-30'").id;
 
+/** Doyun's Sat 10-03 10:00-16:00 with every co-worker busy then (Minho already works 12:00-18:00): no eligible candidate. */
+function doyunSaturdayWithNoTaker() {
+  svc.editShift(null, { workDate: '2026-10-03', startTime: '09:00', endTime: '17:00', workerId: 2 });
+  svc.editShift(null, { workDate: '2026-10-03', startTime: '11:00', endTime: '15:00', workerId: 4 });
+  return get("SELECT id FROM Shift WHERE workerId = 5 AND workDate = '2026-10-03'").id;
+}
+
 // ---- Seed state (spec §10) ----
 
 test('TC-001 seed reproduces spec §10', () => {
@@ -35,13 +42,16 @@ test('TC-001 seed reproduces spec §10', () => {
   assert.equal(r.deadline, '2026-09-29T21:00');
   assert.equal(r.reason, 'Midterm exam');
   assert.equal(r.shiftId, wedShiftId());
-  assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget ORDER BY workerId'), [{ workerId: 3, response: 'PENDING' }, { workerId: 5, response: 'PENDING' }]);
+  assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget ORDER BY workerId'),
+    [{ workerId: 3, response: 'PENDING' }, { workerId: 4, response: 'PENDING' }, { workerId: 5, response: 'PENDING' }]);
+  assert.deepEqual(all("SELECT workerId FROM Notification WHERE kind = 'REQUEST_RECEIVED' ORDER BY workerId").map((n) => n.workerId), [3, 4, 5]);
+  assert.deepEqual(all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'Availability'"), []);
 });
 
 test('TC-016 seed request candidates equal the BR-01 computation', () => {
   svc.cancelRequest(1, 2);
   const { candidates } = svc.createSubRequest({ shiftId: wedShiftId(), requesterId: 2, deadline: '2026-09-29T21:00' });
-  assert.deepEqual(candidates.map((c) => c.name), ['Choi Minho', 'Kang Doyun']);
+  assert.deepEqual(candidates.map((c) => c.name), ['Choi Minho', 'Jung Hana', 'Kang Doyun']);
 });
 
 // ---- UC-01..03 ----
@@ -129,12 +139,12 @@ test('TC-024 creating a request notifies each candidate (FR-07)', () => {
   assert.equal(get("SELECT count(*) AS n FROM Notification WHERE subRequestId = ? AND kind = 'REQUEST_RECEIVED'", [id]).n, 2);
 });
 
-test('TC-025 no eligible worker still creates the request and notifies the owner (FR-08)', () => {
-  const shiftId = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
-  const { id, candidates } = svc.createSubRequest({ shiftId, requesterId: 4, deadline: '2026-10-03T12:00' });
-  assert.equal(candidates.length, 0);
-  assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'REQUESTED');
-  assert.equal(get("SELECT workerId FROM Notification WHERE subRequestId = ? AND kind = 'NO_CANDIDATE'", [id]).workerId, 1);
+test('TC-025 no eligible worker still creates the request, which ends FAILED at once (FR-08, BR-13)', () => {
+  const shiftId = doyunSaturdayWithNoTaker();
+  const { id, status, candidates } = svc.createSubRequest({ shiftId, requesterId: 5, deadline: '2026-10-02T12:00' });
+  assert.deepEqual([candidates.length, status], [0, 'FAILED']);
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'FAILED');
+  assert.deepEqual(all("SELECT workerId FROM Notification WHERE subRequestId = ? AND kind = 'REQUEST_FAILED' ORDER BY workerId", [id]).map((n) => n.workerId), [1, 5]);
 });
 
 test('TC-026 invalid requests are refused (BR-03)', () => {
@@ -153,13 +163,15 @@ test('TC-051 two acceptances of the same request: only the first succeeds', () =
   assert.throws(() => svc.respondToRequest(1, 5, 'ACCEPTED'), (err) => err.code === 'ALREADY_TAKEN' && err.params.name === 'Choi Minho');
   const r = get('SELECT * FROM SubRequest WHERE id = 1');
   assert.equal(r.acceptorId, 3);
-  assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget ORDER BY workerId'), [{ workerId: 3, response: 'ACCEPTED' }, { workerId: 5, response: 'CLOSED' }]);
+  assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget ORDER BY workerId'),
+    [{ workerId: 3, response: 'ACCEPTED' }, { workerId: 4, response: 'CLOSED' }, { workerId: 5, response: 'CLOSED' }]);
 });
 
 test('TC-052 acceptance notifies requester and owner, closed target is told (FR-10)', () => {
   svc.respondToRequest(1, 3, 'ACCEPTED');
   const kinds = all('SELECT workerId, kind FROM Notification WHERE subRequestId = 1 AND kind != ? ORDER BY workerId', ['REQUEST_RECEIVED']);
-  assert.deepEqual(kinds, [{ workerId: 1, kind: 'REQUEST_ACCEPTED' }, { workerId: 2, kind: 'REQUEST_ACCEPTED' }, { workerId: 5, kind: 'TARGET_CLOSED' }]);
+  assert.deepEqual(kinds, [{ workerId: 1, kind: 'REQUEST_ACCEPTED' }, { workerId: 2, kind: 'REQUEST_ACCEPTED' },
+    { workerId: 4, kind: 'TARGET_CLOSED' }, { workerId: 5, kind: 'TARGET_CLOSED' }]);
 });
 
 test('TC-053 a decline keeps the request open for other candidates', () => {
@@ -256,8 +268,8 @@ test('TC-064 worker home: Minho sees the request with the effect of accepting (1
 
 test('TC-065 owner home: decision card with the approval effect, then nothing left after approval', () => {
   let home = svc.getOwnerHome();
-  assert.deepEqual([home.decisions.length, home.open.length, home.taskCount], [0, 1, 0]);
-  assert.deepEqual(home.open[0].targets.map((x) => [x.workerName, x.response]), [['Choi Minho', 'PENDING'], ['Kang Doyun', 'PENDING']]);
+  assert.deepEqual([home.decisions.length, home.open.length, home.failed, home.taskCount], [0, 1, [], 0]);
+  assert.deepEqual(home.open[0].targets.map((x) => [x.workerName, x.response]), [['Choi Minho', 'PENDING'], ['Jung Hana', 'PENDING'], ['Kang Doyun', 'PENDING']]);
   assert.deepEqual([home.week.shifts, home.week.hours, home.todayShifts.length, home.todayShifts[0].workerName], [9, 50, 1, 'Lee Seoyeon']);
   assert.equal(home.week.holidayTotal, 33024);
   svc.respondToRequest(1, 3, 'ACCEPTED');
@@ -282,7 +294,8 @@ test('TC-066 review step previews recipients; shift detail explains why a shift 
   const sat = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-10-03'").id;
   assert.deepEqual(svc.previewCandidates(sat, 3).map((c) => c.name), ['Lee Seoyeon', 'Jung Hana']);
   const sun = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
-  assert.deepEqual(svc.previewCandidates(sun, 4), []);
+  assert.deepEqual(svc.previewCandidates(sun, 4).map((c) => c.name), ['Lee Seoyeon', 'Choi Minho', 'Kang Doyun']);
+  assert.deepEqual(svc.previewCandidates(doyunSaturdayWithNoTaker(), 5), []);
   const wed = svc.getShiftDetail(wedShiftId());
   assert.deepEqual([wed.workerName, wed.openRequestId, wed.history.length, wed.canDelete], ['Lee Seoyeon', 1, 1, false]);
   assert.equal(svc.getShiftDetail(sat).canDelete, true);
@@ -314,7 +327,6 @@ test('TC-089 marking a shift absent removes holiday eligibility for that week', 
 
 test('TC-08A both substitution-attendance policies through approval', () => {
   const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-29'").id;
-  svc.saveAvailability(2, [{ weekday: 2, startTime: '17:00', endTime: '23:00' }]);
   const { id } = svc.createSubRequest({ shiftId: tue, requesterId: 3, deadline: '2026-09-29T12:00' });
   svc.respondToRequest(id, 2, 'ACCEPTED');
   svc.decideRequest(id, 'APPROVED');
@@ -420,7 +432,6 @@ test('TC-121 request expires at its deadline; requester and owner notified', () 
 
 test('TC-122 an ACCEPTED request expires when the shift starts without approval', () => {
   const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-29'").id;
-  svc.saveAvailability(2, [{ weekday: 2, startTime: '17:00', endTime: '23:00' }]);
   const { id } = svc.createSubRequest({ shiftId: tue, requesterId: 3, deadline: '2026-09-29T18:00' });
   svc.respondToRequest(id, 2, 'ACCEPTED');
   setNow('2026-09-29T18:00');
@@ -432,7 +443,7 @@ test('TC-122 an ACCEPTED request expires when the shift starts without approval'
 test('TC-123 cancel closes and notifies all targets (UC-12)', () => {
   svc.cancelRequest(1, 2);
   assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'CANCELLED');
-  assert.deepEqual(all("SELECT workerId FROM Notification WHERE kind = 'REQUEST_CANCELLED' ORDER BY workerId").map((n) => n.workerId), [3, 5]);
+  assert.deepEqual(all("SELECT workerId FROM Notification WHERE kind = 'REQUEST_CANCELLED' ORDER BY workerId").map((n) => n.workerId), [3, 4, 5]);
   assert.throws(() => svc.cancelRequest(1, 2), { code: 'REQUEST_CLOSED' });
 });
 
@@ -470,14 +481,14 @@ test('TC-132 inbox lists newest first with unread count; mark read clears it (FR
 
 test('TC-133 notification recipients follow the spec §8 table', () => {
   const who = (reqId, kind) => all('SELECT workerId FROM Notification WHERE subRequestId = ? AND kind = ? ORDER BY workerId', [reqId, kind]).map((n) => n.workerId);
-  // Seed request 1: REQUEST_RECEIVED to both candidates; a decline notifies no one.
-  assert.deepEqual(who(1, 'REQUEST_RECEIVED'), [3, 5]);
+  // Seed request 1: REQUEST_RECEIVED to all three candidates; a decline that leaves someone pending notifies no one.
+  assert.deepEqual(who(1, 'REQUEST_RECEIVED'), [3, 4, 5]);
   const before = get('SELECT count(*) AS n FROM Notification').n;
   svc.respondToRequest(1, 5, 'DECLINED');
   assert.equal(get('SELECT count(*) AS n FROM Notification').n, before);
   svc.respondToRequest(1, 3, 'ACCEPTED');
   assert.deepEqual(who(1, 'REQUEST_ACCEPTED'), [1, 2]);
-  assert.deepEqual(who(1, 'TARGET_CLOSED'), []);
+  assert.deepEqual(who(1, 'TARGET_CLOSED'), [4]);
   svc.decideRequest(1, 'REJECTED');
   assert.deepEqual(who(1, 'REQUEST_REJECTED'), [2, 3]);
   // Approval goes to requester and acceptor.
@@ -487,24 +498,27 @@ test('TC-133 notification recipients follow the spec §8 table', () => {
   assert.deepEqual(who(r2, 'TARGET_CLOSED'), [2]);
   svc.decideRequest(r2, 'APPROVED');
   assert.deepEqual(who(r2, 'REQUEST_APPROVED'), [3, 4]);
-  // NO_CANDIDATE to the owner only.
+  // REQUEST_FAILED to the requester and the owner when every target answered can't (BR-13); targets get nothing more.
   const sun = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
   const r3 = svc.createSubRequest({ shiftId: sun, requesterId: 4, deadline: '2026-10-03T12:00' }).id;
-  assert.deepEqual(who(r3, 'NO_CANDIDATE'), [1]);
+  assert.deepEqual(who(r3, 'REQUEST_RECEIVED'), [2, 3, 5]);
+  for (const w of [2, 3, 5]) svc.respondToRequest(r3, w, 'DECLINED');
+  assert.deepEqual(who(r3, 'REQUEST_FAILED'), [1, 4]);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE subRequestId = ? AND workerId IN (2, 3, 5) AND kind != 'REQUEST_RECEIVED'", [r3]).n, 0);
   // Cancel: every target that was PENDING or ACCEPTED; expiry: requester and owner, targets closed silently.
   const thu = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-10-01'").id;
   const r4 = svc.createSubRequest({ shiftId: thu, requesterId: 3, deadline: '2026-09-30T12:00' }).id;
-  assert.deepEqual(who(r4, 'REQUEST_RECEIVED'), [2, 5]);
+  assert.deepEqual(who(r4, 'REQUEST_RECEIVED'), [2, 4, 5]);
   setNow('2026-09-30T12:00');
   svc.expireOverdue();
   assert.deepEqual(who(r4, 'REQUEST_EXPIRED'), [1, 3]);
-  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE subRequestId = ? AND workerId IN (2, 5) AND kind != 'REQUEST_RECEIVED'", [r4]).n, 0);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE subRequestId = ? AND workerId IN (2, 4, 5) AND kind != 'REQUEST_RECEIVED'", [r4]).n, 0);
   assert.deepEqual(all('SELECT DISTINCT response FROM SubRequestTarget WHERE subRequestId = ?', [r4]), [{ response: 'CLOSED' }]);
   // Cancel of an ACCEPTED request: the acceptor (ACCEPTED) is notified; the target closed at acceptance is not.
   svc.generateWeek('2026-10-05');
   const wed = get("SELECT id FROM Shift WHERE workerId = 2 AND workDate = '2026-10-07'").id;
   const r5 = svc.createSubRequest({ shiftId: wed, requesterId: 2, deadline: '2026-10-06T12:00' }).id;
-  assert.deepEqual(who(r5, 'REQUEST_RECEIVED'), [3, 5]);
+  assert.deepEqual(who(r5, 'REQUEST_RECEIVED'), [3, 4, 5]);
   svc.respondToRequest(r5, 5, 'ACCEPTED');
   svc.cancelRequest(r5, 2);
   assert.deepEqual(who(r5, 'REQUEST_CANCELLED'), [5]);
@@ -561,7 +575,7 @@ test('TC-054 acceptance is refused when the candidate already works an overlappi
   const r = get('SELECT status, acceptorId FROM SubRequest WHERE id = 1');
   assert.deepEqual({ ...r }, { status: 'REQUESTED', acceptorId: null });
   assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget WHERE subRequestId = 1 ORDER BY workerId').map((t) => [t.workerId, t.response]),
-    [[3, 'PENDING'], [5, 'PENDING']]);
+    [[3, 'PENDING'], [4, 'PENDING'], [5, 'PENDING']]);
   assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_ACCEPTED'").n, 0);
   svc.respondToRequest(1, 5, 'ACCEPTED');
   assert.equal(get('SELECT acceptorId FROM SubRequest WHERE id = 1').acceptorId, 5);
@@ -661,11 +675,137 @@ test('TC-125 approving at the deadline or after the shift start expires the requ
   // Shift start: a request whose deadline equals the shift start, decided once the shift has started.
   const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-10-01'").id;
   setNow('2026-09-30T09:00');
-  svc.saveAvailability(2, [{ weekday: 4, startTime: '17:00', endTime: '23:00' }]);
   const { id } = svc.createSubRequest({ shiftId: tue, requesterId: 3, deadline: '2026-10-01T18:00' });
   svc.respondToRequest(id, 2, 'ACCEPTED');
   setNow('2026-10-01T18:00');
   assert.throws(() => svc.decideRequest(id, 'APPROVED'), { code: 'REQUEST_CLOSED' });
   assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'EXPIRED');
   assert.equal(get('SELECT workerId FROM Shift WHERE id = ?', [tue]).workerId, 3);
+});
+
+// ---- TC-13x no taker: can't answers and FAILED (BR-13, FR-08, FR-22; iteration 6) ----
+
+test('TC-13A all three targets answer can\'t: FAILED, requester and owner notified, later accept refused (FR-22, BR-13)', () => {
+  assert.equal(svc.respondToRequest(1, 3, 'DECLINED').status, 'REQUESTED');
+  assert.equal(svc.respondToRequest(1, 4, 'DECLINED').status, 'REQUESTED');
+  assert.equal(svc.respondToRequest(1, 5, 'DECLINED').status, 'FAILED');
+  const r = get('SELECT status, acceptorId, decidedAt FROM SubRequest WHERE id = 1');
+  assert.deepEqual({ ...r }, { status: 'FAILED', acceptorId: null, decidedAt: '2026-09-28T09:00' });
+  assert.deepEqual(all('SELECT DISTINCT response FROM SubRequestTarget WHERE subRequestId = 1'), [{ response: 'DECLINED' }]);
+  const failed = all("SELECT workerId, message FROM Notification WHERE subRequestId = 1 AND kind = 'REQUEST_FAILED' ORDER BY workerId");
+  assert.deepEqual(failed.map((n) => n.workerId), [1, 2]);
+  assert.ok(failed.every((n) => n.message.length > 10));
+  assert.throws(() => svc.respondToRequest(1, 3, 'ACCEPTED'), (err) => err.code === 'REQUEST_CLOSED' && err.params.status === 'FAILED');
+  assert.throws(() => svc.cancelRequest(1, 2), (err) => err.code === 'REQUEST_CLOSED' && err.params.status === 'FAILED');
+  assert.throws(() => svc.decideRequest(1, 'APPROVED'), { code: 'NOT_ACCEPTED' });
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'FAILED');
+  // FAILED is final: expiry does not touch it, and the shift can be requested again.
+  setNow('2026-09-29T21:00');
+  assert.equal(svc.expireOverdue(), 0);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_EXPIRED'").n, 0);
+});
+
+test('TC-13B no eligible candidate at creation: FAILED immediately, no targets (FR-08, BR-13)', () => {
+  const shiftId = doyunSaturdayWithNoTaker();
+  assert.deepEqual(svc.previewCandidates(shiftId, 5), []);
+  const result = svc.createSubRequest({ shiftId, requesterId: 5, reason: 'Family event', deadline: '2026-10-02T12:00' });
+  assert.deepEqual([result.status, result.candidates], ['FAILED', []]);
+  assert.equal(get('SELECT count(*) AS n FROM SubRequestTarget WHERE subRequestId = ?', [result.id]).n, 0);
+  assert.deepEqual(all('SELECT workerId, kind FROM Notification WHERE subRequestId = ? ORDER BY workerId', [result.id]).map((n) => [n.workerId, n.kind]),
+    [[1, 'REQUEST_FAILED'], [5, 'REQUEST_FAILED']]);
+  assert.deepEqual(svc.getWorkerHome(5).failed.map((f) => f.requestId), [result.id]);
+  assert.deepEqual(svc.getOwnerHome().failed.map((f) => [f.requestId, f.requesterName]), [[result.id, 'Kang Doyun']]);
+});
+
+test('TC-13C one can\'t and one pending: still REQUESTED and no notification (FR-22)', () => {
+  const sun = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
+  const { id } = svc.createSubRequest({ shiftId: sun, requesterId: 4, deadline: '2026-10-03T12:00' });
+  const before = get('SELECT count(*) AS n FROM Notification').n;
+  svc.respondToRequest(id, 2, 'DECLINED');
+  svc.respondToRequest(id, 3, 'DECLINED');
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'REQUESTED');
+  assert.equal(get('SELECT count(*) AS n FROM Notification').n, before);
+  assert.deepEqual(svc.getWorkerHome(4).failed, []);
+  assert.deepEqual(svc.getOwnerHome().failed, []);
+  assert.ok(svc.getWorkerHome(5).incoming.some((r) => r.id === id));
+  // The last pending target can still accept.
+  assert.equal(svc.respondToRequest(id, 5, 'ACCEPTED').status, 'ACCEPTED');
+});
+
+test('TC-13D Home exposes the failed item; markNotificationsRead with its id removes it (BR-13, FR-21)', () => {
+  for (const w of [3, 4, 5]) svc.respondToRequest(1, w, 'DECLINED');
+  const seoyeon = svc.getWorkerHome(2);
+  assert.equal(seoyeon.failed.length, 1);
+  const mine = seoyeon.failed[0];
+  assert.deepEqual([mine.requestId, mine.workDate, mine.startTime, mine.endTime], [1, '2026-09-30', '18:00', '23:00']);
+  assert.equal(get('SELECT kind FROM Notification WHERE id = ?', [mine.notificationId]).kind, 'REQUEST_FAILED');
+  assert.deepEqual(seoyeon.myOpen, []);
+  const tracked = svc.listMyRequests(2).find((r) => r.id === 1);
+  assert.equal(tracked.status, 'FAILED');
+  assert.deepEqual(tracked.targets.map((t) => [t.workerName, t.response]), [['Choi Minho', 'DECLINED'], ['Jung Hana', 'DECLINED'], ['Kang Doyun', 'DECLINED']]);
+  // Targets see no failed card of their own.
+  assert.deepEqual(svc.getWorkerHome(3).failed, []);
+  let owner = svc.getOwnerHome();
+  assert.equal(owner.failed.length, 1);
+  const card = owner.failed[0];
+  assert.deepEqual([card.requestId, card.requesterName, card.workDate, card.startTime, card.endTime], [1, 'Lee Seoyeon', '2026-09-30', '18:00', '23:00']);
+  assert.deepEqual([owner.open.length, owner.taskCount], [0, 1]);
+  // Another user's id is ignored; the owner's own id acknowledges only that card.
+  assert.equal(svc.markNotificationsRead(1, [mine.notificationId]), 0);
+  assert.equal(svc.markNotificationsRead(1, [card.notificationId]), 1);
+  owner = svc.getOwnerHome();
+  assert.deepEqual([owner.failed, owner.taskCount], [[], 0]);
+  assert.equal(svc.getWorkerHome(2).failed.length, 1);
+  assert.equal(svc.markNotificationsRead(2, [mine.notificationId]), 1);
+  assert.deepEqual(svc.getWorkerHome(2).failed, []);
+  // The old call form still marks everything read.
+  assert.ok(svc.unreadCount(3) > 0);
+  svc.markNotificationsRead(3);
+  assert.equal(svc.unreadCount(3), 0);
+});
+
+test('TC-13E demo walkthrough S8: Hana\'s Sun 10-04 request, all three can\'t, FAILED card for Hana and the owner (spec §10)', () => {
+  const sun = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
+  assert.deepEqual(svc.previewCandidates(sun, 4).map((c) => c.name), ['Lee Seoyeon', 'Choi Minho', 'Kang Doyun']);
+  const { id, status, candidates } = svc.createSubRequest({ shiftId: sun, requesterId: 4, deadline: '2026-10-03T12:00' });
+  assert.equal(status, 'REQUESTED');
+  // Kang Doyun's Sun 16:00-22:00 does not overlap 10:00-16:00, so he is asked too.
+  assert.deepEqual(candidates.map((c) => c.name), ['Lee Seoyeon', 'Choi Minho', 'Kang Doyun']);
+  for (const w of [2, 3, 5]) {
+    const card = svc.getWorkerHome(w).incoming.find((r) => r.id === id);
+    assert.ok(card, `worker ${w} sees the request on Home`);
+    svc.respondToRequest(id, w, 'DECLINED');
+    assert.equal(svc.getWorkerHome(w).incoming.find((r) => r.id === id), undefined);
+  }
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'FAILED');
+  const hana = svc.getWorkerHome(4);
+  assert.deepEqual(hana.failed.map((f) => [f.requestId, f.workDate, f.startTime, f.endTime]), [[id, '2026-10-04', '10:00', '16:00']]);
+  assert.equal(svc.listMyRequests(4).find((r) => r.id === id).status, 'FAILED');
+  const owner = svc.getOwnerHome();
+  assert.deepEqual(owner.failed.map((f) => [f.requestId, f.requesterName, f.workDate, f.startTime, f.endTime]), [[id, 'Jung Hana', '2026-10-04', '10:00', '16:00']]);
+  assert.equal(owner.taskCount, 1);
+  svc.markNotificationsRead(1, [owner.failed[0].notificationId]);
+  assert.deepEqual([svc.getOwnerHome().failed, svc.getOwnerHome().taskCount], [[], 0]);
+  // The shift stays Hana's.
+  assert.equal(get('SELECT workerId FROM Shift WHERE id = ?', [sun]).workerId, 4);
+});
+
+test('TC-003 a saved database from before iteration 6 (Availability table, no FAILED status) is replaced by the seed', () => {
+  const old = new SQL.Database();
+  old.run(`CREATE TABLE Payroll (id INTEGER PRIMARY KEY, minWageAck INTEGER);
+    CREATE TABLE Availability (id INTEGER PRIMARY KEY, workerId INTEGER);
+    CREATE TABLE SubRequest (id INTEGER PRIMARY KEY, status TEXT NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','EXPIRED','CANCELLED')));`);
+  const store = new Map([[DB_KEY, Buffer.from(old.export()).toString('base64')]]);
+  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) };
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    openDatabase(SQL, storage);
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(svc.getWorkplace().name, 'Dalbit Café');
+  assert.deepEqual(all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'Availability'"), []);
+  for (const w of [3, 4, 5]) svc.respondToRequest(1, w, 'DECLINED');
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'FAILED');
 });

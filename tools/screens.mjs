@@ -1,5 +1,5 @@
 // Reproducible screenshots of ShiftSwap.
-//   node tools/screens.mjs review <dir>   every scene at 1280 px and 390 px in English and Korean (1× scale)
+//   node tools/screens.mjs review <dir>   every scene at 1280 px and 360 px in English and Korean (1× scale)
 //   node tools/screens.mjs report         the report set in docs/img (2× scale; English, plus ko-*.png)
 // Every scene starts from a fresh seed (storage cleared) with the demo clock at 2026-09-28T09:00.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -12,26 +12,28 @@ const REPORT = [
   ['ui-01-signin.png', 'signin', 1280],
   ['ui-02-board-owner.png', 'schedule-owner', 1280],
   ['ui-03-board-worker.png', 'schedule-worker', 1280],
-  ['ui-04-request-form.png', 'flow-3', 390],
-  ['ui-05-inbox.png', 'worker-home-minho', 390],
+  ['ui-04-request-form.png', 'flow-3', 360],
+  ['ui-05-inbox.png', 'worker-home-minho', 360],
   ['ui-06-approval.png', 'owner-home-decision', 1280],
-  ['ui-07-my-requests.png', 'swaps-seoyeon-accepted', 390],
-  ['ui-08-attendance.png', 'me', 390],
+  ['ui-07-my-requests.png', 'swaps-seoyeon-accepted', 360],
+  ['ui-08-attendance.png', 'me', 360],
   ['ui-09-weekly.png', 'pay-week', 1280],
   ['ui-10-payroll.png', 'pay-month', 1280],
   ['ui-11-workers.png', 'staff-detail', 1280],
   ['ui-12-settings.png', 'settings', 1280],
-  ['ui-13-mobile-board.png', 'schedule-owner', 390],
+  ['ui-13-mobile-board.png', 'schedule-owner', 360],
   ['ui-14-board-handover.png', 'schedule-handover', 1280],
   ['ui-15-korean.png', 'owner-home-decision', 1280, 'ko'],
+  ['ui-16-failed-owner.png', 'failed-owner', 1280],
 ];
 const REPORT_KO = [
-  ['ko-signin.png', 'signin', 390],
-  ['ko-worker-home.png', 'worker-home-minho', 390],
-  ['ko-request-review.png', 'flow-3', 390],
-  ['ko-owner-home.png', 'owner-home-decision', 390],
+  ['ko-signin.png', 'signin', 360],
+  ['ko-worker-home.png', 'worker-home-minho', 360],
+  ['ko-request-review.png', 'flow-3', 360],
+  ['ko-owner-home.png', 'owner-home-decision', 360],
   ['ko-board.png', 'schedule-handover', 1280],
-  ['ko-payroll.png', 'pay-month', 390],
+  ['ko-payroll.png', 'pay-month', 360],
+  ['ko-failed-worker.png', 'failed-worker', 360],
 ];
 
 /** Capture the whole page: the viewport is made as tall as the page so fixed bars sit at its bottom. */
@@ -66,7 +68,7 @@ try {
     const only = process.argv[4] ? process.argv[4].split(',') : Object.keys(SCENES);
     for (const name of only) {
       for (const lang of ['en', 'ko']) {
-        for (const width of [1280, 390]) {
+        for (const width of [1280, 360]) {
           await runScene(page, a, name, lang, width);
           const size = await capture(page, a, join(dir, `${name}-${lang}-${width}.png`), width, 1);
           console.log(`${name}-${lang}-${width}.png ${size}`);

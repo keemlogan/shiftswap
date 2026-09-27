@@ -1,6 +1,31 @@
 // Named UI states used by the screenshots and the headless checks. Each scene starts from a fresh seed.
 import { sleep } from './lib.mjs';
 
+/** S8 (spec §10): as Jung Hana, request a substitute for Sun 2026-10-04 10:00–16:00 through the three-step flow. */
+export async function hanaRequestsSunday(a) {
+  await a.signIn(4, '#/swaps/new/1');
+  await a.evaluate(`[...document.querySelectorAll('input[name="shift"]')].find((r) => r.closest('label').innerText.includes('10:00–16:00')).click()`);
+  await sleep(200);
+  await a.click('#next');
+  await a.click('#next');
+  await a.click('#send');
+}
+
+/** As worker `id`, answer 불가 / Can't on the request card for the 10:00–16:00 shift. */
+export async function declineSunday(a, id) {
+  await a.signIn(id, '#/home');
+  const ok = await a.evaluate(`(() => { const card = [...document.querySelectorAll('.req-card')].find((c) => c.querySelector('[data-decline]') && c.innerText.includes('10:00–16:00'));
+    if (!card) return false; card.querySelector('[data-decline]').click(); return true; })()`);
+  if (!ok) throw new Error(`no Sunday request card for worker ${id}`);
+  await sleep(280);
+}
+
+/** S8 up to the end: Hana's request, then Lee Seoyeon, Choi Minho and Kang Doyun all answer can't → FAILED. */
+export async function s8Failed(a) {
+  await hanaRequestsSunday(a);
+  for (const id of [2, 3, 5]) await declineSunday(a, id);
+}
+
 /** Scenes: a name and the steps that bring a fresh seed into the state the screenshot shows. */
 export const SCENES = {
   signin: async () => {},
@@ -65,6 +90,14 @@ export const SCENES = {
   'staff-list': async (a) => a.signIn(1, '#/staff'),
   'staff-detail': async (a) => a.signIn(1, '#/staff/3'),
   me: async (a) => a.signIn(2, '#/me'),
+  'failed-worker': async (a) => {
+    await s8Failed(a);
+    await a.signIn(4, '#/swaps');
+  },
+  'failed-owner': async (a) => {
+    await s8Failed(a);
+    await a.signIn(1, '#/home');
+  },
   'notifications-minho': async (a) => a.signIn(3, '#/notifications'),
   settings: async (a) => a.signIn(1, '#/settings'),
   'demo-tools': async (a) => {

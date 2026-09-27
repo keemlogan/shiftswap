@@ -2,7 +2,7 @@
 
 **Requirement (spec §5, NFR-03):** with 20 workers and 12 weeks of shifts, any screen renders in under 1 second on a mid-range laptop.
 
-**Result:** met with a wide margin. Measured on the v4 interface, the slowest screen took 18.0 ms from the route change to the rendered DOM, and 42.5 ms including paint. The limit is 1,000 ms.
+**Result:** met with a wide margin. Measured on the final (iteration 6) interface, the slowest screen took 15.7 ms from the route change to the rendered DOM, and 35.1 ms including paint. The limit is 1,000 ms.
 
 **Reproduce:** `node tools/nfr03.mjs` (starts its own static server and headless Chrome, prints the numbers below as JSON).
 
@@ -47,17 +47,17 @@ The data was built in a throwaway browser profile through the application servic
 
 | Screen | Route | Items on screen | Route change → DOM, median | max | Route change → painted, median | max |
 |---|---|---|---|---|---|---|
-| Schedule (owner) | `#/schedule/2026-09-28` | 49 shift blocks | 7.6 ms | 7.9 ms | 27.5 ms | 42.5 ms |
-| Pay → Weekly | `#/pay/week/2026-09-21` | 20 worker cards | 16.2 ms | 18.0 ms | 26.1 ms | 36.1 ms |
-| Pay → Monthly (existing draft) | `#/pay/month/2026-09` | 20 worker rows + 1 warning row | 13.4 ms | 14.8 ms | 27.1 ms | 28.5 ms |
+| Schedule (owner) | `#/schedule/2026-09-28` | 49 shift blocks | 3.1 ms | 5.7 ms | 27.5 ms | 28.4 ms |
+| Pay → Weekly | `#/pay/week/2026-09-21` | 20 worker cards | 7.7 ms | 15.7 ms | 10.6 ms | 28.7 ms |
+| Pay → Monthly (existing draft) | `#/pay/month/2026-09` | 20 worker rows + 1 warning row | 13.4 ms | 15.2 ms | 23.3 ms | 35.1 ms |
 
 Additional measurement on the same data set:
 
 | Operation | Measured | Median | Range |
 |---|---|---|---|
-| Cold start: page reload → sql.js initialised → saved database loaded → schedule rendered | 5 reloads, warm HTTP cache | 30 ms | 26–31 ms |
+| Cold start: page reload → sql.js initialised → saved database loaded → schedule rendered | 5 reloads, warm HTTP cache | 39 ms | 27–63 ms |
 
-The v3 interface, measured the same way before the redesign, gave the same picture: route change → DOM at most 16.6 ms, painted at most 36.7 ms. There were no console errors in any run.
+Earlier measurements gave the same picture — the v4 interface: route change → DOM at most 18.0 ms, painted at most 42.5 ms; the v3 interface: route change → DOM at most 16.6 ms, painted at most 36.7 ms. There were no console errors in any run.
 
 ## Limits of this measurement
 

@@ -100,6 +100,7 @@ Source of every row: independent code review / reproduction run 1 (a reviewer sc
 | 6 | Independent code review / reproduction run 1 (BR-12) | Accept/decline and approve/reject expire an overdue request themselves (deadline ≤ now or shift start ≤ now) and refuse with REQUEST_CLOSED | `services.js`: `isOverdue()`, `expireRequest()` shared with `expireOverdue`; the expiry is committed and REQUEST_CLOSED is thrown after the transaction (`throwIfExpired`) so the throw does not roll it back | TC-124, TC-125 |
 | 7 | Independent code review / reproduction run 1 (BR-10, BR-09) | Probation window contractStart (inclusive) to +3 months (exclusive), only with probationEnd; the 90 % floor must be exact | `rules.js` `probationApplies` already matched (boundary test added); `computePayrollRow` uses `minimumHourly * 9 / 10` because `10320 * 0.9` is not exactly 9,288 in floating point | TC-106, TC-107 |
 | 8 | Follows from #1 | New error code shown in the UI | `ui/i18n.js` error dictionary: `err.ACCEPTOR_BUSY` (ko, en); REQUEST_CLOSED and ATTENDANCE_CLOSED already translated | — |
+| 9 | Product-owner review (prompt §2.0 item 7) | Korean display names: in the Korean UI the seed people and store are shown by their spec §10 names (박지영, 이서연, 최민호, 정하나, 강도윤, 달빛카페) and addressed as full name + 님 ("최민호님"); stored names stay English, names not in the map are shown as stored; the English UI is unchanged | `ui/i18n.js`: `KO_NAMES` display map with `displayName()`, `honorific()`, `initial()`, and `given()` returning the Korean full name in ko; every screen and `main.js` render names through them | `tools/check.mjs` DC-3/DC-4 (Korean names on sign-in, "이서연님이 대타를 구해요", "최민호님이 먼저 수락했어요", handover marker 최민호 / 이서연) |
 
 Result: `npm test` 77 tests, 77 pass, 0 fail.
 
@@ -150,9 +151,28 @@ Found and fixed while reviewing the screenshots (both languages, 1280 and 390 px
 - The payroll warning row painted each cell separately on phones.
 - The shift history read "요청 · 요청".
 - English copy errors: "1 things", "Seoyeon This week", "1 shifts", "warning(s)", "Please reply tomorrow".
+- After the parallel code review (Iteration 5) made editing a shift with an open request an error (SHIFT_OPEN_REQUEST), the detail sheet now disables "시간 바꾸기" and "담당자 바꾸기" for such a shift and shows that reason beneath them, instead of failing after the tap (§2.0 rule 8).
 - Sheets opened with a focus ring on the first button (they now focus their title).
 
 Result:
 - `npm test`: 77 tests, 77 pass, 0 fail. That is v3's 62, plus TC-064, TC-065 and TC-066 for the new queries (TC-134 was updated), plus 12 tests added by another team member in parallel: TC-01E/F/G, 054, 055, 072, 073, 08C, 106, 107, 124 and 125.
 - `node tools/check.mjs`: 115/115 pass with 0 console errors. That covers DC-3, the Korean walkthrough of DC-4 (10 checks), and DC-5 for 26 scenes × 2 languages × 2 widths.
 - NFR-03 re-measured on v4: the slowest screen renders in 18 ms and paints in 43 ms.
+
+## Iteration 6 — requirements change: availability removed, can't answer and FAILED
+
+Source of every row: product-owner review of the running app (2026-09-27, spec §15). When no co-worker's availability matched, the owner only got a "no candidate" notice with nothing to do, and availability slots were extra data workers had to keep up to date. Spec changes: UC-02 and FR-03 retired, BR-01 without availability, new BR-13 and FR-22, FR-08 and FR-09 reworded, §7 SubRequest state FAILED, §8 table Availability removed (11 tables) and NO_CANDIDATE replaced by REQUEST_FAILED, §10 seed without availability (seed request targets Minho, Hana and Doyun) and walkthrough S8.
+
+| # | Spec change | Code (`app/core`) | Tests |
+|---|---|---|---|
+| 1 | BR-01: eligible = active WORKER, not the requester, no overlapping shift that date; availability is not used | `rules.js` `isEligibleCandidate({ worker, requesterId, shift, workerShifts })` (no `availability` argument; a given `worker.role` must be WORKER); `services.js` `eligibleCandidates` / `previewCandidates` no longer read availability | TC-014, TC-015 (rewritten), TC-016, TC-066 (Sun 10-04 now has three recipients) |
+| 2 | UC-02 / FR-03 retired; §8 table Availability removed | `db.js`: `Availability` dropped from `SCHEMA` and the seed; `services.js`: `getAvailability` and `saveAvailability` removed; `menuFor` / `routesFor` had no availability route (unchanged) | TC-001 (no Availability table), TC-08A, TC-122, TC-125 (setup no longer registers availability), TC-134 (unchanged) |
+| 3 | §10 seed: request 1 targets Choi Minho, Jung Hana and Kang Doyun | `db.js` seed: three SubRequestTarget rows and three REQUEST_RECEIVED notifications | TC-001, TC-051, TC-052, TC-054, TC-065, TC-123 (three targets) |
+| 4 | §7 / §8: SubRequest.status FAILED (final) | `db.js`: FAILED in the CHECK list; `hasCurrentSchema()` also requires FAILED, so a saved copy from iteration 5 is replaced by the seed | TC-003 |
+| 5 | BR-13 / FR-08: no eligible candidate at creation → FAILED at once, REQUEST_FAILED to requester and owner | `rules.js` `hasNoTaker(responses)`; `services.js` `failRequest()`; `createSubRequest` returns `{ id, status, candidates }` with status `'FAILED'` when there is no candidate | TC-025 (rewritten), TC-13B, TC-13F |
+| 6 | BR-13 / FR-22: the can't (DECLINED) that leaves every target DECLINED → FAILED; a single can't notifies no one | `respondToRequest(requestId, workerId, 'DECLINED')` re-reads the targets in the same transaction and calls `failRequest()`; it returns `{ status: 'REQUESTED' \| 'FAILED' }` | TC-13A, TC-13C, TC-133 (REQUEST_FAILED to [owner, requester] instead of NO_CANDIDATE; TARGET_CLOSED now reaches Hana) |
+| 7 | BR-13: accepting or cancelling a FAILED request is refused | unchanged guards now cover FAILED: REQUEST_CLOSED with `params.status = 'FAILED'`; `expireOverdue` ignores FAILED | TC-13A |
+| 8 | FR-22 / prompt §2.3, §2.5: Home shows the failed request until acknowledged (확인했어요); it counts as an owner task | `getWorkerHome(workerId).failed` and `getOwnerHome().failed` (unread REQUEST_FAILED notifications); `taskCount` includes `failed`; `markNotificationsRead(workerId, ids?)` marks only the given ids (the old one-argument form still marks everything) | TC-13D |
+| 9 | §10 walkthrough S8 | — | TC-13E |
+
+Result: `npm test` 84 tests, 84 pass, 0 fail (the 77 tests of iteration 5, updated where they assumed availability, plus TC-13A–F and TC-003).

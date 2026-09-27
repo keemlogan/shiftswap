@@ -5,6 +5,7 @@ import { t, esc, fmtWhen, notificationText } from './i18n.js';
 import { icon, button, pageHead, emptyState } from './components.js';
 
 function actionable(n, user) {
+  if (n.kind === 'REQUEST_FAILED') return !n.readAt;
   if (user.role === 'WORKER') return n.kind === 'REQUEST_RECEIVED' && n.state === 'OPEN';
   return n.kind === 'REQUEST_ACCEPTED' && n.requestStatus === 'ACCEPTED';
 }
@@ -18,7 +19,7 @@ export function render(view, ctx) {
       <li class="notif ${n.readAt ? '' : 'is-unread'}">
         <span class="notif-dot" aria-hidden="true"></span>
         <div class="notif-main">
-          <p>${esc(notificationText(n, ctx.now))}</p>
+          <p>${esc(notificationText(n, ctx.now, ctx.user))}</p>
           <p class="notif-meta"><time class="muted num" datetime="${esc(n.createdAt)}">${esc(fmtWhen(n.createdAt, ctx.now))}</time>
             ${n.readAt ? '' : `<span class="sr-only">${esc(t('notif.new'))}</span>`}</p>
         </div>

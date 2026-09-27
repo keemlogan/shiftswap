@@ -3,7 +3,7 @@
 // is acknowledged (BR-09).
 import * as svc from '../core/services.js';
 import { minimumWageFor, probationApplies, weekStartOf, addDays, addMonths } from '../core/rules.js';
-import { t, esc, fmtHours, fmtWon, fmtMonth, fmtMonthShort, fmtDateShort, given } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, fmtMonth, fmtMonthShort, fmtDateShort, given, displayName } from './i18n.js';
 import { icon, button, pageHead, emptyState } from './components.js';
 import { weeklyCards } from './weekly.js';
 import { weekNav } from './schedule.js';
@@ -81,7 +81,7 @@ function renderMonth(view, ctx, week, month) {
           ].join('');
           return `
           <tr class="${r.minWageWarning ? 'row-warning' : ''}">
-            <th scope="row">${esc(r.workerName)}</th>
+            <th scope="row">${esc(displayName(r.workerName))}</th>
             <td class="num" data-label="${esc(t(cols[0]))}">${esc(fmtHours(r.baseHours))}</td>
             <td class="num" data-label="${esc(t(cols[1]))}">${esc(fmtWon(r.basePay))}</td>
             <td class="num" data-label="${esc(t(cols[2]))}">${esc(fmtWon(r.holidayPay))}</td>

@@ -1,9 +1,9 @@
 // Home (NFR-13): what is waiting for this person right now, most urgent first, each item with its own action.
 // The first actionable item carries the screen's single primary button; the rest are secondary.
 import * as svc from '../core/services.js';
-import { t, esc, fmtDate, fmtHours, fmtWon, dday, given } from './i18n.js';
+import { t, esc, fmtDate, fmtShift, fmtHours, fmtWon, dday, given, displayName } from './i18n.js';
 import { icon, button, sectionHead, shiftChips, shiftClasses } from './components.js';
-import { incomingCard, takenCard, myRequestCard, bindRequestActions } from './requests.js';
+import { incomingCard, takenCard, failedCard, myRequestCard, bindRequestActions, bindFailedAck } from './requests.js';
 import { decisionCard, openRequestCard, bindDecisionActions } from './approvals.js';
 import { toRecordRow, bindRecordButtons, confirmCard, bindConfirmActions } from './attendance.js';
 
@@ -70,9 +70,10 @@ function renderWorker(view, ctx) {
   const home = svc.getWorkerHome(ctx.user.id);
   const takePrimary = primaryPicker();
   const incoming = home.incoming.map((r) => incomingCard(r, { now: ctx.now, primary: takePrimary() })).join('');
+  const failed = home.failed.map((f) => failedCard(f, { primary: takePrimary() })).join('');
   const next = home.nextShift ? nextShiftCard(home.nextShift, ctx, takePrimary) : '';
   const record = home.toRecord.length ? `<ul class="card list">${home.toRecord.map((s) => toRecordRow(s, { primary: takePrimary() })).join('')}</ul>` : '';
-  const somethingToDo = home.incoming.length || home.myOpen.length || home.toRecord.length;
+  const somethingToDo = home.incoming.length || home.failed.length || home.myOpen.length || home.toRecord.length;
   const fallback = takePrimary() ? button({ label: t('home.openSchedule'), kind: 'primary', block: true, href: '#/schedule' }) : '';
 
   view.innerHTML = `
@@ -83,7 +84,7 @@ function renderWorker(view, ctx) {
     </header>
     ${fallback ? `<div class="cta-bar">${fallback}</div>` : ''}
     ${home.incoming.length || home.taken.length ? `<section class="section">${sectionHead(t('home.incoming'), home.incoming.length || null)}<div class="stack">${incoming}${home.taken.map(takenCard).join('')}</div></section>` : ''}
-    ${home.myOpen.length ? `<section class="section">${sectionHead(t('home.myRequests'))}<div class="stack">${home.myOpen.map((r) => myRequestCard(r, ctx)).join('')}</div></section>` : ''}
+    ${home.myOpen.length || home.failed.length ? `<section class="section">${sectionHead(t('home.myRequests'))}<div class="stack">${failed}${home.myOpen.map((r) => myRequestCard(r, ctx)).join('')}</div></section>` : ''}
     ${next ? `<section class="section">${next}</section>` : ''}
     <section class="section">${weekCard(home.week)}</section>
     ${record ? `<section class="section">${sectionHead(t('home.toRecord'), home.toRecord.length)}${record}</section>` : ''}`;
@@ -97,6 +98,11 @@ function renderOwner(view, ctx) {
   const home = svc.getOwnerHome();
   const takePrimary = primaryPicker();
   const decisions = home.decisions.map((d) => decisionCard(d, { primary: takePrimary() })).join('');
+  const failed = home.failed.map((f) => `
+    <article class="card req-card">
+      <div class="card-row"><h3 class="card-title">${esc(t('owner.failedLine', { name: given(f.requesterName), shift: fmtShift(f) }))}</h3>${icon('alert', 'alert-icon')}</div>
+      <div class="actions">${button({ label: t('failed.ack'), kind: takePrimary() ? 'primary' : 'secondary', block: true, attrs: `data-ack-failed="${f.notificationId}"` })}</div>
+    </article>`).join('');
   const confirms = home.toConfirm.map((s) => confirmCard(s, { primary: takePrimary() })).join('');
   const warnings = home.payWarnings.map((p) => `
     <article class="card req-card">
@@ -114,6 +120,7 @@ function renderOwner(view, ctx) {
     </header>
     ${fallback ? `<div class="cta-bar">${fallback}</div>` : ''}
     ${home.decisions.length ? `<section class="section">${sectionHead(t('owner.decisions'), home.decisions.length)}<div class="stack">${decisions}</div></section>` : ''}
+    ${home.failed.length ? `<section class="section">${sectionHead(t('owner.failed'), home.failed.length)}<div class="stack">${failed}</div></section>` : ''}
     ${home.toConfirm.length ? `<section class="section">${sectionHead(t('owner.toConfirm'), home.toConfirm.length)}<div class="stack">${confirms}</div></section>` : ''}
     ${home.payWarnings.length ? `<section class="section">${sectionHead(t('owner.payWarnings'), home.payWarnings.length)}<div class="stack">${warnings}</div></section>` : ''}
     ${home.open.length ? `<section class="section">${sectionHead(t('owner.open'), home.open.length)}<div class="stack">${home.open.map((r) => openRequestCard(r, ctx.now)).join('')}</div></section>` : ''}
@@ -121,7 +128,7 @@ function renderOwner(view, ctx) {
       ${sectionHead(t('owner.today'))}
       ${home.todayShifts.length ? `<ul class="card list">${home.todayShifts.map((s) => `
         <li class="list-row ${shiftClasses(s, null)}">
-          <div class="list-main"><strong>${esc(s.workerName)}</strong><span class="muted num">${esc(`${s.startTime}–${s.endTime}`)}</span></div>
+          <div class="list-main"><strong>${esc(displayName(s.workerName))}</strong><span class="muted num">${esc(`${s.startTime}–${s.endTime}`)}</span></div>
           <div class="list-side">${shiftChips(s)}</div>
         </li>`).join('')}</ul>` : `<p class="card muted">${esc(t('owner.todayNone'))}</p>`}
     </section>
@@ -134,5 +141,6 @@ function renderOwner(view, ctx) {
       </div>
     </section>`;
   bindDecisionActions(view, ctx);
+  bindFailedAck(view, ctx);
   bindConfirmActions(view, ctx);
 }

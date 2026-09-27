@@ -22,10 +22,12 @@ state REQUESTED <<sub>>
 state ACCEPTED <<sub>>
 state APPROVED <<sub>>
 state REJECTED <<sub>>
+state FAILED <<sub>>
 state EXPIRED <<sub>>
 state CANCELLED <<sub>>
 
 REQUESTED --> ACCEPTED : candidate accepts\n[first acceptance, BR-02] / respondToRequest (UC-05)
+REQUESTED --> FAILED : no eligible candidate at creation\nor every target answered can't (BR-13) / createSubRequest, respondToRequest (UC-05)
 REQUESTED --> EXPIRED : deadline <= now\nor shift.start <= now (BR-12) / expireOverdue (UC-11)
 REQUESTED --> CANCELLED : requester cancels (UC-12, FR-19)
 
@@ -36,11 +38,13 @@ ACCEPTED --> CANCELLED : requester cancels (UC-12, FR-19)
 
 APPROVED --> [*]
 REJECTED --> [*]
+FAILED --> [*]
 EXPIRED --> [*]
 CANCELLED --> [*]
 
 note right of APPROVED : final state
 note right of REJECTED : final state
+note right of FAILED : final state\n(BR-13: REQUEST_FAILED to requester + owner;\nsurfaced as getWorkerHome/getOwnerHome "failed"\nuntil markNotificationsRead(workerId, ids) acks it;\nowner can only acknowledge; accepting or cancelling a\nFAILED request is refused as REQUEST_CLOSED)
 note right of EXPIRED : final state\n(A3 System Clock actor)
 note right of CANCELLED : final state
 @enduml

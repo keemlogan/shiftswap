@@ -46,7 +46,7 @@ rectangle "ShiftSwap" as Boundary {
   usecase "UC-11\nExpire overdue\nsubstitute request" as UC11 <<amber>>
   usecase "UC-12\nCancel own\nsubstitute request" as UC12 <<amber>>
   usecase "UC-04\nRequest substitute" as UC04 <<amber>>
-  usecase "UC-05\nRespond to substitute\nrequest (accept/decline)" as UC05 <<amber>>
+  usecase "UC-05\nRespond (accept / can't)" as UC05 <<amber>>
   usecase "UC-04a\nFind eligible\ncandidates (BR-01)" as UC04a <<amber>>
   usecase "UC-06\nApprove or reject\nsubstitution" as UC06 <<amber>>
   usecase "UC-08\nCompute weekly hours\nand holiday allowance" as UC08

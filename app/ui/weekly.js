@@ -1,6 +1,6 @@
 // UC-08 Weekly hours and holiday allowance (FR-14), shown in Pay → Weekly as one card per worker (prompt §2.7).
 import * as svc from '../core/services.js';
-import { t, esc, fmtHours, fmtWon, fmtDateShort } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, fmtDateShort, displayName } from './i18n.js';
 import { emptyState } from './components.js';
 
 function reasonText(r) {
@@ -23,7 +23,7 @@ export function weeklyCards(week) {
     return `
       <article class="card pay-card ${r.holidayEligible ? 'is-ok' : ''}">
         <div class="card-row">
-          <h3 class="card-title">${esc(r.name)}</h3>
+          <h3 class="card-title">${esc(displayName(r.name))}</h3>
           <span class="chip ${r.holidayEligible ? 'chip-ok' : ''}">${esc(t(r.holidayEligible ? 'pay.eligible' : 'pay.notEligible'))}</span>
         </div>
         ${r.holidayEligible

@@ -27,7 +27,6 @@ try {
       const id = svc.registerWorker({ name: 'Load Worker' + String(i + 1).padStart(2, '0'), phone: '010-9000-' + String(1000 + i),
         hourlyWage: 10320 + (i % 4) * 100, contractStart: '2026-03-02', contractEnd: '', probationEnd: '', simpleLabor: i % 3 === 0, active: true });
       svc.saveFixedSchedule(id, patterns[i % 4].map(([weekday, startTime, endTime]) => ({ weekday, startTime, endTime })));
-      svc.saveAvailability(id, [{ weekday: ((i + 2) % 7) + 1, startTime: '09:00', endTime: '23:00' }]);
     }
     const weeks = [];
     for (let d = new Date(Date.UTC(2026, 7, 10)), k = 0; k < 12; k++, d.setUTCDate(d.getUTCDate() + 7)) weeks.push(d.toISOString().slice(0, 10));

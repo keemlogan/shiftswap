@@ -14,6 +14,10 @@ skinparam class<<service>> {
   BackgroundColor #FFFFFF
   BorderColor #E9A23B
 }
+skinparam class<<query>> {
+  BackgroundColor #FFFFFF
+  BorderColor #6B8CAE
+}
 hide circle
 hide empty members
 
@@ -36,6 +40,7 @@ enum SubRequestStatus {
   ACCEPTED
   APPROVED
   REJECTED
+  FAILED
   EXPIRED
   CANCELLED
 }
@@ -56,7 +61,7 @@ enum NotificationKind {
   REQUEST_REJECTED
   REQUEST_EXPIRED
   REQUEST_CANCELLED
-  NO_CANDIDATE
+  REQUEST_FAILED
   TARGET_CLOSED
 }
 
@@ -83,14 +88,6 @@ class Worker {
 }
 
 class FixedSchedule {
-  id : int <<PK>>
-  workerId : int <<FK>>
-  weekday : int
-  startTime : time
-  endTime : time
-}
-
-class Availability {
   id : int <<PK>>
   workerId : int <<FK>>
   weekday : int
@@ -183,7 +180,6 @@ class Notification {
 class ScheduleService <<service>> {
   +registerWorker(data) : int
   +saveFixedSchedule(workerId, slots) : FixedSchedule[]
-  +saveAvailability(workerId, slots) : Availability[]
   +generateWeek(weekStart) : {weekStart, created}
   +editShift(shiftId, changes) : int
   +updateSettings({name, regularEmployees,\n  subAttendancePolicy, minimumWages}) : {workplace, minimumWages}
@@ -191,7 +187,7 @@ class ScheduleService <<service>> {
 
 class SubstituteService <<service>> {
   +defaultDeadline(shift) : string
-  +createSubRequest({shiftId, requesterId,\n  reason, deadline}) : {id, candidates}
+  +createSubRequest({shiftId, requesterId,\n  reason, deadline}) : {id, status, candidates}
   +respondToRequest(requestId, workerId, response) : {status}
   +decideRequest(requestId, decision) : {status}
   +cancelRequest(requestId, requesterId) : {status}
@@ -214,14 +210,15 @@ class PayrollService <<service>> {
 
 class NotificationService <<service>> {
   +listNotifications(workerId) : {items, unread}
-  +markNotificationsRead(workerId) : int
+  +markNotificationsRead(workerId, ids?) : int
 }
 
 class LaborRules <<service>> {
   +{static} overlaps(aStart, aEnd, bStart, bEnd) : boolean
   +{static} durationHours(start, end) : float
   +{static} weekStartOf(date) : date
-  +{static} isEligibleCandidate({worker, requesterId,\n  shift, workerShifts, availability}) : boolean
+  +{static} isEligibleCandidate({worker, requesterId,\n  shift, workerShifts}) : boolean
+  +{static} hasNoTaker(responses) : boolean
   +{static} validateRequest({shift, requesterId,\n  now, deadline, openRequests}) : string[]
   +{static} contractHours(fixedSchedules) : float
   +{static} computeWeeklySummary({workerId,\n  contractHours, shifts, policy}) : WeeklySummary
@@ -230,12 +227,20 @@ class LaborRules <<service>> {
   +{static} minimumWageFor(year, rows) : int
   +{static} probationApplies(worker, date) : boolean
   +{static} computePayrollRow({hourlyWage, shifts,\n  holidayWeeks, regularEmployees,\n  minimumHourly, probation}) : Payroll
+  +{static} round2(x) : float
 }
+
+class HomeQueries <<query>> {
+  +getWorkerHome(workerId) : {worker, today, incoming, taken,\n  myOpen, failed, nextShift, week, toRecord}
+  +getOwnerHome() : {today, decisions, open, failed,\n  toConfirm, payWarnings, taskCount, todayShifts, week}
+  +previewCandidates(shiftId, requesterId) : {id, name}[]
+  +getShiftDetail(shiftId) : {...Shift, history, canDelete}
+}
+note bottom of HomeQueries : read-only queries for the\ntask-first Home screens (NFR-13)
 
 ' ===== relationships =====
 Workplace "1" -- "*" Worker
 Worker "1" -- "*" FixedSchedule
-Worker "1" -- "*" Availability
 Worker "1" -- "*" Shift : currently assigned >
 Worker "0..1" -- "*" Shift : originally owned >
 FixedSchedule "0..1" -- "*" Shift : generated from >
@@ -260,7 +265,6 @@ Notification::kind .. NotificationKind
 
 ScheduleService ..> Worker
 ScheduleService ..> FixedSchedule
-ScheduleService ..> Availability
 ScheduleService ..> Shift
 ScheduleService ..> Workplace
 ScheduleService ..> LaborRules : overlaps(), addDays()
@@ -275,4 +279,14 @@ PayrollService ..> Payroll
 PayrollService ..> MinimumWage
 PayrollService ..> LaborRules
 NotificationService ..> Notification
+HomeQueries ..> Worker
+HomeQueries ..> Workplace
+HomeQueries ..> Shift
+HomeQueries ..> SubRequest
+HomeQueries ..> SubRequestTarget
+HomeQueries ..> Attendance
+HomeQueries ..> Payroll
+HomeQueries ..> Notification
+HomeQueries ..> FixedSchedule
+HomeQueries ..> LaborRules : isEligibleCandidate(),\ncomputeWeeklySummary() (swap effect)
 @enduml

@@ -1,10 +1,7 @@
-// Me (prompt §2.8; UC-02 availability, UC-07 attendance). Also exports the weekday-chip schedule editor
-// used for fixed schedules on the Staff screen.
-import * as svc from '../core/services.js';
+// The weekday-chip schedule editor used for fixed schedules on the Staff screen (FR-02).
 import { contractHours } from '../core/rules.js';
-import { t, esc, dayName, fmtWon, fmtYMD, showFormError } from './i18n.js';
-import { icon, button, pageHead, sectionHead, emptyState, timeOptions } from './components.js';
-import { myAttendance, bindRecordButtons } from './attendance.js';
+import { t, esc, dayName } from './i18n.js';
+import { icon, timeOptions } from './components.js';
 
 /**
  * Weekday chips + one start/end row per chosen weekday. `slots` are {id?, weekday, startTime, endTime}
@@ -76,47 +73,4 @@ export function bindSlotEditor(root) {
   });
   list.addEventListener('change', updateTotal);
   updateTotal();
-}
-
-export function render(view, ctx) {
-  const me = svc.getWorker(ctx.user.id);
-  const cta = button({ label: t('me.save'), kind: 'primary', block: true, id: 'save-avail' });
-  const attendance = myAttendance(ctx);
-  view.innerHTML = `
-    ${pageHead({ title: t('me.title'), sub: t('me.sub'), cta })}
-    <section class="section">
-      <div class="card profile">
-        <div class="card-row"><h2 class="card-title">${esc(me.name)}</h2><span class="chip">${esc(t('role.WORKER'))}</span></div>
-        <dl class="summary-list">
-          <div><dt>${esc(t('me.contract'))}</dt><dd class="num">${esc(t('staff.period', { from: fmtYMD(me.contractStart), to: me.contractEnd ? fmtYMD(me.contractEnd) : t('staff.openEnded') }))}</dd></div>
-          <div><dt>${esc(t('me.hours'))}</dt><dd class="num">${esc(t('common.perWeek', { h: contractHours(svc.getFixedSchedules(me.id)) }))}</dd></div>
-          <div><dt>${esc(t('me.wage'))}</dt><dd class="num">${esc(fmtWon(me.hourlyWage))}</dd></div>
-          <div><dt>${esc(t('me.phone'))}</dt><dd class="num">${esc(me.phone || '')}</dd></div>
-        </dl>
-        <p class="hint">${esc(t('me.privacy'))}</p>
-      </div>
-    </section>
-    <section class="section">
-      ${sectionHead(t('me.availability'))}
-      <form class="card form" id="avail-form" novalidate>
-        <p class="muted">${esc(t('me.availabilityHint'))}</p>
-        ${slotEditorHtml(svc.getAvailability(me.id), { defaults: ['17:00', '23:00'] })}
-      </form>
-    </section>
-    <section class="section">
-      ${sectionHead(t('me.attendance'))}
-      ${attendance.html || emptyState(t('me.attendanceEmpty'))}
-    </section>`;
-  const form = view.querySelector('#avail-form');
-  bindSlotEditor(form);
-  view.querySelector('#save-avail').addEventListener('click', () => {
-    try {
-      svc.saveAvailability(me.id, readSlots(form));
-      ctx.toast(t('me.saved'));
-      ctx.refresh();
-    } catch (err) {
-      showFormError(form, err);
-    }
-  });
-  bindRecordButtons(view, ctx, attendance.shifts);
 }
