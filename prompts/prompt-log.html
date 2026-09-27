@@ -583,6 +583,23 @@ not exactly 9,288 in floating point</td>
 ATTENDANCE_CLOSED already translated</td>
 <td>—</td>
 </tr>
+<tr>
+<td>9</td>
+<td>Product-owner review (prompt §2.0 item 7)</td>
+<td>Korean display names: in the Korean UI the seed people and store are
+shown by their spec §10 names (박지영, 이서연, 최민호, 정하나, 강도윤,
+달빛카페) and addressed as full name + 님 ("최민호님"); stored names
+stay English, names not in the map are shown as stored; the English UI
+is unchanged</td>
+<td><code>ui/i18n.js</code>: <code>KO_NAMES</code> display map with
+<code>displayName()</code>, <code>honorific()</code>,
+<code>initial()</code>, and <code>given()</code> returning the Korean
+full name in ko; every screen and <code>main.js</code> render names
+through them</td>
+<td><code>tools/check.mjs</code> DC-3/DC-4 (Korean names on sign-in,
+"이서연님이 대타를 구해요", "최민호님이 먼저 수락했어요", handover
+marker 최민호 / 이서연)</td>
+</tr>
 </tbody>
 </table>
 <p>Result: <code>npm test</code> 77 tests, 77 pass, 0 fail.</p>
@@ -864,4 +881,119 @@ and DC-5 for 26 scenes × 2 languages × 2 widths.</li>
 <li>NFR-03 re-measured on v4: the slowest screen renders in 18 ms and
 paints in 43 ms.</li>
 </ul>
+<h2
+id="iteration-6--requirements-change-availability-removed-cant-answer-and-failed">Iteration
+6 — requirements change: availability removed, can't answer and
+FAILED</h2>
+<p>Source of every row: product-owner review of the running app
+(2026-09-27, spec §15). When no co-worker's availability matched, the
+owner only got a "no candidate" notice with nothing to do, and
+availability slots were extra data workers had to keep up to date. Spec
+changes: UC-02 and FR-03 retired, BR-01 without availability, new BR-13
+and FR-22, FR-08 and FR-09 reworded, §7 SubRequest state FAILED, §8
+table Availability removed (11 tables) and NO_CANDIDATE replaced by
+REQUEST_FAILED, §10 seed without availability (seed request targets
+Minho, Hana and Doyun) and walkthrough S8.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Spec change</th>
+<th>Code (<code>app/core</code>)</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>BR-01: eligible = active WORKER, not the requester, no overlapping
+shift that date; availability is not used</td>
+<td><code>rules.js</code>
+<code>isEligibleCandidate({ worker, requesterId, shift, workerShifts })</code>
+(no <code>availability</code> argument; a given <code>worker.role</code>
+must be WORKER); <code>services.js</code>
+<code>eligibleCandidates</code> / <code>previewCandidates</code> no
+longer read availability</td>
+<td>TC-014, TC-015 (rewritten), TC-016, TC-066 (Sun 10-04 now has three
+recipients)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>UC-02 / FR-03 retired; §8 table Availability removed</td>
+<td><code>db.js</code>: <code>Availability</code> dropped from
+<code>SCHEMA</code> and the seed; <code>services.js</code>:
+<code>getAvailability</code> and <code>saveAvailability</code> removed;
+<code>menuFor</code> / <code>routesFor</code> had no availability route
+(unchanged)</td>
+<td>TC-001 (no Availability table), TC-08A, TC-122, TC-125 (setup no
+longer registers availability), TC-134 (unchanged)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>§10 seed: request 1 targets Choi Minho, Jung Hana and Kang
+Doyun</td>
+<td><code>db.js</code> seed: three SubRequestTarget rows and three
+REQUEST_RECEIVED notifications</td>
+<td>TC-001, TC-051, TC-052, TC-054, TC-065, TC-123 (three targets)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>§7 / §8: SubRequest.status FAILED (final)</td>
+<td><code>db.js</code>: FAILED in the CHECK list;
+<code>hasCurrentSchema()</code> also requires FAILED, so a saved copy
+from iteration 5 is replaced by the seed</td>
+<td>TC-003</td>
+</tr>
+<tr>
+<td>5</td>
+<td>BR-13 / FR-08: no eligible candidate at creation → FAILED at once,
+REQUEST_FAILED to requester and owner</td>
+<td><code>rules.js</code> <code>hasNoTaker(responses)</code>;
+<code>services.js</code> <code>failRequest()</code>;
+<code>createSubRequest</code> returns
+<code>{ id, status, candidates }</code> with status
+<code>'FAILED'</code> when there is no candidate</td>
+<td>TC-025 (rewritten), TC-13B, TC-13F</td>
+</tr>
+<tr>
+<td>6</td>
+<td>BR-13 / FR-22: the can't (DECLINED) that leaves every target
+DECLINED → FAILED; a single can't notifies no one</td>
+<td><code>respondToRequest(requestId, workerId, 'DECLINED')</code>
+re-reads the targets in the same transaction and calls
+<code>failRequest()</code>; it returns
+<code>{ status: 'REQUESTED' | 'FAILED' }</code></td>
+<td>TC-13A, TC-13C, TC-133 (REQUEST_FAILED to [owner, requester] instead
+of NO_CANDIDATE; TARGET_CLOSED now reaches Hana)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>BR-13: accepting or cancelling a FAILED request is refused</td>
+<td>unchanged guards now cover FAILED: REQUEST_CLOSED with
+<code>params.status = 'FAILED'</code>; <code>expireOverdue</code>
+ignores FAILED</td>
+<td>TC-13A</td>
+</tr>
+<tr>
+<td>8</td>
+<td>FR-22 / prompt §2.3, §2.5: Home shows the failed request until
+acknowledged (확인했어요); it counts as an owner task</td>
+<td><code>getWorkerHome(workerId).failed</code> and
+<code>getOwnerHome().failed</code> (unread REQUEST_FAILED
+notifications); <code>taskCount</code> includes <code>failed</code>;
+<code>markNotificationsRead(workerId, ids?)</code> marks only the given
+ids (the old one-argument form still marks everything)</td>
+<td>TC-13D</td>
+</tr>
+<tr>
+<td>9</td>
+<td>§10 walkthrough S8</td>
+<td>—</td>
+<td>TC-13E</td>
+</tr>
+</tbody>
+</table>
+<p>Result: <code>npm test</code> 84 tests, 84 pass, 0 fail (the 77 tests
+of iteration 5, updated where they assumed availability, plus TC-13A–F
+and TC-003).</p>
 </main></body></html>

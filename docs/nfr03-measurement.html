@@ -6,9 +6,10 @@ measurement — render time with 20 workers and 12 weeks of shifts</h1>
 <p><strong>Requirement (spec §5, NFR-03):</strong> with 20 workers and
 12 weeks of shifts, any screen renders in under 1 second on a mid-range
 laptop.</p>
-<p><strong>Result:</strong> met with a wide margin. Measured on the v4
-interface, the slowest screen took 18.0 ms from the route change to the
-rendered DOM, and 42.5 ms including paint. The limit is 1,000 ms.</p>
+<p><strong>Result:</strong> met with a wide margin. Measured on the
+final (iteration 6) interface, the slowest screen took 15.7 ms from the
+route change to the rendered DOM, and 35.1 ms including paint. The limit
+is 1,000 ms.</p>
 <p><strong>Reproduce:</strong> <code>node tools/nfr03.mjs</code> (starts
 its own static server and headless Chrome, prints the numbers below as
 JSON).</p>
@@ -45,10 +46,10 @@ server from the repository root</td>
 <h2 id="data-set">Data set</h2>
 <p>The data was built in a throwaway browser profile through the
 application services (<code>registerWorker</code>,
-<code>saveFixedSchedule</code>, <code>saveAvailability</code>,
-<code>generateWeek</code>, <code>recordAttendance</code>,
-<code>confirmAttendance</code>, <code>generatePayroll</code>). It starts
-from the normal seed, which is not modified in the repository.</p>
+<code>saveFixedSchedule</code>, <code>generateWeek</code>,
+<code>recordAttendance</code>, <code>confirmAttendance</code>,
+<code>generatePayroll</code>). It starts from the normal seed, which is
+not modified in the repository.</p>
 <table>
 <thead>
 <tr>
@@ -138,28 +139,28 @@ week's WeeklySummary rows for all 20 workers
 <td>Schedule (owner)</td>
 <td><code>#/schedule/2026-09-28</code></td>
 <td>49 shift blocks</td>
-<td>7.6 ms</td>
-<td>7.9 ms</td>
+<td>3.1 ms</td>
+<td>5.7 ms</td>
 <td>27.5 ms</td>
-<td>42.5 ms</td>
+<td>28.4 ms</td>
 </tr>
 <tr>
 <td>Pay → Weekly</td>
 <td><code>#/pay/week/2026-09-21</code></td>
 <td>20 worker cards</td>
-<td>16.2 ms</td>
-<td>18.0 ms</td>
-<td>26.1 ms</td>
-<td>36.1 ms</td>
+<td>7.7 ms</td>
+<td>15.7 ms</td>
+<td>10.6 ms</td>
+<td>28.7 ms</td>
 </tr>
 <tr>
 <td>Pay → Monthly (existing draft)</td>
 <td><code>#/pay/month/2026-09</code></td>
 <td>20 worker rows + 1 warning row</td>
 <td>13.4 ms</td>
-<td>14.8 ms</td>
-<td>27.1 ms</td>
-<td>28.5 ms</td>
+<td>15.2 ms</td>
+<td>23.3 ms</td>
+<td>35.1 ms</td>
 </tr>
 </tbody>
 </table>
@@ -178,14 +179,15 @@ week's WeeklySummary rows for all 20 workers
 <td>Cold start: page reload → sql.js initialised → saved database loaded
 → schedule rendered</td>
 <td>5 reloads, warm HTTP cache</td>
-<td>30 ms</td>
-<td>26–31 ms</td>
+<td>39 ms</td>
+<td>27–63 ms</td>
 </tr>
 </tbody>
 </table>
-<p>The v3 interface, measured the same way before the redesign, gave the
-same picture: route change → DOM at most 16.6 ms, painted at most 36.7
-ms. There were no console errors in any run.</p>
+<p>Earlier measurements gave the same picture — the v4 interface: route
+change → DOM at most 18.0 ms, painted at most 42.5 ms; the v3 interface:
+route change → DOM at most 16.6 ms, painted at most 36.7 ms. There were
+no console errors in any run.</p>
 <h2 id="limits-of-this-measurement">Limits of this measurement</h2>
 <ul>
 <li>The machine is an Apple M2, which is faster than many mid-range

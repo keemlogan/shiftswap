@@ -116,7 +116,7 @@ SLIDES = [
          en="At month end the owner generates payroll. Doyun's hourly wage is below the 2026 minimum wage, so the row is flagged and the month cannot be confirmed until the owner acknowledges the warning.",
          ko="월말에는 급여 정산을 생성합니다. 도윤의 시급이 2026년 최저임금보다 낮아 경고가 표시되고, 사장이 확인하기 전에는 확정할 수 없습니다."),
     dict(who=MK, min=1.0, kind="numbers", title="Testing",
-         nums=[(f"{PASSED}/{TESTS}", "tests pass", "npm test, Node test runner"), ("13/13", "business rules tested", "every BR has ≥ 1 test"), ("77/77", "tests pass in a clean rebuild", "prompt v5 re-run in an empty folder"),
+         nums=[(f"{PASSED}/{TESTS}", "tests pass", "npm test, Node test runner"), ("13/13", "business rules tested", "every BR has ≥ 1 test"), ("84/84", "tests pass in a clean rebuild", "final prompt v6 re-run in an empty folder"),
                ("21/21", "FRs traced", "FR → UC → screen → function → test"), ("2", "screen widths", "360 px and 1440 px, no horizontal scroll")],
          en=f"All {TESTS} automated tests pass. They include boundary values such as fourteen point nine nine versus fifteen hours, the forty-hour cap, both attendance policies, and the concurrent acceptance. The traceability matrix in the report links every functional requirement to its use case, screen, function and tests.",
          ko=f"자동 테스트 {TESTS}개가 모두 통과합니다. 14.99시간과 15시간 같은 경계값, 40시간 상한, 두 가지 개근 정책, 동시 수락을 포함합니다. 보고서의 추적 매트릭스는 모든 기능 요구사항을 유스케이스, 화면, 함수, 테스트와 연결합니다."),

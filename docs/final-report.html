@@ -1895,7 +1895,7 @@ function computePayrollRow(...):                       -- rules.js
 
 <h2 id="reproducibility">5.6 Reproducibility Check</h2>
 
-<p>The course requires a final prompt that, when re-run through vibe coding, reliably reproduces a working system. A prompt that was refined on one code base may, however, depend on that code base without anyone noticing: a sentence may be understandable only to an assistant that has seen the previous version. The reproducibility check therefore rebuilds the system from nothing and tests the result with the team's test suite.</p>
+<p>The course requires a final prompt that, when re-run through vibe coding, reliably reproduces a working system. A prompt that was refined on one code base may, however, depend on that code base without anyone noticing: a sentence may be understandable only to an assistant that has seen the previous version. The reproducibility check therefore rebuilds the system from nothing and tests the result with the team's test suite. It was carried out three times, with prompt versions 3, 5 and 6. The final run passed all 84 acceptance tests unchanged and met all six done criteria (Section 5.6.2).</p>
 
 <h3 id="repro-method">5.6.1 Method</h3>
 
@@ -1959,7 +1959,40 @@ function computePayrollRow(...):                       -- rules.js
 
 <h4 id="repro-run3">Run 3 (prompt version 6)</h4>
 
-<!-- REPRO3-RESULTS -->
+<p>The third run was made on 2026-09-27 with the final prompt, version 6, after the requirements change of iteration 6 (Section 5.4.6). The method was that of run 2: a new assistant session with no conversation history worked only inside an empty folder. It received the prompt followed by the specification, and the 84 supplied tests in <code>tests/rules.test.js</code> and <code>tests/services.test.js</code>. The table below gives the results.</p>
+
+<table>
+  <caption>Table 54. Results of reproduction run 3 (prompt v6)</caption>
+  <thead><tr><th style="width:36%">Measurement</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm test</code> of the rebuilt system</td><td>89 tests, 89 passed: the 84 supplied tests and 5 tests the session added</td></tr>
+    <tr><td>Supplied tests on the first run</td><td>All 84 passed; the team re-ran the supplied files in the rebuilt folder: 84 of 84</td></tr>
+    <tr><td>Supplied test files unchanged</td><td>Identical checksums at the start and at the end: <code>shasum</code> of <code>rules.test.js</code> 83182afc4cc26a0fea6b127fbb379b63b01f6668, of <code>services.test.js</code> 1032e7d08436da7010f94b88e1ea1fa61d3c7fb6</td></tr>
+    <tr><td>Done criteria 1–2</td><td>Pass: supplied tests, seed state and walkthrough S7</td></tr>
+    <tr><td>Done criterion 3</td><td>Pass: the sign-in screen "달빛카페 데모" opens without console errors</td></tr>
+    <tr><td>Done criterion 4</td><td>Pass: tour walkthrough including "16시간 → 21시간", one-tap acceptance, "최민호님이 먼저 수락했어요" for the second candidate, the owner's decision card with "(33,024원 유지)" and the handover marker</td></tr>
+    <tr><td>Done criterion 5</td><td>Pass: walkthrough S8 in the browser — three recipients, three answers 불가, Hana's FAILED card, and the owner's card "대타를 못 구했어요", which 확인했어요 removes</td></tr>
+    <tr><td>Done criterion 6</td><td>Pass: one filled primary button per screen, reasons on disabled buttons, touch targets of at least 44 px, no horizontal scroll at 360 px</td></tr>
+  </tbody>
+</table>
+
+<p>The session reported several ambiguities; the main ones were the following. First, §10 of the specification still said that the Korean interface shows the English names, while §2.0 of the prompt required a Korean display map; the session followed the prompt. Second, the rule of exactly one primary button per screen conflicted with Home cards that each carry an action; the session kept the first enabled card action as the primary and drew the others grey. Third, the file layout of the prompt listed no module for Home, so the session placed Home in existing modules. The first and third points had already been corrected in the repository — the sentence of §10, and the module list of prompt §1 with <code>home.js</code>, <code>me.js</code>, <code>components.js</code> and <code>slots.js</code> — but only after run 3 had started, so the run was made without these corrections. Fourth, the session noted three behaviours that the documents leave implicit: saving the settings replaces the whole minimum-wage table, generating the payroll of a confirmed month returns the confirmed rows, and attendance can be recorded once the shift has started.</p>
+
+<h4 id="repro-summary">Summary of the three runs</h4>
+
+<p>The table below summarises the three reproduction runs.</p>
+
+<table>
+  <caption>Table 55. Summary of the reproduction runs</caption>
+  <thead><tr><th style="width:8%">Run</th><th style="width:10%">Prompt</th><th style="width:24%">Input</th><th>Team's acceptance tests against the rebuild</th><th style="width:16%">Done criteria</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>v3</td><td>prompt + specification</td><td>rules 13 of 25; services did not load</td><td>1–4 met</td></tr>
+    <tr><td>2</td><td>v5</td><td>prompt + specification + tests</td><td>77 of 77</td><td>1–5 met</td></tr>
+    <tr><td>3</td><td>v6</td><td>prompt + specification + tests</td><td>84 of 84</td><td>1–6 met</td></tr>
+  </tbody>
+</table>
+
+<p>Run 1 showed that the prompt reproduced the behaviour of the system but not its interfaces. From version 5 on, the acceptance tests are part of the input, and both later runs passed every supplied test unchanged, including run 3 after a change of the requirements. The final prompt therefore reproduces a system that passes all 84 acceptance tests of the reference implementation. The limits stated in Section 5.6.1 remain: there was one run per prompt version, the interface was compared with the reference by the done criteria and not pixel by pixel, and two clarifications that the runs reported were added to the prompt and the specification after the runs had started.</p>
 
 <h1 id="testing">6. Testing and Validation</h1>
 
@@ -1970,7 +2003,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The layered architecture of Chapter 4 decides where each kind of test belongs. The table below maps the lecture's test levels to what was done for ShiftSwap.</p>
 
 <table>
-  <caption>Table 54. Test levels and how they were applied</caption>
+  <caption>Table 56. Test levels and how they were applied</caption>
   <thead><tr><th style="width:17%">Level</th><th style="width:28%">Target</th><th>Method</th></tr></thead>
   <tbody>
     <tr><td>Unit testing</td><td>Domain rules (<code>rules.js</code>)</td><td>28 tests in <code>tests/rules.test.js</code> call the pure rule functions with hand-built inputs, including the boundary values of Section 6.5. No database is involved.</td></tr>
@@ -1988,7 +2021,7 @@ function computePayrollRow(...):                       -- rules.js
 <h2 id="testing-environment">6.2 Test Environment</h2>
 
 <table>
-  <caption>Table 55. Test environment</caption>
+  <caption>Table 57. Test environment</caption>
   <thead><tr><th style="width:28%">Item</th><th>Value</th></tr></thead>
   <tbody>
     <tr><td>Test runner</td><td>Node.js built-in test runner <code>node:test</code> with <code>node:assert/strict</code> [12]; command <code>npm test</code>, which runs <code>node --test tests/*.test.js</code></td></tr>
@@ -2007,7 +2040,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The table below lists all 84 automated tests in the order in which they appear in the two test files. The list was extracted from the files with a script, so it contains exactly the tests that run. The column "Covers" gives the business rules, requirements or specification sections each test checks; "Expected result" states what the assertions require.</p>
 
 <table>
-  <caption>Table 56. Automated test cases (tests/rules.test.js and tests/services.test.js)</caption>
+  <caption>Table 58. Automated test cases (tests/rules.test.js and tests/services.test.js)</caption>
   <thead><tr><th style="width:8%">ID</th><th style="width:27%">Name</th><th style="width:8%">File</th><th style="width:13%">Covers</th><th>Expected result</th></tr></thead>
   <tbody>
     <tr><td class="req-id">TC-011</td><td>overlap is half-open: touching ranges do not overlap</td><td>rules</td><td>BR-01</td><td>Touching ranges 10:00–16:00 and 16:00–22:00 do not overlap; one extra minute does.</td></tr>
@@ -2102,7 +2135,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the final build (prompt v6, Chapter 5).</p>
 
 <table>
-  <caption>Table 57. Test results by group (npm test, 2026-09-27)</caption>
+  <caption>Table 59. Test results by group (npm test, 2026-09-27)</caption>
   <thead><tr><th style="width:10%">Group</th><th>Subject</th><th style="width:9%">Tests</th><th style="width:9%">Passed</th><th style="width:9%">Failed</th></tr></thead>
   <tbody>
     <tr><td>TC-00x</td><td>Seed data and storage (spec §10, NFR-05)</td><td class="num">3</td><td class="num">3</td><td class="num">0</td></tr>
@@ -2139,7 +2172,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The legal rules of ShiftSwap are threshold rules: a worker is either above or below 15 hours, a workplace either has five employees or not, a date is either inside or outside the probation period. Errors in such rules typically occur exactly at the threshold — a <code>&gt;</code> written for <code>≥</code>, or a date compared inclusively instead of exclusively. The tests therefore place inputs on both sides of every threshold, as the table below shows.</p>
 
 <table>
-  <caption>Table 58. Boundary values tested for the legal and workflow rules</caption>
+  <caption>Table 60. Boundary values tested for the legal and workflow rules</caption>
   <thead><tr><th style="width:15%">Rule</th><th style="width:22%">Threshold</th><th>Values below / at / above</th><th style="width:15%">Tests</th></tr></thead>
   <tbody>
     <tr><td>BR-06 contractual hours</td><td>≥ 15 h</td><td>14.99 h → not eligible; 15.00 h → eligible (3 holiday hours); 16 h → eligible (3.2 h)</td><td>TC-082, TC-081, TC-083</td></tr>
@@ -2171,12 +2204,12 @@ function computePayrollRow(...):                       -- rules.js
 <p>The non-functional requirements were verified with the methods named in their specification. The table below gives the evidence and the status for each. Where a check has not been carried out, the table says so.</p>
 
 <table>
-  <caption>Table 59. Verification of the non-functional requirements</caption>
+  <caption>Table 61. Verification of the non-functional requirements</caption>
   <thead><tr><th style="width:9%">ID</th><th style="width:24%">Method</th><th>Evidence</th><th style="width:13%">Status</th></tr></thead>
   <tbody>
     <tr><td class="req-id">NFR-01</td><td>UI walkthrough</td><td>In the final build the pending request appears as a card on the candidate's Home screen, with the effect of accepting and the Accept button on the card, so acceptance takes one tap after sign-in. Checked in the Korean walkthrough of <code>tools/check.mjs</code> (done criterion 4); the data behind the card is covered by TC-064 and the state logic by TC-063.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-02</td><td>Browser check at 360 px and 1440 px</td><td>The prompt log records headless Chrome checks of every screen for both roles in English and Korean at 1440 px and 360 px with no horizontal scroll for the builds of version 2 (70 of 70 checks) and version 3 (82 of 82 checks). For the final build, <code>tools/check.mjs</code> checks 28 screen states in both languages at 1280 px and 360 px for horizontal scroll; all pass (Section 6.7, NFR-13 row).</td><td>Met</td></tr>
-    <tr><td class="req-id">NFR-03</td><td>Timed load with 20 workers and 12 weeks</td><td>Service-level measurement in Node on the machine of Section 6.2, with 16 extra workers (20 in total) and 12 generated weeks (492 shifts): <code>getWeekShifts</code> 1.2 ms, <code>recomputeWeek</code> for all workers 16.9 ms, <code>generatePayroll</code> 22.1 ms, <code>createSubRequest</code> 2.5 ms, <code>getApprovalPreview</code> 1.7 ms. The database work of any screen is therefore far below 1 second; a browser rendering measurement with the same data has not been recorded.</td><td>Data layer met; screen timing not measured</td></tr>
+    <tr><td class="req-id">NFR-03</td><td>Timed load with 20 workers and 12 weeks</td><td>Browser measurement on the final (iteration 6) interface with <code>tools/nfr03.mjs</code> (Apple M2, headless Chrome 153, viewport 1280 × 800), owner signed in, 20 workers, 12 generated weeks (588 shifts). Route change to rendered DOM, median / maximum of 10 runs: Schedule 3.1 / 5.7 ms, Pay → Weekly 7.7 / 15.7 ms, Pay → Monthly 13.4 / 15.2 ms; including paint: 27.5 / 28.4 ms, 10.6 / 28.7 ms and 23.3 / 35.1 ms. The slowest screen took 15.7 ms to the DOM and 35.1 ms to paint, against the limit of 1,000 ms. Cold start (reload to rendered schedule): median 39 ms, range 27–63 ms. The procedure and data set are recorded in <code>docs/nfr03-measurement.md</code> in the repository.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-04</td><td>Unit test TC-05x</td><td>TC-051, TC-052, TC-053, TC-063 pass (Section 6.6).</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-05</td><td>Manual test</td><td>TC-105 reloads the database from a storage object and finds the acknowledgement kept; TC-002 and TC-003 check the replacement of an outdated copy (from before iteration 2 and before iteration 6); the prompt log records a headless reload and reset check.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-06</td><td>Manual test in four browsers</td><td>Chrome checked (headless and desktop). The code uses only standard ES modules, <code>localStorage</code>, <code>sessionStorage</code> and WebAssembly. Checks in Edge, Safari and Firefox are not recorded at the time of writing.</td><td>Chrome met; others pending</td></tr>
@@ -2196,7 +2229,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The specification requires that every functional requirement maps to at least one use case, every use case to at least one screen and service function, and every business rule to at least one test case (spec §12). The matrix below was derived from the code, not from the design documents: the screen column lists the UI modules that call the service functions, found by searching each module in <code>app/ui/</code> for its calls to <code>services.js</code>, and the test column lists the tests that call those functions or the rule functions behind them and assert the requirement's behaviour.</p>
 
 <table>
-  <caption>Table 60. Traceability matrix: functional requirement → use case → screen → service → business rule → tests</caption>
+  <caption>Table 62. Traceability matrix: functional requirement → use case → screen → service → business rule → tests</caption>
   <thead><tr><th style="width:7%">FR</th><th style="width:9%">UC</th><th style="width:14%">Screen (app/ui)</th><th style="width:27%">Service function(s)</th><th style="width:14%">BR</th><th>Tests</th></tr></thead>
   <tbody>
     <tr><td class="req-id">FR-01</td><td>UC-01</td><td><code>workers.js</code></td><td><code>registerWorker</code></td><td>BR-09, BR-10 (data)</td><td>TC-01C, TC-01D</td></tr>
@@ -2229,7 +2262,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The table below summarises coverage from the other direction. Every business rule, including BR-13, has at least one test, as spec §12 requires; most have several, at the rule level and through the services.</p>
 
 <table>
-  <caption>Table 61. Business-rule coverage by test cases</caption>
+  <caption>Table 63. Business-rule coverage by test cases</caption>
   <thead><tr><th style="width:8%">BR</th><th style="width:22%">Rule</th><th style="width:28%">Implementing functions</th><th>Tests</th><th style="width:8%">Count</th></tr></thead>
   <tbody>
     <tr><td class="req-id">BR-01</td><td>Eligible candidates</td><td><code>isEligibleCandidate, overlaps</code></td><td>TC-011, TC-012, TC-014, TC-015, TC-016, TC-024, TC-066, TC-08B</td><td class="num">8</td></tr>
@@ -2254,7 +2287,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>The build iterations are described in Chapter 5; this section lists what they found and how each finding was verified. In iteration 1, the AI coding assistant built the system from prompt version 1 and recorded every point at which the specification was ambiguous or silent, together with the choice it made. A document review of the proposal and interim report against the specification found further gaps. In iteration 2 each finding was resolved by changing the specification or the prompt, and where necessary the code, and each resolution was tied to a test. The table below lists the findings. Most of them were gaps in the specification rather than errors in the code: the implementation had already made a reasonable choice, and the change made that choice part of the contract, so that a regenerated system must make the same choice.</p>
 
 <table>
-  <caption>Table 62. Findings of iterations 1 and 2, their resolution and verification</caption>
+  <caption>Table 64. Findings of iterations 1 and 2, their resolution and verification</caption>
   <thead><tr><th style="width:4%">#</th><th style="width:30%">Finding</th><th style="width:36%">Resolution (specification / prompt / code)</th><th>Verified by</th></tr></thead>
   <tbody>
     <tr><td>1</td><td><code>node --test tests/</code> fails on Node 24 (directory argument read as a module path)</td><td>Prompt: test script <code>node --test tests/*.test.js</code></td><td><code>npm test</code> runs</td></tr>
@@ -2287,7 +2320,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>Iteration 5 added a second kind of finding: defects in the code of the reference implementation, found by an independent code review after reproduction run 1 (Section 5.6.2). A reviewer script reproduced each defect against the version 3 code before it was fixed. The table below lists the seven defects and the regression tests that now guard against them.</p>
 
 <table>
-  <caption>Table 63. Defects found by the independent code review (iteration 5) and their regression tests</caption>
+  <caption>Table 65. Defects found by the independent code review (iteration 5) and their regression tests</caption>
   <thead><tr><th style="width:4%">#</th><th style="width:32%">Defect</th><th style="width:38%">Fix (specification / code)</th><th>Regression tests</th></tr></thead>
   <tbody>
     <tr><td>1</td><td>A candidate who already works an overlapping shift on the date could accept, and could be approved</td><td>BR-02: the acceptor is re-checked at acceptance and at approval; ACCEPTOR_BUSY is thrown inside the transaction, so nothing changes</td><td>TC-054, TC-055</td></tr>
@@ -2303,7 +2336,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>Iteration 6 was a requirements change rather than a correction (Section 3.11.4). Its effect on the tests is listed in the table below, taken from the prompt log. Tests that relied on availability were rewritten, and the new rule BR-13 and requirement FR-22 received tests of their own.</p>
 
 <table>
-  <caption>Table 64. Test changes for the change request of iteration 6</caption>
+  <caption>Table 66. Test changes for the change request of iteration 6</caption>
   <thead><tr><th style="width:4%">#</th><th style="width:34%">Specification change</th><th>Tests</th></tr></thead>
   <tbody>
     <tr><td>1</td><td>BR-01 without availability: eligible means an active worker, not the requester, with no overlapping shift that day</td><td>TC-014, TC-015 rewritten; TC-016 and TC-066 updated (three recipients for the seed request and for Hana's Sunday shift)</td></tr>
@@ -2329,7 +2362,7 @@ function computePayrollRow(...):                       -- rules.js
 <p>ShiftSwap is a static web application (NFR-08), so deploying it means publishing files; there is no server program to install or start. The repository is hosted on GitHub and published with GitHub Pages [13] from the root of the <code>main</code> branch, with HTTPS enforced. An empty <code>.nojekyll</code> file in the root tells GitHub Pages to serve the files as they are, without processing them. The table below gives the addresses.</p>
 
 <table>
-  <caption>Table 65. Deployment addresses</caption>
+  <caption>Table 67. Deployment addresses</caption>
   <thead><tr><th style="width:26%">Item</th><th>Address</th></tr></thead>
   <tbody>
     <tr><td>Application</td><td><code>https://keemlogan.github.io/shiftswap/app/</code></td></tr>
@@ -2495,7 +2528,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 <p>The script below runs the core workflow in about five minutes, following the tour on the sign-in screen (done criterion 4 of the final prompt). Start with <i>Reset demo data</i>.</p>
 
 <table>
-  <caption>Table 66. Live demonstration script</caption>
+  <caption>Table 68. Live demonstration script</caption>
   <thead><tr><th style="width:5%">#</th><th style="width:16%">Person</th><th style="width:34%">Action</th><th>Expected result</th></tr></thead>
   <tbody>
     <tr><td>1</td><td>Lee Seoyeon</td><td>Tour step 1 (<i>Start</i>)</td><td><i>Swaps</i> shows the Wednesday request as a tracker at "Requested"</td></tr>
@@ -2512,7 +2545,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 <h2 id="deploy-troubleshooting">7.4 Troubleshooting</h2>
 
 <table>
-  <caption>Table 67. Common problems and solutions</caption>
+  <caption>Table 69. Common problems and solutions</caption>
   <thead><tr><th style="width:36%">Problem</th><th>Cause and solution</th></tr></thead>
   <tbody>
     <tr><td>An error message asks to serve the folder over HTTP</td><td>The page was opened from the file system. Use the deployed URL or a local web server (Section 7.1.3).</td></tr>
@@ -2534,7 +2567,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 <p>The table below assesses each objective G1–G6 against its measure. Only what can be verified from the tests of Chapter 6, the code or the deployed site is claimed. The objectives concern the behaviour of the system; whether that behaviour reduces the owner's work in a real store has not been measured, because no field trial took place (Section 8.3).</p>
 
 <table>
-  <caption>Table 68. Achievement of objectives G1–G6</caption>
+  <caption>Table 70. Achievement of objectives G1–G6</caption>
   <thead><tr><th style="width:6%">ID</th><th style="width:24%">Objective</th><th>Evidence</th><th style="width:14%">Assessment</th></tr></thead>
   <tbody>
     <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts</td><td><code>createSubRequest</code> notifies every eligible worker in the transaction that creates the request (TC-024, TC-016); when no co-worker can be asked or every one of them answers that they can't, the request ends at once and the requester and the owner are told (TC-025, TC-13A). The owner's only action in the workflow is one approve or reject decision (TC-061, TC-062).</td><td>Achieved in the system; effect in a store not measured</td></tr>
@@ -2542,7 +2575,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
     <tr><td class="req-id">G3</td><td>Keep schedule and weekly hours of both workers correct after a swap</td><td>Approval reassigns the shift, keeps the original worker and recomputes both weekly summaries in one transaction (TC-061). The approval panel shows before and after values for both workers — Choi Minho 16 → 21 scheduled hours, eligibility unchanged (TC-063) — and highlights a change of eligibility (TC-08B).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G4</td><td>Apply the legal pay rules and flag violations before payday</td><td>BR-06 to BR-11 are pure functions tested at their boundary values (Section 6.5), and every business rule BR-01 to BR-12 has at least one test (Section 6.8). The payroll warns for Kang Doyun's wage and blocks confirmation until the owner acknowledges it (TC-104, TC-105).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires</td><td>12 use cases (8 core) against a minimum of 5; 11 database tables against a minimum of 4.</td><td>Achieved</td></tr>
-    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly</td><td>The application is deployed at <code>https://keemlogan.github.io/shiftswap/app/</code> (NFR-07). The final prompt and the specification are in the repository (Chapter 5). In reproduction run 2, a new assistant session given only prompt version 5, the specification and the two test files in an empty folder built a system that passed all 77 supplied tests unchanged and met done criteria 1–5 (Section 5.6.2).</td><td>Achieved; reproduction shown by a single run</td></tr>
+    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly</td><td>The application is deployed at <code>https://keemlogan.github.io/shiftswap/app/</code> (NFR-07). The final prompt and the specification are in the repository (Chapter 5). In reproduction run 3, a new assistant session given only the final prompt (version 6), the specification and the two test files in an empty folder built a system that passes all 84 acceptance tests unchanged and meets done criteria 1–6 (Section 5.6.2). Limits: one run per prompt version, and the interface was compared by the done criteria, not pixel by pixel.</td><td>Achieved</td></tr>
   </tbody>
 </table>
 
@@ -2551,7 +2584,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 <p>The table below summarises the size of the specification, the models and the implementation. The counts of identifiers come from <code>spec/spec.md</code>; the line counts come from <code>wc -l</code> and exclude the vendored sql.js files.</p>
 
 <table>
-  <caption>Table 69. Size of the ShiftSwap specification, models and implementation</caption>
+  <caption>Table 71. Size of the ShiftSwap specification, models and implementation</caption>
   <thead><tr><th style="width:40%">Item</th><th style="width:14%">Count</th><th>Remark</th></tr></thead>
   <tbody>
     <tr><td>Actors</td><td class="num">3</td><td>Worker, Owner, System Clock</td></tr>
@@ -2586,7 +2619,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
   <li><b>Demo clock.</b> Expiry is triggered by navigation and by changes of the demo clock, not by the passage of real time. A request can expire only when someone uses the application.</li>
   <li><b>Legal scope.</b> The pay rules cover the minimum wage, the weekly holiday allowance, overtime and night premiums and the probation reduction. Holiday-work premium, annual leave, severance pay, tax and social insurance are outside the scope, and the four-week average of the 15-hour rule is simplified to the weekly contractual value (BR-06). The treatment of a handed-over shift is a setting because the law does not decide it. The system applies these rules consistently but is not legal advice.</li>
   <li><b>Evaluation.</b> The requirements came from one reference store, and the interviews and prototype sessions were used to confirm requirements, not to measure them. No store has used the system in operation, so the effect on the number of contacts per request (problem P1) has not been measured.</li>
-  <li><b>Test and reproduction gaps.</b> The browser checks of NFR-06 are recorded only for Chrome. The reproducibility of the final prompt rests on one run (Section 5.6.2), and a generative assistant does not produce the same code twice.</li>
+  <li><b>Test and reproduction gaps.</b> The browser checks of NFR-06 are recorded only for Chrome. The reproducibility of each prompt version rests on one run (Section 5.6.2), and a generative assistant does not produce the same code twice.</li>
 </ul>
 
 <h2 id="conclusion-future">8.4 Future Work</h2>
@@ -2615,7 +2648,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 
 <p><b>The incremental model suited the course.</b> Placing all Must use cases in the first increment meant that the substitute workflow, the core of the project, was working and testable before the payroll rules were built, as the lecture's description of the incremental model promises [6]. The weakness the lecture warns of, degradation of structure as increments are added, was contained by fixing the layered architecture before the first increment; the second increment added functions to the existing layers and did not change their boundaries.</p>
 
-<p><b>Names are not interfaces.</b> Reproduction run 1 rebuilt a system that behaved as specified but passed only 13 of the team's 25 rule tests, because the prompt fixed the names of functions but not their signatures and return shapes. Supplying the acceptance tests as part of the input closed this gap: run 2 passed all 77 supplied tests unchanged. For vibe coding, the lesson is that the executable tests belong to the contract, not only to the verification of one build.</p>
+<p><b>Names are not interfaces.</b> Reproduction run 1 rebuilt a system that behaved as specified but passed only 13 of the team's 25 rule tests, because the prompt fixed the names of functions but not their signatures and return shapes. Supplying the acceptance tests as part of the input closed this gap: run 2 passed all 77 supplied tests unchanged, and run 3, after the requirements change of iteration 6, all 84. For vibe coding, the lesson is that the executable tests belong to the contract, not only to the verification of one build.</p>
 
 <p><b>Retire requirements; do not reuse their numbers.</b> The change request of iteration 6 removed a use case, a functional requirement and a table after the product owner had used the running system. Because the traceability links were part of the specification, the impact analysis was a search for identifiers, and the change reached the code, the tests and this report within one iteration. Keeping the retired numbers FR-03 and UC-02 unused preserved the meaning of every earlier record that mentions them.</p>
 

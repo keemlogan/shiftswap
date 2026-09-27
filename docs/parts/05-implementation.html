@@ -245,7 +245,7 @@
 
 <h2 id="reproducibility">5.6 Reproducibility Check</h2>
 
-<p>The course requires a final prompt that, when re-run through vibe coding, reliably reproduces a working system. A prompt that was refined on one code base may, however, depend on that code base without anyone noticing: a sentence may be understandable only to an assistant that has seen the previous version. The reproducibility check therefore rebuilds the system from nothing and tests the result with the team's test suite.</p>
+<p>The course requires a final prompt that, when re-run through vibe coding, reliably reproduces a working system. A prompt that was refined on one code base may, however, depend on that code base without anyone noticing: a sentence may be understandable only to an assistant that has seen the previous version. The reproducibility check therefore rebuilds the system from nothing and tests the result with the team's test suite. It was carried out three times, with prompt versions 3, 5 and 6. The final run passed all 84 acceptance tests unchanged and met all six done criteria (Section 5.6.2).</p>
 
 <h3 id="repro-method">5.6.1 Method</h3>
 
@@ -309,4 +309,37 @@
 
 <h4 id="repro-run3">Run 3 (prompt version 6)</h4>
 
-<!-- REPRO3-RESULTS -->
+<p>The third run was made on 2026-09-27 with the final prompt, version 6, after the requirements change of iteration 6 (Section 5.4.6). The method was that of run 2: a new assistant session with no conversation history worked only inside an empty folder. It received the prompt followed by the specification, and the 84 supplied tests in <code>tests/rules.test.js</code> and <code>tests/services.test.js</code>. The table below gives the results.</p>
+
+<table>
+  <caption>Table {{tab}}. Results of reproduction run 3 (prompt v6)</caption>
+  <thead><tr><th style="width:36%">Measurement</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm test</code> of the rebuilt system</td><td>89 tests, 89 passed: the 84 supplied tests and 5 tests the session added</td></tr>
+    <tr><td>Supplied tests on the first run</td><td>All 84 passed; the team re-ran the supplied files in the rebuilt folder: 84 of 84</td></tr>
+    <tr><td>Supplied test files unchanged</td><td>Identical checksums at the start and at the end: <code>shasum</code> of <code>rules.test.js</code> 83182afc4cc26a0fea6b127fbb379b63b01f6668, of <code>services.test.js</code> 1032e7d08436da7010f94b88e1ea1fa61d3c7fb6</td></tr>
+    <tr><td>Done criteria 1–2</td><td>Pass: supplied tests, seed state and walkthrough S7</td></tr>
+    <tr><td>Done criterion 3</td><td>Pass: the sign-in screen "달빛카페 데모" opens without console errors</td></tr>
+    <tr><td>Done criterion 4</td><td>Pass: tour walkthrough including "16시간 → 21시간", one-tap acceptance, "최민호님이 먼저 수락했어요" for the second candidate, the owner's decision card with "(33,024원 유지)" and the handover marker</td></tr>
+    <tr><td>Done criterion 5</td><td>Pass: walkthrough S8 in the browser — three recipients, three answers 불가, Hana's FAILED card, and the owner's card "대타를 못 구했어요", which 확인했어요 removes</td></tr>
+    <tr><td>Done criterion 6</td><td>Pass: one filled primary button per screen, reasons on disabled buttons, touch targets of at least 44 px, no horizontal scroll at 360 px</td></tr>
+  </tbody>
+</table>
+
+<p>The session reported several ambiguities; the main ones were the following. First, §10 of the specification still said that the Korean interface shows the English names, while §2.0 of the prompt required a Korean display map; the session followed the prompt. Second, the rule of exactly one primary button per screen conflicted with Home cards that each carry an action; the session kept the first enabled card action as the primary and drew the others grey. Third, the file layout of the prompt listed no module for Home, so the session placed Home in existing modules. The first and third points had already been corrected in the repository — the sentence of §10, and the module list of prompt §1 with <code>home.js</code>, <code>me.js</code>, <code>components.js</code> and <code>slots.js</code> — but only after run 3 had started, so the run was made without these corrections. Fourth, the session noted three behaviours that the documents leave implicit: saving the settings replaces the whole minimum-wage table, generating the payroll of a confirmed month returns the confirmed rows, and attendance can be recorded once the shift has started.</p>
+
+<h4 id="repro-summary">Summary of the three runs</h4>
+
+<p>The table below summarises the three reproduction runs.</p>
+
+<table>
+  <caption>Table {{tab}}. Summary of the reproduction runs</caption>
+  <thead><tr><th style="width:8%">Run</th><th style="width:10%">Prompt</th><th style="width:24%">Input</th><th>Team's acceptance tests against the rebuild</th><th style="width:16%">Done criteria</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>v3</td><td>prompt + specification</td><td>rules 13 of 25; services did not load</td><td>1–4 met</td></tr>
+    <tr><td>2</td><td>v5</td><td>prompt + specification + tests</td><td>77 of 77</td><td>1–5 met</td></tr>
+    <tr><td>3</td><td>v6</td><td>prompt + specification + tests</td><td>84 of 84</td><td>1–6 met</td></tr>
+  </tbody>
+</table>
+
+<p>Run 1 showed that the prompt reproduced the behaviour of the system but not its interfaces. From version 5 on, the acceptance tests are part of the input, and both later runs passed every supplied test unchanged, including run 3 after a change of the requirements. The final prompt therefore reproduces a system that passes all 84 acceptance tests of the reference implementation. The limits stated in Section 5.6.1 remain: there was one run per prompt version, the interface was compared with the reference by the done criteria and not pixel by pixel, and two clarifications that the runs reported were added to the prompt and the specification after the runs had started.</p>

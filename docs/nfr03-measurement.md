@@ -17,7 +17,7 @@
 
 ## Data set
 
-The data was built in a throwaway browser profile through the application services (`registerWorker`, `saveFixedSchedule`, `saveAvailability`, `generateWeek`, `recordAttendance`, `confirmAttendance`, `generatePayroll`). It starts from the normal seed, which is not modified in the repository.
+The data was built in a throwaway browser profile through the application services (`registerWorker`, `saveFixedSchedule`, `generateWeek`, `recordAttendance`, `confirmAttendance`, `generatePayroll`). It starts from the normal seed, which is not modified in the repository.
 
 | Item | Value |
 |---|---|

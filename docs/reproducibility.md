@@ -85,3 +85,30 @@ Supplying the acceptance tests as part of the input removed the API-level diverg
 1. No UI module named for the Home screens (added home.js). 2. Spec kept English names while the prompt's examples used Korean names — the prompt was afterwards clarified with a Korean display-name map (added after run 2 had started). 3. Primary-button placement on Home vs the sticky bottom bar. 4. "Reset demo data" both in the header menu and in Demo tools. 5. Late accept/approve saves EXPIRED and then fails with REQUEST_CLOSED (required by the tests). 6. Expiry closes only PENDING targets. The remaining points (storage keys, month-end probation date, payroll row set, settings save semantics) are consistent with the reference build.
 
 Limits: one run; the user interface is compared through the done criteria, not pixel by pixel.
+
+---
+
+# Reproducibility check — run 3 (prompt v6 + spec + supplied tests)
+
+Date: 2026-09-27. Same method as run 2, with the final prompt v6 (iteration 6: availability removed, "can't" answer, FAILED ending) and the 84 supplied tests.
+
+## Result
+
+- `npm test`: 89 tests, 89 pass, 0 fail — the 84 supplied tests plus 5 added by the session. The supplied files alone passed 84/84 on the first run. The team re-ran them in the rebuilt folder: 84/84.
+- Supplied test files unchanged (shasum at start = at end): rules.test.js 83182afc4cc26a0fea6b127fbb379b63b01f6668, services.test.js 1032e7d08436da7010f94b88e1ea1fa61d3c7fb6.
+- Done criteria 1–6 all PASS: seed and S7 (2); sign-in "달빛카페 데모" without console errors (3); tour walkthrough incl. "16시간 → 21시간", one-tap accept, "최민호님이 먼저 수락했어요", decision card "(33,024원 유지)", handover marker (4); S8 in the browser — three recipients, three 불가 answers, Hana's FAILED card, the owner's "대타를 못 구했어요" card whose only action 확인했어요 removes it (5); one filled primary per screen, reasons on disabled buttons, targets ≥ 44 px, no horizontal scroll at 360 px (6).
+
+## Ambiguities reported in run 3 — main ones
+
+1. Spec §10 still said the Korean UI shows English names while prompt §2.0.7 required a Korean display map — the session followed the prompt; the spec sentence had been corrected after the run had started.
+2. "Exactly one primary per screen" vs Home cards that each carry an action — the first enabled card action stays primary, the rest are drawn grey.
+3. The file layout listed no Home module — the session placed Home in existing modules; the module list in prompt §1 (home.js, me.js, components.js, slots.js) was added after the run had started.
+4. Saving settings replaces the minimum-wage table; generating payroll for a confirmed month returns the confirmed rows; attendance can be recorded once the shift has started.
+
+## Summary of the three runs
+
+| Run | Prompt | Input | Team's acceptance tests against the rebuild | Done criteria |
+|---|---|---|---|---|
+| 1 | v3 | prompt + spec | rules 13/25, services did not load | 1–4 met |
+| 2 | v5 | prompt + spec + tests | 77/77 | 1–5 met |
+| 3 | v6 | prompt + spec + tests | 84/84 | 1–6 met |
