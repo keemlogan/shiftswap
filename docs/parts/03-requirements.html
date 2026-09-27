@@ -2,7 +2,7 @@
 
 <p>This chapter specifies what ShiftSwap must do. It follows the requirements engineering activities of Chapter 8 of the lecture — elicitation, analysis, validation and management [6], [7] — and the contents recommended there for a software requirements specification: problem description, functional and non-functional requirements, scenarios, use-case diagram and supplementary diagrams. The problem description is Chapter 2. Section 3.1 explains how the requirements were elicited, and Section 3.2 identifies stakeholders and actors. Sections 3.3 to 3.5 present the use-case model, the functional requirements and a full description of each use case. Section 3.6 states the business rules, the domain requirements that carry the legal content of the system. Section 3.7 gives the non-functional requirements, Section 3.8 the scenarios, and Section 3.9 the analysis models. Sections 3.10 and 3.11 describe how the requirements were validated and how changes to them were managed.</p>
 
-<p>All identifiers used in this chapter (A1–A3, UC-01–UC-13 with UC-02 retired, FR-01–FR-22 with FR-03 retired, NFR-01–NFR-13, BR-01–BR-13, TC groups) are defined in the specification file <code>spec/spec.md</code> of the repository, which the team treated as the single source of truth (Section 3.11). The wording of the requirements in this chapter is the wording of that file.</p>
+<p>All identifiers used in this chapter (A1–A3, UC-01–UC-14 with UC-02 retired, FR-01–FR-23 with FR-03 retired, NFR-01–NFR-13, BR-01–BR-14, TC groups) are defined in the specification file <code>spec/spec.md</code> of the repository, which the team treated as the single source of truth (Section 3.11). The wording of the requirements in this chapter is the wording of that file.</p>
 
 <h2 id="ch3-elicitation">3.1 Requirements Elicitation</h2>
 
@@ -66,7 +66,7 @@
   <tbody>
     <tr><td class="req-id">A1</td><td>Worker</td><td>Primary, human</td><td>Part-time employee. Views own schedule, requests substitutes, accepts or declines ("can't") requests from co-workers, records attendance.</td></tr>
     <tr><td class="req-id">A2</td><td>Owner</td><td>Primary, human</td><td>Store owner (also acts as manager). Registers workers and fixed schedules, approves/rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll, edits settings.</td></tr>
-    <tr><td class="req-id">A3</td><td>System Clock</td><td>Secondary, system</td><td>Time-triggered actor. Expires unanswered/unapproved requests at their deadline and closes weeks for weekly summary. (In the demo app this is driven by the adjustable "demo clock".)</td></tr>
+    <tr><td class="req-id">A3</td><td>System Clock</td><td>Secondary, system</td><td>Time-triggered actor. Expires unanswered/unapproved requests at their deadline, closes weeks for weekly summary, and on or after the first day of a month prepares the previous month's payroll draft (UC-14, from iteration 7). (In the demo app this is driven by the adjustable "demo clock".)</td></tr>
   </tbody>
 </table>
 
@@ -76,10 +76,10 @@
 
 <h2 id="ch3-ucmodel">3.3 Use-Case Model</h2>
 
-<p>The figure below shows the use-case diagram. It contains twelve active use cases. UC-01 to UC-09 correspond one to one to the nine main functions announced in the proposal; UC-02 (register availability) was retired in iteration 6 (Section 3.11.4), and its identifier is kept but not reused. UC-10 to UC-13 are supporting use cases, already listed in the proposal, which make settings, expiry, cancellation and role selection explicit so that the core use cases are complete. The table after the diagram lists the use cases with their primary actor, priority and the database tables they mainly use.</p>
+<p>The figure below shows the use-case diagram. It contains thirteen active use cases. UC-01 to UC-09 correspond one to one to the nine main functions announced in the proposal; UC-02 (register availability) was retired in iteration 6 (Section 3.11.4), and its identifier is kept but not reused. UC-10 to UC-13 are supporting use cases, already listed in the proposal, which make settings, expiry, cancellation and role selection explicit so that the core use cases are complete. UC-14, the automatic preparation of last month's payroll, was added in iteration 7 at the request of the product owner (Section 3.11.5). The table after the diagram lists the use cases with their primary actor, priority and the database tables they mainly use.</p>
 
 <figure>
-  <img style="max-height:6in" src="../uml/usecase.svg" alt="UML use-case diagram of ShiftSwap with actors Worker, Owner and System Clock and the twelve active use cases">
+  <img style="max-height:6in" src="../uml/usecase.svg" alt="UML use-case diagram of ShiftSwap with actors Worker, Owner and System Clock and the thirteen active use cases">
   <figcaption>Figure {{fig}}. Use-case diagram of ShiftSwap (UML 2.5)</figcaption>
 </figure>
 
@@ -102,6 +102,7 @@
     <tr><td class="req-id">UC-11</td><td>Expire overdue substitute request</td><td>System Clock</td><td>Must</td><td>SubRequest, SubRequestTarget, Notification</td></tr>
     <tr><td class="req-id">UC-12</td><td>Cancel own substitute request</td><td>Worker</td><td>Should</td><td>SubRequest, SubRequestTarget</td></tr>
     <tr><td class="req-id">UC-13</td><td>Sign in by role (demo account selection)</td><td>Worker, Owner</td><td>Must</td><td>Worker</td></tr>
+    <tr><td class="req-id">UC-14</td><td>Prepare last month's payroll automatically</td><td>System Clock</td><td>Must</td><td>Payroll, Notification</td></tr>
   </tbody>
 </table>
 
@@ -113,7 +114,7 @@
   <li><b>UC-09 «include» UC-08.</b> The monthly payroll takes its holiday allowance from the weekly summaries, so they are recomputed when a payroll draft is generated.</li>
   <li><b>UC-11 «extend» UC-04.</b> The extension point is "deadline reached with no approved acceptance". Expiry is the exceptional ending of a request, triggered by the System Clock.</li>
   <li><b>UC-12 «extend» UC-04.</b> Cancellation is the other exceptional ending, triggered by the requester while the request is still open.</li>
-  <li><b>All use cases except UC-11 «include» UC-13.</b> Every user action requires that the user has signed in, and the role chosen at sign-in decides which use cases are available. UC-11 is the only use case not started by a signed-in user.</li>
+  <li><b>All use cases except UC-11 and UC-14 «include» UC-13.</b> Every user action requires that the user has signed in, and the role chosen at sign-in decides which use cases are available. UC-11 and UC-14 are the only use cases not started by a signed-in user; both are started by the System Clock.</li>
 </ul>
 
 <p>In the diagram the Worker is also associated with UC-01, although the Owner is its primary actor. The association represents the worker as the subject of the registration, who afterwards sees the registered fixed schedule on the weekly board; the worker cannot create or change a fixed schedule.</p>
@@ -150,18 +151,19 @@
     <tr><td class="req-id">FR-20</td><td>Access</td><td>Users shall sign in by choosing a demo account, either from a guided three-step demo tour or from the list of all accounts; the UI shows only the menus of that role.</td><td>UC-13</td><td>Must</td></tr>
     <tr><td class="req-id">FR-21</td><td>Access</td><td>Every user shall have an in-app notification inbox listing notifications newest first with unread count.</td><td>UC-04–06, 11, 12</td><td>Must</td></tr>
     <tr><td class="req-id">FR-22</td><td>Substitute workflow</td><td>When every target of a REQUESTED request has answered can't (DECLINED), the request ends as FAILED (BR-13): the requester receives "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." ("Every co-worker said they can't cover this shift. Please contact the owner.") and the owner receives a REQUEST_FAILED notification whose only action is <i>확인했어요</i> (acknowledge, which marks it read).</td><td>UC-05</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-23</td><td>Attendance and pay</td><td>On or after the first day of a month, the system shall prepare the previous month's payroll as a DRAFT (the same computation as FR-15) without any user action, notify the owner with PAYROLL_DRAFT_READY, and never overwrite rows that already exist; the owner still reviews, acknowledges warnings and confirms (FR-15, FR-16).</td><td>UC-14</td><td>Must</td></tr>
   </tbody>
 </table>
 
-<p>Of the 22 identifiers, 21 functional requirements are active; FR-03 was retired together with UC-02. Every active functional requirement maps to at least one use case, as the traceability rule of the specification requires (spec §12). The reverse also holds: every use case is realised by at least one functional requirement. UC-08 is realised by FR-14 alone, but the computation it describes is detailed by business rules BR-05 to BR-07. The notification inbox (FR-21) is not a use case of its own; it is the shared output of the five use cases that create notifications. The kinds of notification are fixed by the specification: <code>REQUEST_RECEIVED</code>, <code>REQUEST_ACCEPTED</code>, <code>REQUEST_APPROVED</code>, <code>REQUEST_REJECTED</code>, <code>REQUEST_EXPIRED</code>, <code>REQUEST_CANCELLED</code>, <code>REQUEST_FAILED</code> and <code>TARGET_CLOSED</code>. REQUEST_FAILED replaced the earlier <code>NO_CANDIDATE</code> in iteration 6.</p>
+<p>Of the 23 identifiers, 22 functional requirements are active; FR-03 was retired together with UC-02, and FR-23 was added in iteration 7. Every active functional requirement maps to at least one use case, as the traceability rule of the specification requires (spec §12). The reverse also holds: every use case is realised by at least one functional requirement. UC-08 is realised by FR-14 alone, but the computation it describes is detailed by business rules BR-05 to BR-07. The notification inbox (FR-21) is not a use case of its own; it is the shared output of the five use cases that create notifications. The kinds of notification are fixed by the specification: <code>REQUEST_RECEIVED</code>, <code>REQUEST_ACCEPTED</code>, <code>REQUEST_APPROVED</code>, <code>REQUEST_REJECTED</code>, <code>REQUEST_EXPIRED</code>, <code>REQUEST_CANCELLED</code>, <code>REQUEST_FAILED</code>, <code>TARGET_CLOSED</code> and <code>PAYROLL_DRAFT_READY</code>. REQUEST_FAILED replaced the earlier <code>NO_CANDIDATE</code> in iteration 6, and PAYROLL_DRAFT_READY, which UC-14 sends to the owner, was added in iteration 7.</p>
 
 <p>The following conventions apply to all requirements. Dates are ISO <code>YYYY-MM-DD</code>, times are <code>HH:MM</code> in 24-hour notation, and datetimes are <code>YYYY-MM-DDTHH:MM</code>. A time interval [s, e) includes its start and excludes its end, so a shift ending at 18:00 does not overlap one starting at 18:00. An end time that is not later than the start time means that the shift ends on the following day. Money amounts are integers in Korean won.</p>
 
 <h2 id="ch3-ucdesc">3.5 Use-Case Descriptions</h2>
 
-<p>The lecture notes that a use case is represented both in a diagram, as an overview, and in a more detailed textual form [6]. This section gives the textual form for every active use case, UC-01 and UC-03 to UC-13, in one fixed structure: identifier and name, actors, preconditions, trigger, main flow as numbered steps, alternative flows, exception flows, postconditions, the business rules applied, the related functional and non-functional requirements, and the screen of the application on which the use case is performed. The fields correspond to the scenario contents required by the SRS outline of the lecture (related actors, initial condition, final condition, exceptional case and step-by-step flow of action). Alternative flows describe other successful paths; exception flows describe paths on which the goal of the use case is not reached. The screens are described in Chapter 4 and shown in the user guide of Chapter 7.</p>
+<p>The lecture notes that a use case is represented both in a diagram, as an overview, and in a more detailed textual form [6]. This section gives the textual form for every active use case, UC-01 and UC-03 to UC-14, in one fixed structure: identifier and name, actors, preconditions, trigger, main flow as numbered steps, alternative flows, exception flows, postconditions, the business rules applied, the related functional and non-functional requirements, and the screen of the application on which the use case is performed. The fields correspond to the scenario contents required by the SRS outline of the lecture (related actors, initial condition, final condition, exceptional case and step-by-step flow of action). Alternative flows describe other successful paths; exception flows describe paths on which the goal of the use case is not reached. The screens are described in Chapter 4 and shown in the user guide of Chapter 7.</p>
 
-<p>Two conventions keep the descriptions short. "The system validates" always means that invalid input leaves the data unchanged and produces a message that states the cause and the correction, as required by the copy rules of the design. Every use case except UC-11 includes UC-13, which is therefore stated only as a precondition.</p>
+<p>Two conventions keep the descriptions short. "The system validates" always means that invalid input leaves the data unchanged and produces a message that states the cause and the correction, as required by the copy rules of the design. Every use case except UC-11 and UC-14 includes UC-13, which is therefore stated only as a precondition.</p>
 
 <h3 id="ch3-uc01">UC-01 Register worker and fixed schedule</h3>
 <table class="uc">
@@ -310,7 +312,7 @@
     <tr><th style="width:19%">Preconditions</th><td><ul><li>The owner is signed in (UC-13).</li><li>The minimum-wage table has a row for the year of the month or an earlier year.</li></ul></td></tr>
     <tr><th style="width:19%">Trigger</th><td>The end of a pay month, or the owner wants to check the pay of the current month.</td></tr>
     <tr><th style="width:19%">Main flow</th><td><ol><li>The owner opens the <i>Pay</i> tab, segment <i>Monthly payroll</i>, and selects a month.</li><li>The owner selects <i>Create September payroll draft</i> (the month named in the button).</li><li>The system recomputes the weekly summaries of the weeks whose Sunday falls in the month (includes UC-08).</li><li>For each worker with shifts or holiday pay in the month the system computes base hours and base pay (worked hours for WORKED shifts, scheduled hours for SCHEDULED shifts, nothing for ABSENT shifts), holiday pay, premium pay and total (BR-11, BR-08).</li><li>The system checks each worker's hourly wage against the applicable minimum wage, taking the probation reduction into account only when all its conditions hold (BR-09, BR-10).</li><li>The system stores one DRAFT row per worker, replacing earlier DRAFT rows of the month.</li><li>The system shows the table with the flags <i>estimated</i> and <i>below minimum wage</i>.</li><li>The owner acknowledges each minimum-wage warning; the acknowledgement is stored on the row (minWageAck = 1).</li><li>The owner selects <i>Confirm</i>.</li><li>The system sets the rows to CONFIRMED; they are read-only from now on.</li></ol></td></tr>
-    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 No warning.</b> If no row has a minimum-wage warning, step 8 is skipped.</li><li><b>A2 Regenerate.</b> The owner generates the month again before confirming; only DRAFT rows are replaced, so acknowledgements given on the old draft must be given again (BR-09).</li></ul></td></tr>
+    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 No warning.</b> If no row has a minimum-wage warning, step 8 is skipped.</li><li><b>A2 Regenerate.</b> The owner generates the month again before confirming; only DRAFT rows are replaced, so acknowledgements given on the old draft must be given again (BR-09).</li><li><b>A3 Draft already prepared.</b> On or after the first day of the following month, the System Clock has already performed steps 3–6 (UC-14). The owner is told by the PAYROLL_DRAFT_READY notification and on Home, opens the prepared draft and continues at step 8.</li></ul></td></tr>
     <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Warning not acknowledged.</b> At step 9 a warning is still unacknowledged. Confirmation is blocked and the row is highlighted.</li><li><b>E2 Month already confirmed.</b> Confirmed rows are not replaced by regeneration and cannot be edited.</li><li><b>E3 Minimum wage not yet updated.</b> The table has no row for the year of the month. The system uses the latest earlier year, which may be too low; the owner adds the new year in Settings (UC-10) and generates the draft again.</li></ul></td></tr>
     <tr><th style="width:19%">Postconditions</th><td><ul><li>Payroll rows for the month exist in DRAFT or CONFIRMED state.</li><li>No confirmed row has an unacknowledged minimum-wage warning.</li></ul></td></tr>
     <tr><th style="width:19%">Business rules</th><td>BR-07, BR-08, BR-09, BR-10, BR-11</td></tr>
@@ -395,12 +397,31 @@
   </tbody>
 </table>
 
+<h3 id="ch3-uc14">UC-14 Prepare last month's payroll automatically</h3>
+<table class="uc">
+  <caption>Table {{tab}}. Use-case description UC-14</caption>
+  <tbody>
+    <tr><th style="width:19%">ID</th><td><span class="req-id">UC-14</span></td></tr>
+    <tr><th style="width:19%">Name</th><td>Prepare last month's payroll automatically</td></tr>
+    <tr><th style="width:19%">Actors</th><td>Primary: System Clock (A3). Secondary: Owner (A2), who is notified and later confirms the draft (UC-09).</td></tr>
+    <tr><th style="width:19%">Preconditions</th><td><ul><li>The previous month P is not earlier than the month of the earliest contract start.</li><li>No Payroll row exists yet for P.</li></ul></td></tr>
+    <tr><th style="width:19%">Trigger</th><td>The application starts, the user navigates to another screen, or the demo clock is changed, and the current time is on or after the first day of a month (BR-14).</td></tr>
+    <tr><th style="width:19%">Main flow</th><td><ol><li>The system reads the current time and determines the previous month P.</li><li>The system checks that P is not earlier than the month of the earliest contract start and that P has no Payroll row.</li><li>The system recomputes the weekly summaries of the weeks whose Sunday falls in P and builds one DRAFT row per worker, exactly as in UC-09, steps 3–6 (BR-06 to BR-11).</li><li>The system sends one PAYROLL_DRAFT_READY notification to the owner.</li><li>The owner's Home shows a card saying that last month's payroll draft is ready, with an action that opens it (the owner continues with UC-09, step 8).</li></ol></td></tr>
+    <tr><th style="width:19%">Alternative flows</th><td><ul><li><b>A1 Already prepared.</b> At step 2 P already has rows, DRAFT or CONFIRMED, because the draft was prepared earlier in the month or generated by the owner. The use case ends without change, so the clock running again later in the month creates no second draft and no second notification.</li><li><b>A2 Before the first contract.</b> P lies before the earliest contract start; nothing is prepared.</li></ul></td></tr>
+    <tr><th style="width:19%">Exception flows</th><td><ul><li><b>E1 Minimum-wage warning.</b> A row of the draft carries a minimum-wage warning. The draft is still prepared; confirmation remains blocked until the owner acknowledges the warning (BR-09).</li></ul></td></tr>
+    <tr><th style="width:19%">Postconditions</th><td><ul><li>P has a DRAFT payroll, or had rows already; nothing has been confirmed.</li><li>The owner has at most one PAYROLL_DRAFT_READY notification for P.</li></ul></td></tr>
+    <tr><th style="width:19%">Business rules</th><td>BR-14; BR-06 to BR-11 (through the payroll computation)</td></tr>
+    <tr><th style="width:19%">Related FR / NFR</th><td>FR-23, FR-15, FR-16, FR-21</td></tr>
+    <tr><th style="width:19%">UI screen</th><td>None of its own (effects visible on the owner's Home and in Pay → Monthly)</td></tr>
+  </tbody>
+</table>
+
 
 <h2 id="ch3-br">3.6 Business Rules</h2>
 
 <p>The business rules are the domain requirements of ShiftSwap. They state precisely, with conditions and numbers, what the functional requirements refer to by name: which workers are eligible, when an acceptance succeeds, when the holiday allowance is owed, and how pay is computed. The lecture warns that a system that does not satisfy its domain requirements may be unworkable [7]; for this system, a wrong rule means a wrong pay slip. The rules are therefore written so that each can be implemented as one pure function in the domain-rule module (Chapter 4) and tested on its own (Section 3.10).</p>
 
-<p>The table below lists the thirteen rules. The column "Rule" repeats the wording of the specification. The column "Rationale" explains why the rule has this form, and the column "Source" names the law or the store practice it comes from.</p>
+<p>The table below lists the fourteen rules. The column "Rule" repeats the wording of the specification. The column "Rationale" explains why the rule has this form, and the column "Source" names the law or the store practice it comes from.</p>
 
 <table>
   <caption>Table {{tab}}. Business rules with rationale and source</caption>
@@ -421,6 +442,7 @@
     <tr><td class="req-id">BR-11</td><td><b>Monthly payroll.</b> Month = calendar month. Base pay = Σ actual hours of WORKED shifts in the month × wage (recorded clock-in/out); SCHEDULED shifts in the month count with their scheduled hours and set estimated = 1 on the row; ABSENT shifts count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.</td><td>Wages are paid monthly while the holiday allowance is weekly; assigning each week to the month of its Sunday makes every week count exactly once. The "estimated" flag lets the owner check pay during the month without mistaking it for the final amount; an absent shift earns nothing.</td><td>Store practice (monthly pay)</td></tr>
     <tr><td class="req-id">BR-12</td><td><b>Expiry.</b> A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED.</td><td>An open request must not remain open after it can no longer be useful. Expiring ACCEPTED requests as well means that an owner who does not decide in time leaves the shift with the original worker, which is the safe default.</td><td>Workflow consistency</td></tr>
     <tr><td class="req-id">BR-13</td><td><b>No taker.</b> A REQUESTED request ends as FAILED (final) when it has no eligible candidate at creation, or when every SubRequestTarget has response DECLINED. FAILED sends REQUEST_FAILED to the requester and the owner; the owner's only action is to acknowledge (mark the notification read). Accepting a FAILED request is refused (REQUEST_CLOSED).</td><td>Once everyone asked has said no, waiting for the deadline only delays the moment at which the owner has to act. Ending the request at once tells the requester to call the owner and gives the owner a clear task, the same one as in the current process but without the search. The owner's card has no other action because the system has nothing left to try.</td><td>Product-owner review in iteration 6 (Section 3.11.4)</td></tr>
+    <tr><td class="req-id">BR-14</td><td><b>Automatic monthly payroll draft.</b> Whenever the System Clock runs (app start, every route change, after the demo clock changes), let M be the month of now and P = M − 1. If P is not earlier than the month of the earliest contractStart and no Payroll row exists yet for P, generate the DRAFT for P exactly as generatePayroll does and insert one PAYROLL_DRAFT_READY notification for the owner. It runs at most once per month (existing rows — DRAFT or CONFIRMED — mean it has already run) and never confirms anything.</td><td>The owner asked that last month's pay be ready without a manual step. Using the existence of rows as the "already done" marker makes the rule idempotent without a separate flag, and never overwriting rows protects both confirmed pay and a draft the owner has already acknowledged. Confirmation stays manual because a minimum-wage warning needs a conscious decision (BR-09).</td><td>Product-owner request in iteration 7 (Section 3.11.5)</td></tr>
   </tbody>
 </table>
 
@@ -458,7 +480,7 @@
 
 <h2 id="ch3-scenarios">3.8 Scenarios</h2>
 
-<p>A scenario is a real-life example of how the system can be used, and according to the lecture it should include the starting situation, the normal flow of events, what can go wrong, other concurrent activities, and the state when the scenario finishes [7]. The seven scenarios below use the demonstration data of the specification: Dalbit Café (regular employees 4, substitution-attendance policy EXCUSED), the owner Park Jiyoung and the workers Lee Seoyeon, Choi Minho, Jung Hana and Kang Doyun. The first table below summarises the workers; the demo clock starts at Monday 2026-09-28 09:00, and the weeks beginning 2026-09-21 and 2026-09-28 have been generated, the first with confirmed attendance for all shifts. Together the scenarios cover every use case at least once and include the concurrent acceptance and the expiry of a request.</p>
+<p>A scenario is a real-life example of how the system can be used, and according to the lecture it should include the starting situation, the normal flow of events, what can go wrong, other concurrent activities, and the state when the scenario finishes [7]. The eight scenarios below use the demonstration data of the specification: Dalbit Café (regular employees 4, substitution-attendance policy EXCUSED), the owner Park Jiyoung and the workers Lee Seoyeon, Choi Minho, Jung Hana and Kang Doyun. The first table below summarises the workers; the demo clock starts at Monday 2026-09-28 09:00, and the weeks beginning 2026-09-21 and 2026-09-28 have been generated, the first with confirmed attendance for all shifts. Since iteration 7 the seed also contains each worker's work history: every fixed shift from the contract start up to 2026-09-20 is worked and confirmed, and the payroll of every month up to August 2026 is confirmed. Together the scenarios cover every use case at least once and include the concurrent acceptance and the expiry of a request.</p>
 
 <table>
   <caption>Table {{tab}}. Workers of the demonstration data (seed)</caption>
@@ -538,26 +560,36 @@
 
 <div class="box" style="break-inside:auto">
 <h3 id="ch3-s7">S-7 Monthly payroll with a minimum-wage warning (UC-09, UC-10)</h3>
-<p><b>Starting situation.</b> The owner prepares the September 2026 payroll. The minimum-wage table holds 10,030 for 2025 and 10,320 for 2026.</p>
-<p><b>Normal flow.</b> Jiyoung opens the monthly payroll in the <i>Pay</i> tab, selects September 2026 and creates the draft. Among the generated weeks, only the week of 2026-09-21 has its Sunday in September, so its holiday pay — KRW 33,024 for Minho — is included in September (BR-11). Premium pay is zero for everyone, because the workplace has 4 regular employees (BR-08). The system then checks each wage. Kang Doyun earns KRW 10,000, below the 2026 minimum of 10,320; the probation reduction does not apply to him, because his contract (2026-08-15 to 2026-11-15) is shorter than one year and his work is simple labour (BR-10). His row therefore carries a minimum-wage warning. Jung Hana's contract is open-ended, she is within three months of her contract start and before her probation end, and her work is not simple labour, so all BR-10 conditions hold and her threshold is 90 % of 10,320 = KRW 9,288; her wage of 10,320 is above it. Seoyeon (10,500) and Minho (10,320) are not below the minimum. Jiyoung acknowledges Doyun's warning, which is stored on his row (minWageAck = 1), decides to correct his wage with him, and confirms the payroll; the rows become read-only.</p>
-<p><b>What can go wrong.</b> If Jiyoung tries to confirm without acknowledging the warning, confirmation is blocked (BR-09). If she generates the draft before attendance for 28–30 September is recorded, the base pay for those days is computed from scheduled hours and the affected rows are flagged "estimated".</p>
+<p><b>Starting situation.</b> The owner prepares the September 2026 payroll on Monday 28 September. The months up to August are confirmed (seed history), and the minimum-wage table holds 10,030 for 2025 and 10,320 for 2026.</p>
+<p><b>Normal flow.</b> Jiyoung opens the monthly payroll in the <i>Pay</i> tab, selects September 2026 and creates the draft. Four weeks have their Sunday in September — the weeks ending 6, 13, 20 and 27 September — so Minho's holiday pay for September is 4 × KRW 33,024 = KRW 132,096 (BR-11). With base pay for 69 hours (KRW 712,080), his total is KRW 844,176. The other workers have no holiday allowance because their contractual hours are below 15. Lee Seoyeon's total is KRW 472,500 for 45 hours, Jung Hana's KRW 495,360 for 48 hours and Kang Doyun's KRW 480,000 for 48 hours; the month's total is KRW 2,292,036. The shifts of 28 to 30 September have not yet been worked, so they count with their scheduled hours and the affected rows are flagged "estimated". Premium pay is zero for everyone, because the workplace has 4 regular employees (BR-08). The system then checks each wage. Kang Doyun earns KRW 10,000, below the 2026 minimum of 10,320; the probation reduction does not apply to him, because his contract (2026-08-15 to 2026-11-15) is shorter than one year and his work is simple labour (BR-10). His row therefore carries a minimum-wage warning. Jung Hana's contract is open-ended, she is within three months of her contract start and before her probation end, and her work is not simple labour, so all BR-10 conditions hold and her threshold is 90 % of 10,320 = KRW 9,288; her wage of 10,320 is above it. Seoyeon (10,500) and Minho (10,320) are not below the minimum. Jiyoung acknowledges Doyun's warning, which is stored on his row (minWageAck = 1), decides to correct his wage with him, and confirms the payroll; the rows become read-only.</p>
+<p><b>What can go wrong.</b> If Jiyoung tries to confirm without acknowledging the warning, confirmation is blocked (BR-09). If she waits until 1 October, she does not need to create the draft at all: the System Clock prepares it (UC-14, scenario S-8).</p>
 <p><b>Concurrent activities.</b> If the café hired a fifth regular employee and the owner changed the setting in Settings (UC-10) before generating the draft, premium pay would apply; each seed evening shift from 18:00 to 23:00 contains one night hour (22:00–23:00), which would then earn an additional 50 % of the wage.</p>
 <p><b>Final state.</b> September 2026 payroll CONFIRMED for four workers; Doyun's minimum-wage warning acknowledged.</p>
+</div>
+
+<div class="box" style="break-inside:auto">
+<h3 id="ch3-s8">S-8 Last month's payroll is prepared automatically (UC-14, UC-09; demonstration walkthrough S9)</h3>
+<p><b>Starting situation.</b> The demo clock shows a day in September 2026. In <i>Pay</i> → <i>Monthly</i> the owner can page back through every month since the first contract, March 2026, and sees March to August as confirmed and read-only; no payroll exists for September.</p>
+<p><b>Normal flow.</b> In the <i>Demo tools</i> panel the clock is moved to 2026-10-01. The System Clock runs (UC-14): the previous month, September, has no payroll rows, so the system prepares its DRAFT exactly as the owner's <i>Create draft</i> would and sends PAYROLL_DRAFT_READY to the owner. Jiyoung's Home shows the card "9월 급여 초안이 준비됐어요" ("September payroll draft is ready") with an action that opens <i>Pay</i> → <i>Monthly</i> for September. There she sees the draft, marked as prepared automatically on the first of the month, with Kang Doyun's below-minimum warning, which she must acknowledge before she can confirm (UC-09).</p>
+<p><b>What can go wrong.</b> If the owner had already created the September draft herself in September, the System Clock would find rows for September on 1 October and prepare nothing (BR-14). If the draft contained a mistake in the underlying data, the owner could correct it and regenerate the draft before confirming, as in UC-09.</p>
+<p><b>Concurrent activities.</b> The clock runs again on every screen change during October; because September now has rows, no second draft and no second notification are created.</p>
+<p><b>Final state.</b> September 2026 payroll in DRAFT for all workers with shifts in September, one PAYROLL_DRAFT_READY notification for the owner, nothing confirmed.</p>
 </div>
 
 <p>The table below shows which use cases each scenario exercises; the retired UC-02 has no column. Every active use case appears in at least one scenario, and the Must use cases appear in several.</p>
 
 <table>
   <caption>Table {{tab}}. Coverage of use cases by scenarios</caption>
-  <thead><tr><th>Scenario</th><th>UC-01</th><th>03</th><th>04</th><th>05</th><th>06</th><th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th><th>13</th></tr></thead>
+  <thead><tr><th>Scenario</th><th>UC-01</th><th>03</th><th>04</th><th>05</th><th>06</th><th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th></tr></thead>
   <tbody>
-    <tr><td>S-1</td><td>(seed)</td><td>(seed)</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-2</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-3</td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-4</td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td></tr>
-    <tr><td>S-5</td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td></tr>
-    <tr><td>S-6</td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td>●</td></tr>
-    <tr><td>S-7</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td><td></td><td></td><td>●</td></tr>
+    <tr><td>S-1</td><td>(seed)</td><td>(seed)</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-2</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-3</td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td><td></td><td></td><td></td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-4</td><td></td><td></td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-5</td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td></td></tr>
+    <tr><td>S-6</td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-7</td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td><td></td><td></td><td>●</td><td></td></tr>
+    <tr><td>S-8</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td><td>●</td><td>●</td></tr>
   </tbody>
 </table>
 
@@ -686,6 +718,7 @@
     <tr><td>BR-11</td><td>TC-11x</td><td>Monthly totals; holiday pay assigned by the week's Sunday; estimated flag when attendance is missing; rounding down to the won.</td><td>FR-15</td></tr>
     <tr><td>BR-12</td><td>TC-12x</td><td>Expiry at the deadline and at the shift start, for REQUESTED and ACCEPTED requests; no expiry of final states.</td><td>FR-18</td></tr>
     <tr><td>BR-13</td><td>TC-025, TC-13x</td><td>No candidate at creation ends the request FAILED; the last can't ends it FAILED with REQUEST_FAILED to requester and owner; an earlier can't changes nothing; accepting a FAILED request is refused.</td><td>FR-08, FR-09, FR-22</td></tr>
+    <tr><td>BR-14</td><td>TC-14x</td><td>The draft for the previous month appears on the first day of the month and not before; it is prepared only once and never overwrites DRAFT or CONFIRMED rows; one PAYROLL_DRAFT_READY for the owner; the seeded history equals what the rules compute.</td><td>FR-23</td></tr>
   </tbody>
 </table>
 
@@ -746,3 +779,31 @@
 </table>
 
 <p><b>Traceability after the change.</b> The retired identifiers leave gaps that the traceability rule of spec §12 must still satisfy: every active functional requirement maps to a use case, every active use case to a screen and a service function, and every business rule, including the new BR-13, to at least one test. The matrix of Section 6.8 was regenerated from the code after the change and shows FR-03 and UC-02 as retired and FR-22 and BR-13 with their tests. The change also shows why step 3 of the procedure forbids reusing identifiers: the prompt log, the earlier reports and the tests of iterations 1 to 5 still refer to FR-03 and UC-02 with their old meaning, and a new requirement under the same number would make those records ambiguous.</p>
+
+<h3 id="ch3-mgmt-iter7">3.11.5 Change request in iteration 7</h3>
+
+<p>Iteration 7 added a requirement instead of removing one. It followed the same procedure as iteration 6 and is recorded in §16 of the specification.</p>
+
+<p><b>Request.</b> After using the application, the product owner asked for two things: payroll data for the past months, based on the employees' contracts, and last month's payroll filled in automatically on the first day of every month. Until then, the seed contained only two weeks of shifts, so <i>Pay</i> → <i>Monthly</i> showed nothing before September 2026, and every monthly draft had to be started by hand.</p>
+
+<p><b>Decision.</b> The seed now contains each worker's full work history from the contract start: every fixed shift up to 2026-09-20 is worked with a confirmed attendance, and the payroll of every month from the first contract month to August 2026 is confirmed, computed by the same rules as any other payroll. A new use case, UC-14, has the System Clock as its actor: on or after the first day of a month it prepares the previous month's DRAFT and notifies the owner (FR-23, BR-14). Confirmation stays with the owner, because a minimum-wage warning must be acknowledged by a person (BR-09). The new identifiers take the next free numbers: UC-14, FR-23 and BR-14.</p>
+
+<p><b>Impact analysis.</b> The table below lists what the change touched, found by following the traceability links from UC-09 and FR-15, whose computation the new use case reuses.</p>
+
+<table>
+  <caption>Table {{tab}}. Impact of the iteration 7 change request</caption>
+  <thead><tr><th style="width:20%">Artefact</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>Use cases</td><td>UC-14 new, with the System Clock as actor (13 active use cases); UC-09 gains the alternative flow "draft already prepared"</td></tr>
+    <tr><td>Functional requirements</td><td>FR-23 new (22 active functional requirements)</td></tr>
+    <tr><td>Business rules</td><td>BR-14 new (14 rules); BR-06 to BR-11 unchanged and reused for the history and the automatic draft</td></tr>
+    <tr><td>Notifications</td><td>New kind PAYROLL_DRAFT_READY, sent once per month to the owner (nine kinds)</td></tr>
+    <tr><td>Database</td><td>No schema change (11 tables); the existence of Payroll rows for a month marks the draft as prepared</td></tr>
+    <tr><td>Seed data and scenarios</td><td>Work history from each contract start and confirmed payroll to August 2026; new scenario S-8 (demonstration walkthrough S9); the September 2026 figures of the payroll scenario now include the weeks before 21 September</td></tr>
+    <tr><td>Screens</td><td>Owner Home: card "9월 급여 초안이 준비됐어요" with an action that opens the draft; Pay → Monthly: month switcher back to the first contract month, confirmed months read-only, a note on an automatically prepared draft</td></tr>
+    <tr><td>Services and prompt</td><td>The System Clock runs the new service <code>prepareMonthlyPayroll</code> after <code>expireOverdue</code>; the seed is built by calling the same services as the application; prompt version 7 gains a done criterion for walkthrough S9</td></tr>
+    <tr><td>Tests</td><td>New test group TC-14x for BR-14, FR-23 and the seeded history (Section 6.9)</td></tr>
+  </tbody>
+</table>
+
+<p><b>Traceability after the change.</b> FR-23 maps to UC-14, UC-14 to the service that prepares the draft and to the owner's Home, and BR-14 to the test group TC-14x, so the rule of spec §12 holds for the new identifiers as well (Section 6.8). The change also shows a pattern that the two iterations share: in both, the product owner judged the running system, not a document, and the change entered the specification first and the code only afterwards.</p>

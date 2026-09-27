@@ -1,6 +1,7 @@
 // Data access: sql.js database, schema (spec §8), seed data (spec §10), persistence and tx().
+import { seedWorkHistory } from './services.js';
 
-export const DB_KEY = 'shiftswap.db.v1';
+export const DB_KEY = 'shiftswap.db.v2';
 
 export const SCHEMA = `
 CREATE TABLE Workplace (id INTEGER PRIMARY KEY, name TEXT NOT NULL, regularEmployees INTEGER NOT NULL DEFAULT 4,
@@ -158,7 +159,25 @@ function addDays(date, n) {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
+/** Spec §10 seed in one transaction; the nested service calls of the work history join it and nothing is saved midway. */
 function seedDatabase() {
+  db.run('BEGIN');
+  depth++;
+  try {
+    seedRows();
+    // Work history up to 2026-09-20 and confirmed payroll up to 2026-08, built by the services (iteration 7).
+    // It is inserted after the rows above so the ids of the current weeks, the request and its notifications stay as before.
+    seedWorkHistory('2026-09-20', '2026-08');
+    db.run('COMMIT');
+  } catch (err) {
+    db.run('ROLLBACK');
+    throw err;
+  } finally {
+    depth--;
+  }
+}
+
+function seedRows() {
   db.run("INSERT INTO Workplace (id, name, regularEmployees, subAttendancePolicy) VALUES (1, 'Dalbit Café', 4, 'EXCUSED')");
   db.run('INSERT INTO MinimumWage (year, hourly) VALUES (2025, 10030), (2026, 10320)');
   const workers = [

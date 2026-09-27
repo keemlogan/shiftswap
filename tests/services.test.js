@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import initSqlJs from 'sql.js';
-import { createDatabase, openDatabase, all, get, DB_KEY } from '../app/core/db.js';
+import { createDatabase, openDatabase, all, get, run, DB_KEY } from '../app/core/db.js';
 import { setNow, resetClock, now } from '../app/core/clock.js';
 import * as svc from '../app/core/services.js';
 
@@ -34,9 +34,16 @@ test('TC-001 seed reproduces spec §10', () => {
     [4, 'Jung Hana', 'WORKER', 10320], [5, 'Kang Doyun', 'WORKER', 10000],
   ]);
   const shifts = all('SELECT * FROM Shift');
-  assert.equal(shifts.length, 18);
-  assert.ok(shifts.filter((s) => s.workDate < '2026-09-28').every((s) => s.status === 'WORKED'));
-  assert.equal(get('SELECT count(*) AS n FROM Attendance WHERE confirmed = 1').n, 9);
+  // Weeks of 09-21 and 09-28: 9 fixed slots each; before them the work history up to 09-20 (TC-141).
+  assert.equal(shifts.filter((s) => s.workDate >= '2026-09-21').length, 18);
+  const past = shifts.filter((s) => s.workDate < '2026-09-28');
+  assert.ok(past.every((s) => s.status === 'WORKED'));
+  assert.ok(shifts.filter((s) => s.workDate >= '2026-09-28').every((s) => s.status === 'SCHEDULED'));
+  assert.equal(get('SELECT count(*) AS n FROM Attendance WHERE confirmed = 1').n, past.length);
+  assert.equal(get('SELECT count(*) AS n FROM Attendance').n, past.length);
+  // Payroll: confirmed up to 2026-08, nothing for September yet (spec §10).
+  assert.equal(get("SELECT count(*) AS n FROM Payroll WHERE status != 'CONFIRMED' OR yearMonth >= '2026-09'").n, 0);
+  assert.deepEqual(all("SELECT kind FROM Notification WHERE kind != 'REQUEST_RECEIVED'"), []);
   const r = get('SELECT * FROM SubRequest');
   assert.equal(r.status, 'REQUESTED');
   assert.equal(r.deadline, '2026-09-29T21:00');
@@ -303,7 +310,7 @@ test('TC-066 review step previews recipients; shift detail explains why a shift 
 
 // ---- TC-08x weekly summary through the service ----
 
-test('TC-088 worked example: Minho 3.2 h holiday allowance, 33,024 KRW in September payroll', () => {
+test('TC-088 worked example: Minho 3.2 h holiday allowance, 33,024 KRW per week in September payroll', () => {
   const rows = svc.recomputeWeek('2026-09-21');
   const minho = rows.find((r) => r.workerId === 3);
   assert.equal(minho.holidayHours, 3.2);
@@ -311,7 +318,8 @@ test('TC-088 worked example: Minho 3.2 h holiday allowance, 33,024 KRW in Septem
   assert.equal(seoyeon.holidayEligible, false);
   assert.deepEqual(seoyeon.reasons, [{ code: 'CONTRACT_BELOW_15' }]);
   const payroll = svc.generatePayroll('2026-09').find((p) => p.workerId === 3);
-  assert.equal(payroll.holidayPay, 33024);
+  // BR-11: the four weeks whose Sunday is in September (08-31, 09-07, 09-14, 09-21) each pay 33,024.
+  assert.equal(payroll.holidayPay, 4 * 33024);
 });
 
 test('TC-089 marking a shift absent removes holiday eligibility for that week', () => {
@@ -363,8 +371,8 @@ test('TC-095 payroll premium is zero at 4 employees and non-zero at 5', () => {
   assert.ok(svc.generatePayroll('2026-09').every((p) => p.premiumPay === 0));
   svc.updateSettings({ name: 'Dalbit Café', regularEmployees: 5, subAttendancePolicy: 'EXCUSED', minimumWages: [{ year: 2026, hourly: 10320 }] });
   const seoyeon = svc.generatePayroll('2026-09').find((p) => p.workerId === 2);
-  // Seoyeon's September shifts are 18:00-23:00: Mon 21, Wed 23 (worked), Mon 28, Wed 30 (scheduled) → 4 night hours.
-  assert.equal(seoyeon.premiumPay, Math.floor(4 * 10500 * 0.5));
+  // Seoyeon's September shifts are 18:00-23:00: Wed 2, 9, 16, 23, 30 and Mon 7, 14, 21, 28 → 9 night hours.
+  assert.equal(seoyeon.premiumPay, Math.floor(9 * 10500 * 0.5));
 });
 
 // ---- TC-10x minimum wage in payroll ----
@@ -396,13 +404,14 @@ test('TC-105 minimum-wage acknowledgement is persisted and a regenerated draft n
 
 // ---- TC-11x monthly payroll ----
 
-test('TC-114 September payroll for Choi Minho: worked + estimated hours, holiday week of 09-21', () => {
+test('TC-114 September payroll for Choi Minho: worked + estimated hours, four holiday weeks', () => {
   const minho = svc.generatePayroll('2026-09').find((p) => p.workerId === 3);
-  // Worked 16 h (week 09-21) + scheduled Tue 09-29 5 h (estimated).
-  assert.equal(minho.baseHours, 21);
-  assert.equal(minho.basePay, 21 * 10320);
-  assert.equal(minho.holidayPay, 33024);
-  assert.equal(minho.total, 21 * 10320 + 33024);
+  // Worked Tue 1, 8, 15, 22 and Thu 3, 10, 17, 24 (8 × 5 h) and Sat 5, 12, 19, 26 (4 × 6 h) = 64 h,
+  // plus the scheduled Tue 09-29 5 h (estimated) = 69 h.
+  assert.equal(minho.baseHours, 69);
+  assert.equal(minho.basePay, 69 * 10320);
+  assert.equal(minho.holidayPay, 4 * 33024);
+  assert.equal(minho.total, 69 * 10320 + 4 * 33024);
   assert.equal(minho.estimated, 1);
 });
 
@@ -808,4 +817,155 @@ test('TC-003 a saved database from before iteration 6 (Availability table, no FA
   assert.deepEqual(all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'Availability'"), []);
   for (const w of [3, 4, 5]) svc.respondToRequest(1, w, 'DECLINED');
   assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'FAILED');
+});
+
+// ---- TC-14x seeded work history and automatic monthly payroll (spec §10, BR-14, FR-23) ----
+
+const CONTRACT_STARTS = { 2: '2026-03-02', 3: '2026-06-01', 4: '2026-09-01', 5: '2026-08-15' };
+
+/** ISO weekday 1 (Mon) … 7 (Sun) of a date. */
+function weekdayOf(date) {
+  return ((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
+}
+
+function nextDay(date) {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+}
+
+test('TC-141 seed history: shifts from contractStart to 09-20 follow the fixed schedule, all WORKED and confirmed (spec §10)', () => {
+  for (const [id, start] of Object.entries(CONTRACT_STARTS)) {
+    const workerId = Number(id);
+    const fixed = svc.getFixedSchedules(workerId);
+    const expected = [];
+    for (let d = start; d <= '2026-10-04'; d = nextDay(d)) {
+      for (const f of fixed) if (f.weekday === weekdayOf(d)) expected.push(`${d} ${f.startTime}-${f.endTime}`);
+    }
+    const actual = all(
+      `SELECT s.*, a.clockIn, a.clockOut, a.confirmed FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id
+       WHERE s.workerId = ? ORDER BY s.workDate, s.startTime`, [workerId]);
+    // No gap and no duplicate around 09-20 / 09-21: history and the two seeded weeks form one series.
+    assert.deepEqual(actual.map((s) => `${s.workDate} ${s.startTime}-${s.endTime}`), expected);
+    const history = actual.filter((s) => s.workDate <= '2026-09-20');
+    assert.equal(history.length, expected.filter((e) => e.slice(0, 10) <= '2026-09-20').length);
+    assert.ok(history.every((s) => s.status === 'WORKED' && s.confirmed === 1 && s.clockIn === s.startTime && s.clockOut === s.endTime));
+    assert.ok(history.every((s) => s.fixedScheduleId && s.originalWorkerId === null));
+  }
+  assert.deepEqual(all("SELECT workerId, count(*) AS n FROM Shift WHERE workDate <= '2026-09-20' GROUP BY workerId ORDER BY workerId")
+    .map((r) => [r.workerId, r.n]), [[2, 58], [3, 48], [4, 6], [5, 12]]);
+  assert.equal(get("SELECT count(*) AS n FROM Shift WHERE workDate < ?", [CONTRACT_STARTS[2]]).n, 0);
+});
+
+test('TC-142 seed payroll: confirmed months per worker equal the generatePayroll recomputation (BR-06…BR-11)', () => {
+  const stored = all('SELECT * FROM Payroll ORDER BY yearMonth, workerId');
+  assert.deepEqual(stored.map((p) => `${p.workerId}:${p.yearMonth}`), [
+    '2:2026-03', '2:2026-04', '2:2026-05', '2:2026-06', '3:2026-06', '2:2026-07', '3:2026-07', '2:2026-08', '3:2026-08', '5:2026-08',
+  ]);
+  assert.ok(stored.every((p) => p.status === 'CONFIRMED' && p.estimated === 0 && p.premiumPay === 0));
+  // Minho (16 h/week) gets 3.2 h × 10,320 = 33,024 for each week whose Sunday is in the month: 4, 4 and 5 Sundays.
+  assert.deepEqual(stored.filter((p) => p.workerId === 3).map((p) => p.holidayPay), [4 * 33024, 4 * 33024, 5 * 33024]);
+  assert.ok(stored.filter((p) => p.workerId === 2).every((p) => p.holidayPay === 0 && p.basePay === p.baseHours * 10500));
+  const doyun = stored.find((p) => p.workerId === 5);
+  assert.deepEqual([doyun.baseHours, doyun.total, doyun.minWageWarning, doyun.minWageAck], [36, 360000, 1, 1]);
+  assert.ok(stored.filter((p) => p.workerId !== 5).every((p) => p.minWageWarning === 0 && p.minWageAck === 0));
+  // Recompute each month from the same shifts: drop its rows (test only — the app never deletes confirmed payroll)
+  // and generate the draft again.
+  const fields = ['workerId', 'yearMonth', 'baseHours', 'basePay', 'holidayPay', 'premiumPay', 'total', 'minWageWarning', 'estimated'];
+  const pick = (p) => fields.map((f) => p[f]);
+  const recomputed = [];
+  for (const m of [...new Set(stored.map((p) => p.yearMonth))]) {
+    run('DELETE FROM Payroll WHERE yearMonth = ?', [m]);
+    recomputed.push(...svc.generatePayroll(m));
+  }
+  assert.deepEqual(recomputed.map(pick).sort(), stored.map(pick).sort());
+});
+
+const payrollReadyRows = () => all("SELECT * FROM Notification WHERE kind = 'PAYROLL_DRAFT_READY' ORDER BY id");
+
+test('TC-143 prepareMonthlyPayroll: September draft on 10-01 with one notification, nothing again in October, nothing before (BR-14, FR-23)', () => {
+  // Before October the previous month (August) is already confirmed and September is never touched.
+  for (const t of ['2026-09-28T09:00', '2026-09-30T23:59']) assert.deepEqual(svc.prepareMonthlyPayroll(t), { yearMonth: '2026-08', created: 0 });
+  // Before the first contract month there is nothing to prepare.
+  assert.deepEqual(svc.prepareMonthlyPayroll('2026-03-15T09:00'), { yearMonth: '2026-02', created: 0 });
+  assert.equal(get("SELECT count(*) AS n FROM Payroll WHERE yearMonth >= '2026-09'").n, 0);
+  assert.equal(payrollReadyRows().length, 0);
+
+  assert.deepEqual(svc.prepareMonthlyPayroll('2026-10-01T00:00'), { yearMonth: '2026-09', created: 4 });
+  const draft = svc.getPayroll('2026-09');
+  assert.deepEqual(draft.map((p) => [p.workerId, p.status]), [[2, 'DRAFT'], [3, 'DRAFT'], [4, 'DRAFT'], [5, 'DRAFT']]);
+  assert.ok(draft.every((p) => p.autoPrepared === true));
+  const notes = payrollReadyRows();
+  assert.equal(notes.length, 1);
+  assert.deepEqual([notes[0].workerId, notes[0].subRequestId, notes[0].createdAt, notes[0].readAt],
+    [1, null, '2026-10-01T00:00', null]);
+  assert.equal(notes[0].message, 'The September 2026 payroll draft is ready. Review and confirm it.');
+  // The draft is exactly what generatePayroll computes.
+  const fields = (p) => [p.workerId, p.baseHours, p.basePay, p.holidayPay, p.premiumPay, p.total, p.minWageWarning, p.estimated];
+  const first = draft.map(fields);
+  svc.acknowledgeMinWage('2026-09', 5);
+  // Later in October (explicit time and the demo clock) nothing is created or overwritten.
+  assert.deepEqual(svc.prepareMonthlyPayroll('2026-10-15T09:00'), { yearMonth: '2026-09', created: 0 });
+  setNow('2026-10-31T23:59');
+  assert.deepEqual(svc.prepareMonthlyPayroll(), { yearMonth: '2026-09', created: 0 });
+  assert.equal(payrollReadyRows().length, 1);
+  assert.equal(get("SELECT minWageAck FROM Payroll WHERE workerId = 5 AND yearMonth = '2026-09'").minWageAck, 1);
+  assert.equal(get("SELECT count(*) AS n FROM Payroll WHERE status = 'CONFIRMED' AND yearMonth = '2026-09'").n, 0);
+  assert.deepEqual(svc.generatePayroll('2026-09').map(fields), first);
+  // On 11-01 the October draft follows, with its own notification.
+  assert.equal(svc.prepareMonthlyPayroll('2026-11-01T09:00').yearMonth, '2026-10');
+  assert.deepEqual(payrollReadyRows().map((n) => n.message), [
+    'The September 2026 payroll draft is ready. Review and confirm it.',
+    'The October 2026 payroll draft is ready. Review and confirm it.',
+  ]);
+});
+
+test('TC-144 owner Home payrollReady, listPayrollMonths and the notification yearMonth (UC-14)', () => {
+  assert.equal(svc.getOwnerHome().payrollReady, null);
+  assert.deepEqual(svc.listPayrollMonths(), [
+    ...['03', '04', '05', '06', '07', '08'].map((m) => ({ yearMonth: `2026-${m}`, status: 'CONFIRMED', autoPrepared: false })),
+    { yearMonth: '2026-09', status: 'NONE', autoPrepared: false },
+  ]);
+  assert.ok(svc.getPayroll('2026-08').every((p) => p.autoPrepared === false));
+  setNow('2026-10-01T09:00');
+  svc.prepareMonthlyPayroll();
+  let home = svc.getOwnerHome();
+  const id = payrollReadyRows()[0].id;
+  assert.deepEqual(home.payrollReady, { notificationId: id, yearMonth: '2026-09' });
+  // payrollReady and Doyun's unacknowledged warning are both owner tasks.
+  assert.deepEqual([home.payWarnings.map((p) => p.workerId), home.taskCount], [[5], 2]);
+  assert.deepEqual(svc.listPayrollMonths().slice(-3), [
+    { yearMonth: '2026-08', status: 'CONFIRMED', autoPrepared: false },
+    { yearMonth: '2026-09', status: 'DRAFT', autoPrepared: true },
+    { yearMonth: '2026-10', status: 'NONE', autoPrepared: false },
+  ]);
+  const item = svc.listNotifications(1).items.find((n) => n.kind === 'PAYROLL_DRAFT_READY');
+  assert.deepEqual([item.id, item.yearMonth], [id, '2026-09']);
+  assert.ok(svc.listNotifications(1).items.filter((n) => n.kind !== 'PAYROLL_DRAFT_READY').every((n) => n.yearMonth === null));
+  assert.equal(svc.markNotificationsRead(1, [id]), 1);
+  home = svc.getOwnerHome();
+  assert.deepEqual([home.payrollReady, home.taskCount], [null, 1]);
+});
+
+test('TC-145 demo walkthrough S9: confirmed Mar–Aug, clock to 10-01, September draft with Doyun\'s warning, no second draft (spec §10)', () => {
+  const systemClock = () => { svc.expireOverdue(); svc.prepareMonthlyPayroll(); };
+  systemClock();
+  assert.deepEqual(svc.listPayrollMonths().filter((m) => m.status === 'CONFIRMED').map((m) => m.yearMonth),
+    ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08']);
+  assert.ok(svc.getPayroll('2026-06').every((p) => p.status === 'CONFIRMED'));
+  assert.equal(svc.getOwnerHome().payrollReady, null);
+  setNow('2026-10-01T09:00');
+  systemClock();
+  const home = svc.getOwnerHome();
+  assert.equal(home.payrollReady.yearMonth, '2026-09');
+  const draft = svc.getPayroll('2026-09');
+  assert.deepEqual(draft.filter((p) => p.minWageWarning && !p.minWageAck).map((p) => p.workerName), ['Kang Doyun']);
+  assert.throws(() => svc.confirmPayroll('2026-09'), { code: 'MIN_WAGE_UNACKNOWLEDGED' });
+  svc.markNotificationsRead(1, [home.payrollReady.notificationId]);
+  svc.acknowledgeMinWage('2026-09', 5);
+  assert.equal(svc.confirmPayroll('2026-09').confirmed, 4);
+  setNow('2026-10-20T09:00');
+  systemClock();
+  assert.equal(payrollReadyRows().length, 1);
+  assert.equal(get("SELECT count(*) AS n FROM Payroll WHERE yearMonth = '2026-09'").n, 4);
+  assert.equal(svc.listPayrollMonths().find((m) => m.yearMonth === '2026-09').status, 'CONFIRMED');
+  assert.equal(svc.getOwnerHome().payrollReady, null);
 });

@@ -11,16 +11,16 @@
   <thead><tr><th style="width:17%">Level</th><th style="width:28%">Target</th><th>Method</th></tr></thead>
   <tbody>
     <tr><td>Unit testing</td><td>Domain rules (<code>rules.js</code>)</td><td>28 tests in <code>tests/rules.test.js</code> call the pure rule functions with hand-built inputs, including the boundary values of Section 6.5. No database is involved.</td></tr>
-    <tr><td>Integration testing</td><td>Services with the real schema (<code>services.js</code> + <code>db.js</code> + <code>rules.js</code>)</td><td>56 tests in <code>tests/services.test.js</code> create a fresh in-memory SQLite database with the seed data before every test (<code>beforeEach</code>), reset the demo clock, call the service functions and assert on the resulting rows, notifications and error codes.</td></tr>
-    <tr><td>System testing</td><td>The running application in a browser</td><td>Scenario walkthroughs of Section 3.8 on the screens, for both roles, in Korean and English; for the final build the headless check <code>tools/check.mjs</code> opens 28 named screen states in both languages at 1280 px and 360 px (Section 6.7 and Chapter 7).</td></tr>
-    <tr><td>Acceptance testing</td><td>Done criteria of the final prompt</td><td>The six done criteria of the prompt (Chapter 5) serve as acceptance tests. Criterion 4, the walkthrough from acceptance to the handover marker, is automated at the service level as TC-063 and in the browser by <code>tools/check.mjs</code>; criterion 5 (walkthrough S8, nobody can take the shift) is automated at the service level as TC-13E, and criterion 6 (one primary action per screen) is checked by the same script.</td></tr>
+    <tr><td>Integration testing</td><td>Services with the real schema (<code>services.js</code> + <code>db.js</code> + <code>rules.js</code>)</td><td>61 tests in <code>tests/services.test.js</code> create a fresh in-memory SQLite database with the seed data before every test (<code>beforeEach</code>), reset the demo clock, call the service functions and assert on the resulting rows, notifications and error codes.</td></tr>
+    <tr><td>System testing</td><td>The running application in a browser</td><td>Scenario walkthroughs of Section 3.8 on the screens, for both roles, in Korean and English; for the final build the headless check <code>tools/check.mjs</code> opens 32 named screen states in both languages at 1280 px and 360 px (Section 6.7 and Chapter 7).</td></tr>
+    <tr><td>Acceptance testing</td><td>Done criteria of the final prompt</td><td>The seven done criteria of the prompt (Chapter 5) serve as acceptance tests. Criterion 4, the walkthrough from acceptance to the handover marker, is automated at the service level as TC-063 and in the browser by <code>tools/check.mjs</code>; criterion 5 (walkthrough S8, nobody can take the shift) is automated at the service level as TC-13E, criterion 6 (walkthrough S9, the automatic payroll draft) as TC-145, and criterion 7 (one primary action per screen) is checked by the same script.</td></tr>
     <tr><td>Regression testing</td><td>Every change of prompt or code</td><td>The whole suite is run after every generation or modification of the code; a change is accepted only if all tests pass (the practice of continuous integration in the lecture's description of extreme programming [6]).</td></tr>
   </tbody>
 </table>
 
 <p>Two principles guided the choice of test cases. First, the tests were derived from the requirements, not from the code: each test group corresponds to a business rule (spec §11), and each test is named with its identifier and a sentence stating the expected behaviour, for example <code>TC-082 no holiday allowance at 14.99 h</code>. This is the test-case generation technique of requirements validation described in Section 3.10.3. Second, the seed data of spec §10 doubles as the test fixture. The integration tests start from the same café, the same five people and the same open request that appear in the scenarios and in the screenshots, so a number checked in a test — 3.2 holiday hours, 33,024 won, 16 → 21 scheduled hours — is the number the reader sees in this report and on the screen.</p>
 
-<p>The identifiers extend the groups of spec §11 by three groups that are not tied to a business rule: TC-00x for the seed data and storage, TC-07x for attendance (UC-07), and TC-13x for privacy and notifications (NFR-11, FR-21). Within a group, the third character is a sequence number (1–9, then A, B), so TC-01A follows TC-019. The tests TC-01C, TC-01D, TC-134 and TC-135 were added after a traceability check in iteration 3, TC-064 to TC-066 for the Home queries of iteration 4, twelve regression tests for the defects of the independent code review in iteration 5, and TC-13A to TC-13F and TC-003 for the change request of iteration 6 (Section 6.9). The iteration 6 tests extend the group TC-13x because BR-13 has the same number; TC-13F is a rule-level test and is therefore listed with the rule tests.</p>
+<p>The identifiers extend the groups of spec §11 by three groups that are not tied to a business rule: TC-00x for the seed data and storage, TC-07x for attendance (UC-07), and TC-13x for privacy and notifications (NFR-11, FR-21). Within a group, the third character is a sequence number (1–9, then A, B), so TC-01A follows TC-019. The tests TC-01C, TC-01D, TC-134 and TC-135 were added after a traceability check in iteration 3, TC-064 to TC-066 for the Home queries of iteration 4, twelve regression tests for the defects of the independent code review in iteration 5, and TC-13A to TC-13F and TC-003 for the change request of iteration 6 (Section 6.9). The iteration 6 tests extend the group TC-13x because BR-13 has the same number; TC-13F is a rule-level test and is therefore listed with the rule tests. Iteration 7 opened the group TC-14x (TC-141 to TC-145) for BR-14, FR-23 and the seeded work history.</p>
 
 <h2 id="testing-environment">6.2 Test Environment</h2>
 
@@ -41,7 +41,7 @@
 
 <h2 id="testing-cases">6.3 Test Cases</h2>
 
-<p>The table below lists all 84 automated tests in the order in which they appear in the two test files. The list was extracted from the files with a script, so it contains exactly the tests that run. The column "Covers" gives the business rules, requirements or specification sections each test checks; "Expected result" states what the assertions require.</p>
+<p>The table below lists all 89 automated tests in the order in which they appear in the two test files. The list was extracted from the files with a script, so it contains exactly the tests that run. The column "Covers" gives the business rules, requirements or specification sections each test checks; "Expected result" states what the assertions require.</p>
 
 <table>
   <caption>Table {{tab}}. Automated test cases (tests/rules.test.js and tests/services.test.js)</caption>
@@ -75,7 +75,7 @@
     <tr><td class="req-id">TC-111</td><td>payroll totals: base + holiday + premium, rounded down</td><td>rules</td><td>BR-07, BR-11</td><td>16 h × 10,320 = 165,120 + 33,024 holiday = 198,144 won.</td></tr>
     <tr><td class="req-id">TC-112</td><td>premium pay at 5 employees and estimated flag</td><td>rules</td><td>BR-08, BR-11</td><td>One 18:00–23:00 shift at 5 employees: premium 5,250 won; estimated flag set.</td></tr>
     <tr><td class="req-id">TC-113</td><td>fractional amounts are rounded down to the won</td><td>rules</td><td>BR-07, BR-11</td><td>Fractions rounded down: 0.33 h → 3,300 won; 1.33 h holiday → 13,301 won.</td></tr>
-    <tr><td class="req-id">TC-001</td><td>seed reproduces spec §10</td><td>services</td><td>spec §10</td><td>Seed: Dalbit Café, 4 employees, EXCUSED, two minimum-wage rows, five accounts, 18 shifts, 9 confirmed attendances, the open request with three PENDING targets (Minho, Hana, Doyun) and three REQUEST_RECEIVED; no Availability table.</td></tr>
+    <tr><td class="req-id">TC-001</td><td>seed reproduces spec §10</td><td>services</td><td>spec §10</td><td>Seed: Dalbit Café, 4 employees, EXCUSED, two minimum-wage rows, five accounts; 18 shifts in the weeks of 09-21 and 09-28; every shift before 09-28 WORKED with a confirmed attendance; payroll confirmed up to 2026-08 and none for September; the open request with three PENDING targets and three REQUEST_RECEIVED; no Availability table.</td></tr>
     <tr><td class="req-id">TC-016</td><td>seed request candidates equal the BR-01 computation</td><td>services</td><td>BR-01, FR-07</td><td>Recreated seed request yields exactly Choi Minho, Jung Hana and Kang Doyun.</td></tr>
     <tr><td class="req-id">TC-017</td><td>fixed schedules of one worker must not overlap (FR-02)</td><td>services</td><td>FR-02</td><td>Overlapping fixed shifts on the same weekday are refused (FIXED_OVERLAP).</td></tr>
     <tr><td class="req-id">TC-018</td><td>generating the same week twice creates no duplicates (FR-04)</td><td>services</td><td>FR-04</td><td>Seed week creates 0 new shifts; a new week creates 9; a second call creates 0.</td></tr>
@@ -96,14 +96,14 @@
     <tr><td class="req-id">TC-064</td><td>worker home: Minho sees the request with the effect of accepting (16 -&gt; 21 h, 33,024 won unchanged)</td><td>services</td><td>FR-09, FR-11, NFR-01, NFR-13</td><td>Minho's Home shows the seed request with 16 → 21 h and 33,024 won unchanged; after he accepts, Doyun's Home shows that Minho was faster and Seoyeon's shows her request as accepted.</td></tr>
     <tr><td class="req-id">TC-065</td><td>owner home: decision card with the approval effect, then nothing left after approval</td><td>services</td><td>FR-11, FR-12, NFR-13</td><td>Owner Home: one open request with three pending targets, 9 shifts · 50 h; after acceptance one decision card (Seoyeon 10 → 5 h, Minho 16 → 21 h, 33,024 won unchanged); none after approval; a pay warning and an attendance to confirm count as two tasks.</td></tr>
     <tr><td class="req-id">TC-066</td><td>review step previews recipients; shift detail explains why a shift cannot be deleted</td><td>services</td><td>BR-01, FR-05, FR-07</td><td>Recipients preview for Minho's Saturday: Lee Seoyeon and Jung Hana; for Hana's Sunday: Seoyeon, Minho and Doyun; none when every co-worker is busy; the Wednesday shift detail shows its open request and one history entry and cannot be deleted.</td></tr>
-    <tr><td class="req-id">TC-088</td><td>worked example: Minho 3.2 h holiday allowance, 33,024 KRW in September payroll</td><td>services</td><td>BR-06, BR-07, BR-11</td><td>Week of 09-21: Minho 3.2 h; Seoyeon not eligible; September holiday pay 33,024 won.</td></tr>
+    <tr><td class="req-id">TC-088</td><td>worked example: Minho 3.2 h holiday allowance, 33,024 KRW per week in September payroll</td><td>services</td><td>BR-06, BR-07, BR-11</td><td>Week of 09-21: Minho 3.2 h; Seoyeon not eligible (contract below 15 h); September holiday pay 4 × 33,024 = 132,096 won (four weeks with their Sunday in September).</td></tr>
     <tr><td class="req-id">TC-089</td><td>marking a shift absent removes holiday eligibility for that week</td><td>services</td><td>BR-06, FR-13</td><td>Marking Minho’s SCHEDULED Tuesday 09-29 absent after it started removes eligibility for that week (reason ABSENT on 09-29).</td></tr>
     <tr><td class="req-id">TC-08A</td><td>both substitution-attendance policies through approval</td><td>services</td><td>BR-06, FR-17</td><td>After an approved swap Minho stays eligible under EXCUSED and loses eligibility under ABSENT.</td></tr>
     <tr><td class="req-id">TC-08B</td><td>demo walkthrough S7: ABSENT policy, Minho gives away Sat 10-03 and loses holiday allowance</td><td>services</td><td>BR-06, FR-11</td><td>Walkthrough S7: candidates Seoyeon and Hana, Doyun excluded; preview shows eligibility change; after approval not eligible.</td></tr>
-    <tr><td class="req-id">TC-095</td><td>payroll premium is zero at 4 employees and non-zero at 5</td><td>services</td><td>BR-08</td><td>September premium 0 at 4 employees; Seoyeon 21,000 won at 5 (4 night hours × 10,500 × 0.5).</td></tr>
+    <tr><td class="req-id">TC-095</td><td>payroll premium is zero at 4 employees and non-zero at 5</td><td>services</td><td>BR-08</td><td>September premium 0 at 4 employees; at 5, Seoyeon's nine evening shifts give 9 night hours × 10,500 × 0.5 = 47,250 won.</td></tr>
     <tr><td class="req-id">TC-104</td><td>payroll warns for Kang Doyun and blocks confirmation until acknowledged</td><td>services</td><td>BR-09, BR-10, FR-16</td><td>Warning for Doyun, none for Hana (probation); confirmation blocked until acknowledged.</td></tr>
     <tr><td class="req-id">TC-105</td><td>minimum-wage acknowledgement is persisted and a regenerated draft needs a new one</td><td>services</td><td>BR-09, NFR-05</td><td>Acknowledgement survives a reload from storage; a regenerated draft resets it and blocks confirmation again.</td></tr>
-    <tr><td class="req-id">TC-114</td><td>September payroll for Choi Minho: worked + estimated hours, holiday week of 09-21</td><td>services</td><td>BR-11</td><td>Minho September: 21 h (16 worked + 5 estimated), 216,720 + 33,024 = 249,744 won, estimated.</td></tr>
+    <tr><td class="req-id">TC-114</td><td>September payroll for Choi Minho: worked + estimated hours, four holiday weeks</td><td>services</td><td>BR-11</td><td>Minho September: 69 h (64 worked + 5 estimated on 09-29), 712,080 + 4 × 33,024 = 844,176 won, estimated.</td></tr>
     <tr><td class="req-id">TC-115</td><td>confirmed payroll is read-only; regenerating replaces drafts only</td><td>services</td><td>FR-15, BR-11</td><td>After confirmation, marking a shift absent and regenerating leaves the confirmed totals unchanged.</td></tr>
     <tr><td class="req-id">TC-121</td><td>request expires at its deadline; requester and owner notified</td><td>services</td><td>BR-12, FR-18</td><td>No expiry at 20:59; expiry at 21:00; targets CLOSED; REQUEST_EXPIRED to owner and requester.</td></tr>
     <tr><td class="req-id">TC-122</td><td>an ACCEPTED request expires when the shift starts without approval</td><td>services</td><td>BR-12</td><td>An ACCEPTED request expires at the shift start and can no longer be approved.</td></tr>
@@ -131,12 +131,17 @@
     <tr><td class="req-id">TC-13D</td><td>Home exposes the failed item; markNotificationsRead with its id removes it (BR-13, FR-21)</td><td>services</td><td>BR-13, FR-21, FR-22</td><td>The requester's and the owner's Home show the FAILED item (targets see none); the owner's task count includes it; marking its notification read removes only that item; another user's id is ignored.</td></tr>
     <tr><td class="req-id">TC-13E</td><td>demo walkthrough S8: Hana's Sun 10-04 request, all three can't, FAILED card for Hana and the owner (spec §10)</td><td>services</td><td>BR-13, FR-22, spec §10 S8</td><td>Walkthrough S8: Hana's Sunday request reaches Seoyeon, Minho and Doyun; after three answers of can't it is FAILED, Hana and the owner see the item, the owner acknowledges it, and the shift stays Hana's.</td></tr>
     <tr><td class="req-id">TC-003</td><td>a saved database from before iteration 6 (Availability table, no FAILED status) is replaced by the seed</td><td>services</td><td>NFR-05</td><td>A saved database from before iteration 6 (with the Availability table and without FAILED) is replaced by the seed, in which a request can end FAILED.</td></tr>
+    <tr><td class="req-id">TC-141</td><td>seed history: shifts from contractStart to 09-20 follow the fixed schedule, all WORKED and confirmed (spec §10)</td><td>services</td><td>spec §10</td><td>Each worker's shifts from the contract start to 10-04 follow the fixed schedule without gap or duplicate around 09-20; the history up to 09-20 (58, 48, 6 and 12 shifts) is WORKED with confirmed attendance at the scheduled times.</td></tr>
+    <tr><td class="req-id">TC-142</td><td>seed payroll: confirmed months per worker equal the generatePayroll recomputation (BR-06…BR-11)</td><td>services</td><td>BR-06–BR-11, spec §10</td><td>Ten CONFIRMED payroll rows (Seoyeon 03–08, Minho 06–08, Doyun 08); Minho's holiday pay 4, 4 and 5 × 33,024; Doyun 36 h, 360,000 won, warning acknowledged; regenerating every month gives the stored rows.</td></tr>
+    <tr><td class="req-id">TC-143</td><td>prepareMonthlyPayroll: September draft on 10-01 with one notification, nothing again in October, nothing before (BR-14, FR-23)</td><td>services</td><td>BR-14, FR-23</td><td>Nothing is prepared in September or before the first contract month; on 10-01 the September DRAFT (4 rows, equal to generatePayroll) and one PAYROLL_DRAFT_READY; nothing more in October, the acknowledgement is kept; the October draft follows on 11-01.</td></tr>
+    <tr><td class="req-id">TC-144</td><td>owner Home payrollReady, listPayrollMonths and the notification yearMonth (UC-14)</td><td>services</td><td>FR-23, UC-14, NFR-13</td><td>listPayrollMonths lists March–August as CONFIRMED and September as NONE, then DRAFT (prepared automatically); the owner Home shows payrollReady and counts it as a task; marking the notification read clears it.</td></tr>
+    <tr><td class="req-id">TC-145</td><td>demo walkthrough S9: confirmed Mar–Aug, clock to 10-01, September draft with Doyun's warning, no second draft (spec §10)</td><td>services</td><td>BR-14, FR-23, spec §10 S9</td><td>Walkthrough S9: March–August confirmed; at 10-01 the September draft with Doyun's warning; confirmation blocked until acknowledged, then 4 rows confirmed; no second draft on 10-20.</td></tr>
   </tbody>
 </table>
 
 <h2 id="testing-results">6.4 Test Results</h2>
 
-<p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the final build (prompt v6, Chapter 5).</p>
+<p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the final build (prompt v7, Chapter 5).</p>
 
 <table>
   <caption>Table {{tab}}. Test results by group (npm test, 2026-09-27)</caption>
@@ -154,22 +159,23 @@
     <tr><td>TC-11x</td><td>Monthly payroll (BR-11)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
     <tr><td>TC-12x</td><td>Expiry and cancellation (BR-12, FR-18, FR-19)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
     <tr><td>TC-13x</td><td>Privacy, notifications, role menus and no taker (NFR-11, FR-20–FR-22, BR-13)</td><td class="num">11</td><td class="num">11</td><td class="num">0</td></tr>
-    <tr><th colspan="2">Total (rules: 28, services: 56)</th><th class="num">84</th><th class="num">84</th><th class="num">0</th></tr>
+    <tr><td>TC-14x</td><td>Work history and automatic monthly payroll (spec §10, BR-14, FR-23)</td><td class="num">5</td><td class="num">5</td><td class="num">0</td></tr>
+    <tr><th colspan="2">Total (rules: 28, services: 61)</th><th class="num">89</th><th class="num">89</th><th class="num">0</th></tr>
   </tbody>
 </table>
 
-<p>All 84 tests passed. The summary lines of the runner were:</p>
+<p>All 89 tests passed. The summary lines of the runner were:</p>
 
-<pre>ℹ tests 84
+<pre>ℹ tests 89
 ℹ suites 0
-ℹ pass 84
+ℹ pass 89
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 307.972125</pre>
+ℹ duration_ms 1865.488083</pre>
 
-<p>The suite contains no skipped, pending or "todo" tests. The whole run takes well under a second, which made it practical to run the suite after every change, as the regression strategy of Section 6.1 requires. The count grew with the iterations, as recorded in the prompt log: 52 tests in the build of version 1; 58 after iteration 2 (TC-002, TC-01A, TC-01B, TC-105, TC-08B and TC-133); 62 after the traceability check of iteration 3 (TC-01C, TC-01D, TC-134, TC-135); 65 with the Home queries of iteration 4 (TC-064, TC-065, TC-066); 77 with the twelve regression tests of iteration 5; and 84 after the change request of iteration 6, which added TC-13A to TC-13F and TC-003 and rewrote the tests that assumed availability (TC-014, TC-015, TC-025). Each test was introduced together with the specification change or defect fix it verifies (Section 6.9).</p>
+<p>The suite contains no skipped, pending or "todo" tests. The whole run takes about two seconds — longer than before iteration 7, because every integration test now starts from a seed that includes seven months of work history — which kept it practical to run the suite after every change, as the regression strategy of Section 6.1 requires. The count grew with the iterations, as recorded in the prompt log: 52 tests in the build of version 1; 58 after iteration 2 (TC-002, TC-01A, TC-01B, TC-105, TC-08B and TC-133); 62 after the traceability check of iteration 3 (TC-01C, TC-01D, TC-134, TC-135); 65 with the Home queries of iteration 4 (TC-064, TC-065, TC-066); 77 with the twelve regression tests of iteration 5; and 84 after the change request of iteration 6, which added TC-13A to TC-13F and TC-003 and rewrote the tests that assumed availability (TC-014, TC-015, TC-025); and 89 after iteration 7, which added TC-141 to TC-145 and updated TC-001, TC-088, TC-095 and TC-114 for the seeded history. Each test was introduced together with the specification change or defect fix it verifies (Section 6.9).</p>
 
 <h2 id="testing-boundary">6.5 Boundary-Value Analysis</h2>
 
@@ -212,7 +218,7 @@
   <thead><tr><th style="width:9%">ID</th><th style="width:24%">Method</th><th>Evidence</th><th style="width:13%">Status</th></tr></thead>
   <tbody>
     <tr><td class="req-id">NFR-01</td><td>UI walkthrough</td><td>In the final build the pending request appears as a card on the candidate's Home screen, with the effect of accepting and the Accept button on the card, so acceptance takes one tap after sign-in. Checked in the Korean walkthrough of <code>tools/check.mjs</code> (done criterion 4); the data behind the card is covered by TC-064 and the state logic by TC-063.</td><td>Met</td></tr>
-    <tr><td class="req-id">NFR-02</td><td>Browser check at 360 px and 1440 px</td><td>The prompt log records headless Chrome checks of every screen for both roles in English and Korean at 1440 px and 360 px with no horizontal scroll for the builds of version 2 (70 of 70 checks) and version 3 (82 of 82 checks). For the final build, <code>tools/check.mjs</code> checks 28 screen states in both languages at 1280 px and 360 px for horizontal scroll; all pass (Section 6.7, NFR-13 row).</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-02</td><td>Browser check at 360 px and 1440 px</td><td>The prompt log records headless Chrome checks of every screen for both roles in English and Korean at 1440 px and 360 px with no horizontal scroll for the builds of version 2 (70 of 70 checks) and version 3 (82 of 82 checks). For the final build, <code>tools/check.mjs</code> checks 32 screen states in both languages at 1280 px and 360 px for horizontal scroll; all pass (Section 6.7, NFR-13 row).</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-03</td><td>Timed load with 20 workers and 12 weeks</td><td>Browser measurement on the final (iteration 6) interface with <code>tools/nfr03.mjs</code> (Apple M2, headless Chrome 153, viewport 1280 × 800), owner signed in, 20 workers, 12 generated weeks (588 shifts). Route change to rendered DOM, median / maximum of 10 runs: Schedule 3.1 / 5.7 ms, Pay → Weekly 7.7 / 15.7 ms, Pay → Monthly 13.4 / 15.2 ms; including paint: 27.5 / 28.4 ms, 10.6 / 28.7 ms and 23.3 / 35.1 ms. The slowest screen took 15.7 ms to the DOM and 35.1 ms to paint, against the limit of 1,000 ms. Cold start (reload to rendered schedule): median 39 ms, range 27–63 ms. The procedure and data set are recorded in <code>docs/nfr03-measurement.md</code> in the repository.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-04</td><td>Unit test TC-05x</td><td>TC-051, TC-052, TC-053, TC-063 pass (Section 6.6).</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-05</td><td>Manual test</td><td>TC-105 reloads the database from a storage object and finds the acknowledgement kept; TC-002 and TC-003 check the replacement of an outdated copy (from before iteration 2 and before iteration 6); the prompt log records a headless reload and reset check.</td><td>Met</td></tr>
@@ -223,7 +229,7 @@
     <tr><td class="req-id">NFR-10</td><td>Unit tests TC-08x, TC-09x</td><td>All TC-08x, TC-09x and TC-10x tests pass, including the boundary values of Section 6.5.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-11</td><td>Role test</td><td>TC-131 and TC-135: a worker receives <code>null</code> for other people's phone and wage and sees only their own attendance rows; TC-134: the worker routes contain no owner screen.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-12</td><td>Design review</td><td>A search of the application code finds no use of the geolocation interface; attendance is entered by the worker and confirmed by the owner (TC-071).</td><td>Met</td></tr>
-    <tr><td class="req-id">NFR-13</td><td>Headless check that counts the filled primary buttons on every screen of both roles (exactly one expected), checks that every disabled button has a visible reason and that touch targets are at least 44 × 44 px (done criterion 6 of the final prompt); walkthrough of the sign-in tour (done criterion 4)</td><td><code>tools/check.mjs</code>: 128 of 128 checks pass with no console errors on the final build: 28 screen states × Korean/English × 1280/360 px for done criterion 6 (one filled primary button, visible reasons on disabled buttons, touch targets ≥ 44 px, no horizontal scroll), the sign-in screen (criterion 3), the Korean tour walkthrough (criterion 4) and five checks of walkthrough S8 (criterion 5). The data shown on the Home screens and decision cards is covered by TC-064 and TC-065.</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-13</td><td>Headless check that counts the filled primary buttons on every screen of both roles (exactly one expected), checks that every disabled button has a visible reason and that touch targets are at least 44 × 44 px (done criterion 7 of the final prompt); walkthrough of the sign-in tour (done criterion 4)</td><td><code>tools/check.mjs</code>: 149 of 149 checks pass with no console errors on the final build (prompt v7): 32 screen states × Korean/English × 1280/360 px for done criterion 7 (one filled primary button, visible reasons on disabled buttons, touch targets ≥ 44 px, no horizontal scroll), the sign-in screen (criterion 3), the Korean tour walkthrough (criterion 4), five checks of walkthrough S8 (criterion 5) and five checks of walkthrough S9 (criterion 6). The data shown on the Home screens and decision cards is covered by TC-064 and TC-065.</td><td>Met</td></tr>
   </tbody>
 </table>
 
@@ -258,6 +264,7 @@
     <tr><td class="req-id">FR-20</td><td>UC-13</td><td><code>login.js, main.js</code></td><td><code>menuFor, routesFor, listWorkers, getWorker</code></td><td>NFR-11</td><td>TC-134 (menus and routes), TC-131, TC-135 (privacy)</td></tr>
     <tr><td class="req-id">FR-21</td><td>UC-04–06, 11, 12</td><td><code>inbox.js, main.js</code></td><td><code>listNotifications, markNotificationsRead, unreadCount</code></td><td>—</td><td>TC-132, TC-133, TC-13D</td></tr>
     <tr><td class="req-id">FR-22</td><td>UC-05</td><td><code>home.js, requests.js</code></td><td><code>respondToRequest, getWorkerHome, getOwnerHome, markNotificationsRead</code></td><td>BR-13</td><td>TC-13A, TC-13C, TC-13D, TC-13E, TC-133</td></tr>
+    <tr><td class="req-id">FR-23</td><td>UC-14</td><td><code>home.js, payroll.js (main.js runs the System Clock)</code></td><td><code>prepareMonthlyPayroll, getOwnerHome, listPayrollMonths, getPayroll</code></td><td>BR-14</td><td>TC-143, TC-144, TC-145</td></tr>
   </tbody>
 </table>
 
@@ -282,6 +289,7 @@
     <tr><td class="req-id">BR-11</td><td>Monthly payroll</td><td><code>computePayrollRow, generatePayroll</code></td><td>TC-111–TC-115, TC-088</td><td class="num">6</td></tr>
     <tr><td class="req-id">BR-12</td><td>Expiry</td><td><code>expireOverdue</code>, <code>isOverdue</code></td><td>TC-121, TC-122, TC-124, TC-125, TC-133</td><td class="num">5</td></tr>
     <tr><td class="req-id">BR-13</td><td>No taker</td><td><code>hasNoTaker</code>, <code>respondToRequest</code>, <code>createSubRequest</code></td><td>TC-13A–TC-13F, TC-025, TC-003</td><td class="num">8</td></tr>
+    <tr><td class="req-id">BR-14</td><td>Automatic monthly payroll draft</td><td><code>prepareMonthlyPayroll</code>, <code>generatePayroll</code></td><td>TC-141–TC-145</td><td class="num">5</td></tr>
   </tbody>
 </table>
 </div>
@@ -352,5 +360,21 @@
     <tr><td>7</td><td>A FAILED request cannot be accepted, cancelled or approved and does not expire</td><td>TC-13A</td></tr>
     <tr><td>8</td><td>FR-22: the failed request stays on Home until acknowledged and counts as an owner task</td><td>TC-13D (new)</td></tr>
     <tr><td>9</td><td>Demonstration walkthrough S8</td><td>TC-13E (new)</td></tr>
+  </tbody>
+</table>
+
+<p>Iteration 7 added a requirement (Section 3.11.5). Its tests are listed in the table below, taken from the prompt log.</p>
+
+<table>
+  <caption>Table {{tab}}. Test changes for the change request of iteration 7</caption>
+  <thead><tr><th style="width:4%">#</th><th style="width:34%">Specification change</th><th>Tests</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Spec §10: work history from each contract start to 2026-09-20, worked with confirmed attendance</td><td>TC-141 (new); TC-001 updated</td></tr>
+    <tr><td>2</td><td>Spec §10: payroll confirmed for every month up to 2026-08, computed as <code>generatePayroll</code></td><td>TC-142 (new)</td></tr>
+    <tr><td>3</td><td>UC-14, FR-23, BR-14: the previous month's draft on or after the first day, at most once, never confirmed</td><td>TC-143 (new)</td></tr>
+    <tr><td>4</td><td>PAYROLL_DRAFT_READY on the owner's Home; month switcher of Pay → Monthly</td><td>TC-144 (new)</td></tr>
+    <tr><td>5</td><td>Demonstration walkthrough S9</td><td>TC-145 (new)</td></tr>
+    <tr><td>6</td><td>A database saved from an earlier seed is not kept (storage key <code>shiftswap.db.v2</code>)</td><td>TC-002, TC-003, TC-105 use the new key</td></tr>
+    <tr><td>7</td><td>September figures that change with the history</td><td>TC-088 (4 × 33,024 holiday pay), TC-095 (9 night hours for Seoyeon), TC-114 (Minho 69 h, four holiday weeks) updated</td></tr>
   </tbody>
 </table>

@@ -1,7 +1,8 @@
 // Reproducible screenshots of ShiftSwap.
 //   node tools/screens.mjs review <dir>   every scene at 1280 px and 360 px in English and Korean (1× scale)
 //   node tools/screens.mjs report         the report set in docs/img (2× scale; English, plus ko-*.png)
-// Every scene starts from a fresh seed (storage cleared) with the demo clock at 2026-09-28T09:00.
+// Every scene starts from a fresh seed (storage cleared) with the demo clock at 2026-09-28T09:00; the S9 scenes
+// then move it to 2026-10-01 through Demo tools.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve, chrome, app, sleep, ROOT } from './lib.mjs';
@@ -25,6 +26,8 @@ const REPORT = [
   ['ui-14-board-handover.png', 'schedule-handover', 1280],
   ['ui-15-korean.png', 'owner-home-decision', 1280, 'ko'],
   ['ui-16-failed-owner.png', 'failed-owner', 1280],
+  ['ui-17-payroll-history.png', 'pay-month-history', 1280],
+  ['ui-18-payroll-auto.png', 'owner-home-payroll-ready', 1280],
 ];
 const REPORT_KO = [
   ['ko-signin.png', 'signin', 360],
@@ -34,6 +37,7 @@ const REPORT_KO = [
   ['ko-board.png', 'schedule-handover', 1280],
   ['ko-payroll.png', 'pay-month', 360],
   ['ko-failed-worker.png', 'failed-worker', 360],
+  ['ko-payroll-auto.png', 'owner-home-payroll-ready', 360],
 ];
 
 /** Capture the whole page: the viewport is made as tall as the page so fixed bars sit at its bottom. */

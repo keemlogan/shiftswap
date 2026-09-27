@@ -1,6 +1,7 @@
 // Pay (owner, prompt §2.7): Weekly summary (UC-08) and Monthly payroll (UC-09) as two segments. The monthly
 // primary action is "create draft" or "confirm", disabled with its reason until every minimum-wage warning
-// is acknowledged (BR-09).
+// is acknowledged (BR-09). The month switcher reaches back to the first contract month; confirmed months are
+// read-only and a draft the System Clock prepared (UC-14) says so.
 import * as svc from '../core/services.js';
 import { minimumWageFor, probationApplies, weekStartOf, addDays, addMonths } from '../core/rules.js';
 import { t, esc, fmtHours, fmtWon, fmtMonth, fmtMonthShort, fmtDateShort, given, displayName } from './i18n.js';
@@ -18,14 +19,26 @@ function segments(active, week, month) {
     </div>`;
 }
 
-function monthNav(month) {
+/** The first month with payroll history: the month of the earliest contractStart (spec §10, BR-14). */
+function firstMonth() {
+  const months = svc.listPayrollMonths().map((m) => m.yearMonth).sort();
+  return months[0] || null;
+}
+
+/** ‹ month › switcher; ‹ stops at the first contract month. The label carries the month's payroll status. */
+function monthNav(month, status) {
   const prev = addMonths(`${month}-01`, -1).slice(0, 7);
   const next = addMonths(`${month}-01`, 1).slice(0, 7);
+  const first = firstMonth();
+  const chip = status === 'CONFIRMED' ? `<span class="chip chip-ok">${esc(t('pay.monthConfirmed'))}</span>`
+    : status === 'DRAFT' ? `<span class="chip chip-shift">${esc(t('pay.monthDraft'))}</span>` : '';
   return `
     <nav class="period-nav" aria-label="${esc(fmtMonth(month))}">
-      <a class="icon-btn" href="#/pay/month/${prev}" aria-label="${esc(t('common.prevMonth'))}">${icon('chevronLeft')}</a>
+      ${first && prev < first ? '<span class="icon-btn-spacer" aria-hidden="true"></span>'
+        : `<a class="icon-btn" href="#/pay/month/${prev}" aria-label="${esc(t('common.prevMonth'))}">${icon('chevronLeft')}</a>`}
       <p class="period-label">${esc(fmtMonth(month))}</p>
       <a class="icon-btn" href="#/pay/month/${next}" aria-label="${esc(t('common.nextMonth'))}">${icon('chevronRight')}</a>
+      ${chip}
     </nav>`;
 }
 
@@ -57,6 +70,8 @@ function renderMonth(view, ctx, week, month) {
   const drafts = rows.filter((r) => r.status === 'DRAFT');
   const open = drafts.filter((r) => r.minWageWarning && !r.minWageAck);
   const m = fmtMonthShort(month);
+  const status = !rows.length ? 'NONE' : drafts.length ? 'DRAFT' : 'CONFIRMED';
+  const auto = drafts.length > 0 && rows.some((r) => r.autoPrepared);
 
   let cta;
   if (!rows.length) cta = button({ label: t('pay.makeDraft', { month: m }), kind: 'primary', block: true, id: 'make-draft' });
@@ -102,8 +117,9 @@ function renderMonth(view, ctx, week, month) {
   view.innerHTML = `
     ${pageHead({ title: t('pay.title'), cta })}
     ${segments('month', week, month)}
-    ${monthNav(month)}
-    ${rows.length && !drafts.length ? `<p class="notice notice-ok">${esc(t('pay.confirmedNote', { month: m }))}</p>` : ''}
+    ${monthNav(month, status)}
+    ${status === 'CONFIRMED' ? `<p class="notice notice-ok">${esc(t('pay.confirmedNote', { month: m }))}</p>` : ''}
+    ${auto ? `<p class="notice">${icon('clock')}<span>${esc(t('pay.autoNote'))}</span></p>` : ''}
     ${table}
     ${rows.length ? `<div class="notes">
       ${rows.some((r) => r.estimated) ? `<p class="hint">${esc(t('pay.estimatedHint'))}</p>` : ''}

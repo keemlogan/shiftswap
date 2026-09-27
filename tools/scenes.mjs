@@ -26,6 +26,21 @@ export async function s8Failed(a) {
   for (const id of [2, 3, 5]) await declineSunday(a, id);
 }
 
+/** Set the demo clock through Demo tools (the System Clock then runs, as after any clock change). */
+export async function setClock(a, iso) {
+  await a.click('#open-demo');
+  await a.evaluate(`document.getElementById('clock-input').value = ${JSON.stringify(iso)}`);
+  await a.click('#clock-apply');
+  await sleep(200);
+}
+
+/** S9 (spec §10): as the owner, move the demo clock to 2026-10-01 so the September draft is prepared. */
+export async function ownerAtOctoberFirst(a, hash = '#/home') {
+  await a.signIn(1, hash);
+  await setClock(a, '2026-10-01T09:00');
+  await a.go(hash);
+}
+
 /** Scenes: a name and the steps that bring a fresh seed into the state the screenshot shows. */
 export const SCENES = {
   signin: async () => {},
@@ -87,6 +102,10 @@ export const SCENES = {
     await a.signIn(1, '#/pay/month/2026-09');
     await a.click('#make-draft');
   },
+  'pay-month-history': async (a) => a.signIn(1, '#/pay/month/2026-08'),
+  'owner-home-payroll-ready': async (a) => ownerAtOctoberFirst(a),
+  'pay-month-auto': async (a) => ownerAtOctoberFirst(a, '#/pay/month/2026-09'),
+  'notifications-owner-payroll': async (a) => ownerAtOctoberFirst(a, '#/notifications'),
   'staff-list': async (a) => a.signIn(1, '#/staff'),
   'staff-detail': async (a) => a.signIn(1, '#/staff/3'),
   me: async (a) => a.signIn(2, '#/me'),

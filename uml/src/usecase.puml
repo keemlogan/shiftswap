@@ -31,7 +31,7 @@ skinparam note {
 
 left to right direction
 
-title ShiftSwap — Use Case Diagram — Overview (UC-01 … UC-13)
+title ShiftSwap — Use Case Diagram — Overview (UC-01 … UC-14)
 
 ' spacer to keep smetana from clipping the topmost actor's head against the canvas edge
 actor " " as Spacer #FFFFFF;line:FFFFFF;text:FFFFFF
@@ -60,8 +60,9 @@ rectangle "ShiftSwap" as Boundary {
   usecase "UC-09\nGenerate and confirm\nmonthly payroll" as UC09
   usecase "UC-10\nManage workplace settings\nand minimum wage table" as UC10
 
-  ' -- system-clock-side use case --
+  ' -- system-clock-side use cases --
   usecase "UC-11\nExpire overdue\nsubstitute request" as UC11 <<amber>>
+  usecase "UC-14\nPrepare last month's\npayroll automatically" as UC14
 }
 
 actor "A2 Owner" as A2
@@ -85,11 +86,14 @@ A2 -- UC10
 A2 -- UC13
 
 A3 -- UC11
+A3 -- UC14
 
 note as N1
   Amber border = substitution-related use case
   (detail in Figure usecase-substitute).
-  All use cases except UC-11 «include» UC-13.
+  All use cases except UC-11 and UC-14 «include» UC-13.
+  UC-14 also notifies A2 Owner (PAYROLL_DRAFT_READY);
+  the owner still reviews/confirms via UC-09.
   UC-02 (Register availability) retired in iteration 6 (§15).
 end note
 

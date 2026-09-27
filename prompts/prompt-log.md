@@ -176,3 +176,22 @@ Source of every row: product-owner review of the running app (2026-09-27, spec �
 | 9 | §10 walkthrough S8 | — | TC-13E |
 
 Result: `npm test` 84 tests, 84 pass, 0 fail (the 77 tests of iteration 5, updated where they assumed availability, plus TC-13A–F and TC-003).
+
+## Iteration 7 — work history and automatic monthly payroll
+
+Source of every row: product-owner request (2026-09-27, spec §16): payroll data for past months based on the employees' contracts, and last month's payroll prepared automatically on the first day of every month. Spec changes: new UC-14 (actor System Clock), FR-23, BR-14, notification kind PAYROLL_DRAFT_READY, §10 work history and walkthrough S9, §11 TC-14x.
+
+| # | Spec change | Code (`app/core`) | Tests |
+|---|---|---|---|
+| 1 | §10 work history: shifts from each contractStart to 2026-09-20 from the fixed schedule, WORKED with confirmed attendance at the scheduled times | `services.js` `seedWorkHistory(lastDate, lastMonth)` inserts the shifts day by day (only dates between contractStart and contractEnd) with their attendance and confirms each with `confirmAttendance`, which recomputes the week; `db.js` `seedDatabase()` runs the whole seed in one transaction (nested service calls join it, nothing is saved midway) and calls the history after the existing rows, so the ids of the current weeks, request 1 and its notifications do not change. The history ends on 09-20 and the seeded weeks start on 09-21 (no gap, no duplicate) | TC-141; TC-001 (18 shifts in the two current weeks, confirmed attendance = every shift before 09-28) |
+| 2 | §10: payroll of every month from the contract-start month to 2026-08 CONFIRMED, computed as generatePayroll; minWageAck = 1 where a warning exists (Doyun, 2026-08); no row for 2026-09 | `seedWorkHistory` calls `generatePayroll`, `acknowledgeMinWage` for each warned row and `confirmPayroll` for every month from 2026-03 to 2026-08 | TC-142 (months per worker, Minho's holiday pay per week whose Sunday is in the month, recomputation equals the stored rows) |
+| 3 | UC-14 / FR-23 / BR-14: on or after the 1st, the previous month's DRAFT plus one PAYROLL_DRAFT_READY to the owner; at most once per month; never confirms | `prepareMonthlyPayroll(nowIso = now())` → `{ yearMonth, created }`: P = month before `nowIso`; nothing when P is before the first contract month or already has a Payroll row; otherwise `generatePayroll(P)` and one notification (createdAt = `nowIso`, message "The September 2026 payroll draft is ready. Review and confirm it.") | TC-143 |
+| 4 | §8 recipients: PAYROLL_DRAFT_READY for the owner; prompt §2.5 Home card | `getOwnerHome().payrollReady` = `{ notificationId, yearMonth }` of the newest unread PAYROLL_DRAFT_READY or null, counted in `taskCount`; `listNotifications` items carry `yearMonth` for this kind (derived: the month before the notification's createdAt); `markNotificationsRead(ownerId, [notificationId])` clears it | TC-144 |
+| 5 | prompt §2.6 Pay → Monthly: switcher back to the first contract month, confirmed months read-only, note on auto-prepared drafts | `listPayrollMonths()` → `[{ yearMonth, status: 'CONFIRMED' \| 'DRAFT' \| 'NONE', autoPrepared }]` from the first contract month to the demo month, oldest first; `getPayroll(yearMonth)` rows carry `autoPrepared` | TC-144 |
+| 6 | §10 walkthrough S9 | System Clock order: `expireOverdue()` then `prepareMonthlyPayroll()`; core does not run the clock itself, `app/main.js` `render()` calls both | TC-145 |
+| 7 | Saved copies of an earlier seed (no history) must not survive | `db.js` `DB_KEY` = `shiftswap.db.v2` (was `v1`); a browser that saved an earlier seed starts from the new seed; `hasCurrentSchema()` unchanged | TC-002, TC-003, TC-105 (use `DB_KEY`) |
+| 8 | Numbers that change because of the history | — | TC-088 (September holiday pay 4 × 33,024), TC-095 (9 night hours for Seoyeon), TC-114 (Minho 69 h, 4 holiday weeks) |
+
+Seed time in Node: about 25–60 ms per `createDatabase(SQL, { seed: true })` after warm-up (under 170 ms for the first call while the machine was heavily loaded). The seed now has 142 shifts, 133 confirmed attendance records, WeeklySummary rows for the history weeks and 10 CONFIRMED payroll rows.
+
+Result: `npm test` 89 tests, 89 pass, 0 fail (the 84 tests of iteration 6, four of them updated for the history, plus TC-141 … TC-145).

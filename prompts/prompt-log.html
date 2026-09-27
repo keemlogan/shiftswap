@@ -996,4 +996,123 @@ ids (the old one-argument form still marks everything)</td>
 <p>Result: <code>npm test</code> 84 tests, 84 pass, 0 fail (the 77 tests
 of iteration 5, updated where they assumed availability, plus TC-13A–F
 and TC-003).</p>
+<h2
+id="iteration-7--work-history-and-automatic-monthly-payroll">Iteration 7
+— work history and automatic monthly payroll</h2>
+<p>Source of every row: product-owner request (2026-09-27, spec §16):
+payroll data for past months based on the employees' contracts, and last
+month's payroll prepared automatically on the first day of every month.
+Spec changes: new UC-14 (actor System Clock), FR-23, BR-14, notification
+kind PAYROLL_DRAFT_READY, §10 work history and walkthrough S9, §11
+TC-14x.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Spec change</th>
+<th>Code (<code>app/core</code>)</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>§10 work history: shifts from each contractStart to 2026-09-20 from
+the fixed schedule, WORKED with confirmed attendance at the scheduled
+times</td>
+<td><code>services.js</code>
+<code>seedWorkHistory(lastDate, lastMonth)</code> inserts the shifts day
+by day (only dates between contractStart and contractEnd) with their
+attendance and confirms each with <code>confirmAttendance</code>, which
+recomputes the week; <code>db.js</code> <code>seedDatabase()</code> runs
+the whole seed in one transaction (nested service calls join it, nothing
+is saved midway) and calls the history after the existing rows, so the
+ids of the current weeks, request 1 and its notifications do not change.
+The history ends on 09-20 and the seeded weeks start on 09-21 (no gap,
+no duplicate)</td>
+<td>TC-141; TC-001 (18 shifts in the two current weeks, confirmed
+attendance = every shift before 09-28)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>§10: payroll of every month from the contract-start month to 2026-08
+CONFIRMED, computed as generatePayroll; minWageAck = 1 where a warning
+exists (Doyun, 2026-08); no row for 2026-09</td>
+<td><code>seedWorkHistory</code> calls <code>generatePayroll</code>,
+<code>acknowledgeMinWage</code> for each warned row and
+<code>confirmPayroll</code> for every month from 2026-03 to 2026-08</td>
+<td>TC-142 (months per worker, Minho's holiday pay per week whose Sunday
+is in the month, recomputation equals the stored rows)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>UC-14 / FR-23 / BR-14: on or after the 1st, the previous month's
+DRAFT plus one PAYROLL_DRAFT_READY to the owner; at most once per month;
+never confirms</td>
+<td><code>prepareMonthlyPayroll(nowIso = now())</code> →
+<code>{ yearMonth, created }</code>: P = month before
+<code>nowIso</code>; nothing when P is before the first contract month
+or already has a Payroll row; otherwise <code>generatePayroll(P)</code>
+and one notification (createdAt = <code>nowIso</code>, message "The
+September 2026 payroll draft is ready. Review and confirm it.")</td>
+<td>TC-143</td>
+</tr>
+<tr>
+<td>4</td>
+<td>§8 recipients: PAYROLL_DRAFT_READY for the owner; prompt §2.5 Home
+card</td>
+<td><code>getOwnerHome().payrollReady</code> =
+<code>{ notificationId, yearMonth }</code> of the newest unread
+PAYROLL_DRAFT_READY or null, counted in <code>taskCount</code>;
+<code>listNotifications</code> items carry <code>yearMonth</code> for
+this kind (derived: the month before the notification's createdAt);
+<code>markNotificationsRead(ownerId, [notificationId])</code> clears
+it</td>
+<td>TC-144</td>
+</tr>
+<tr>
+<td>5</td>
+<td>prompt §2.6 Pay → Monthly: switcher back to the first contract
+month, confirmed months read-only, note on auto-prepared drafts</td>
+<td><code>listPayrollMonths()</code> →
+<code>[{ yearMonth, status: 'CONFIRMED' | 'DRAFT' | 'NONE', autoPrepared }]</code>
+from the first contract month to the demo month, oldest first;
+<code>getPayroll(yearMonth)</code> rows carry
+<code>autoPrepared</code></td>
+<td>TC-144</td>
+</tr>
+<tr>
+<td>6</td>
+<td>§10 walkthrough S9</td>
+<td>System Clock order: <code>expireOverdue()</code> then
+<code>prepareMonthlyPayroll()</code>; core does not run the clock
+itself, <code>app/main.js</code> <code>render()</code> calls both</td>
+<td>TC-145</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Saved copies of an earlier seed (no history) must not survive</td>
+<td><code>db.js</code> <code>DB_KEY</code> =
+<code>shiftswap.db.v2</code> (was <code>v1</code>); a browser that saved
+an earlier seed starts from the new seed;
+<code>hasCurrentSchema()</code> unchanged</td>
+<td>TC-002, TC-003, TC-105 (use <code>DB_KEY</code>)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Numbers that change because of the history</td>
+<td>—</td>
+<td>TC-088 (September holiday pay 4 × 33,024), TC-095 (9 night hours for
+Seoyeon), TC-114 (Minho 69 h, 4 holiday weeks)</td>
+</tr>
+</tbody>
+</table>
+<p>Seed time in Node: about 25–60 ms per
+<code>createDatabase(SQL, { seed: true })</code> after warm-up (under
+170 ms for the first call while the machine was heavily loaded). The
+seed now has 142 shifts, 133 confirmed attendance records, WeeklySummary
+rows for the history weeks and 10 CONFIRMED payroll rows.</p>
+<p>Result: <code>npm test</code> 89 tests, 89 pass, 0 fail (the 84 tests
+of iteration 6, four of them updated for the history, plus TC-141 …
+TC-145).</p>
 </main></body></html>

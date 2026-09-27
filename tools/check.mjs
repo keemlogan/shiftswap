@@ -1,4 +1,4 @@
-// Headless browser checks (done criteria 3–6 of the prompt):
+// Headless browser checks (done criteria 3–7 of the prompt):
 //   node tools/check.mjs
 // 3. /app/ opens on the sign-in screen with no console errors.
 // 4. The sign-in tour walkthrough in Korean: Seoyeon's tracker; Minho's card with "16시간 → 21시간" accepted in one
@@ -6,10 +6,13 @@
 //    approved; the schedule shows the handover marker.
 // 5. The S8 walkthrough in Korean: Hana requests Sun 10-04 10:00–16:00; Seoyeon, Minho and Doyun tap 불가; Hana's
 //    Swaps tab shows the FAILED card; the owner's Home shows "대타를 못 구했어요" and 확인했어요 removes it.
-// 6. Every scene at 1280 px and 360 px (NFR-02) in Korean and English: exactly one filled primary button, every
+// 6. The S9 walkthrough in Korean: Pay → Monthly shows March–August 2026 as confirmed (‹ stops at March); at
+//    2026-10-01 the owner's Home shows "9월 급여 초안이 준비됐어요" and 급여 확인하기 opens the automatic September
+//    draft with Doyun's warning; at 2026-10-15 there is still one draft and one notification.
+// 7. Every scene at 1280 px and 360 px (NFR-02) in Korean and English: exactly one filled primary button, every
 //    disabled button with a visible reason, touch targets of at least 44 × 44 px, no horizontal scroll.
 import { serve, chrome, app, sleep } from './lib.mjs';
-import { SCENES, hanaRequestsSunday, declineSunday } from './scenes.mjs';
+import { SCENES, hanaRequestsSunday, declineSunday, setClock } from './scenes.mjs';
 
 let failures = 0;
 function check(ok, label, detail = '') {
@@ -90,7 +93,47 @@ try {
   text = await a.text();
   check(!text.includes('동료 모두 불가예요') && !(await a.evaluate('!!document.querySelector("[data-ack-failed]")')), 'DC-5 확인했어요 removes the owner card');
 
-  // ---- Done criterion 6 ----
+  // ---- Done criterion 6 (S9, Korean) ----
+  await a.fresh('ko');
+  await a.signIn(1, '#/pay/month/2026-09');
+  const seen = [];
+  for (let i = 0; i < 12; i++) {
+    const prev = await a.evaluate(`document.querySelector('.period-nav a[aria-label="이전 달"]')?.getAttribute('href') || null`);
+    if (!prev) break;
+    await a.go(prev);
+    seen.push(await a.evaluate(`(() => ({ month: location.hash.slice(-7), label: document.querySelector('.period-nav').innerText,
+      rows: document.querySelectorAll('.pay-table tbody tr:not(.warning-row)').length,
+      editable: document.querySelectorAll('#confirm, #make-draft, #remake, [data-ack]').length }))()`));
+  }
+  check(JSON.stringify(seen.map((m) => m.month)) === JSON.stringify(['2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03'])
+    && seen.every((m) => m.label.includes('확정됨') && m.rows > 0 && m.editable === 0),
+    'DC-6 Pay → Monthly reaches back to March 2026 and shows March–August as 확정됨, read-only', JSON.stringify(seen));
+  await setClock(a, '2026-10-01T09:00');
+  await a.go('#/home');
+  text = await a.text();
+  check(text.includes('9월 급여 초안이 준비됐어요. 확인하고 확정해 주세요.') && await a.evaluate('!!document.querySelector("[data-payroll-ready]")'),
+    'DC-6 at 2026-10-01 the owner\'s Home shows "9월 급여 초안이 준비됐어요" with 급여 확인하기', text.slice(0, 400));
+  const readyLabel = await a.evaluate('document.querySelector("[data-payroll-ready]")?.innerText.trim()');
+  await a.click('[data-payroll-ready]');
+  text = await a.text();
+  const hash = await a.evaluate('location.hash');
+  check(hash === '#/pay/month/2026-09' && readyLabel === '급여 확인하기' && text.includes('매월 1일에 자동으로 만든 초안이에요')
+    && text.includes('강도윤님 시급 10,000원이 2026년 최저임금 10,320원보다 낮아요') && await a.evaluate('!!document.querySelector("[data-ack]") && document.querySelector("#confirm").disabled'),
+    'DC-6 급여 확인하기 opens the automatic September draft with Doyun\'s warning to acknowledge', `${hash} ${text.slice(0, 500)}`);
+  await a.go('#/home');
+  check(!(await a.evaluate('!!document.querySelector("[data-payroll-ready]")')), 'DC-6 opening the draft marks the notification read (the Home card is gone)');
+  const s9 = `(async () => { const svc = await import('./core/services.js');
+    return { drafts: svc.getPayroll('2026-09').filter((r) => r.status === 'DRAFT').length,
+      notes: svc.listNotifications(1).items.filter((n) => n.kind === 'PAYROLL_DRAFT_READY').length,
+      months: svc.listPayrollMonths().filter((m) => m.status === 'DRAFT').map((m) => m.yearMonth) }; })()`;
+  const before = await a.evaluate(s9);
+  await setClock(a, '2026-10-15T09:00');
+  await a.go('#/pay/month/2026-09');
+  const after = await a.evaluate(s9);
+  check(before.notes === 1 && JSON.stringify(after) === JSON.stringify(before) && JSON.stringify(after.months) === '["2026-09"]',
+    'DC-6 at 2026-10-15 there is still one September draft and one PAYROLL_DRAFT_READY notification', `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+
+  // ---- Done criterion 7 ----
   const problemsBefore = page.problems.length;
   for (const name of Object.keys(SCENES)) {
     for (const lang of ['ko', 'en']) {
@@ -100,7 +143,7 @@ try {
         await SCENES[name](a);
         await sleep(150);
         const r = await a.audit();
-        const label = `DC-6 ${name} ${lang} ${width}px`;
+        const label = `DC-7 ${name} ${lang} ${width}px`;
         const reasonsOk = r.disabled.every((d) => d.reason);
         check(r.primaries.length === 1 && reasonsOk && r.small.length === 0 && r.overflow <= 0,
           `${label}: 1 primary (${r.primaries.join(' / ')}), ${r.disabled.length} disabled with reason, targets ≥ 44 px, no h-scroll`,

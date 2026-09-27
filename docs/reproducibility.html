@@ -201,7 +201,52 @@ components.js, slots.js) was added after the run had started.</li>
 for a confirmed month returns the confirmed rows; attendance can be
 recorded once the shift has started.</li>
 </ol>
-<h2 id="summary-of-the-three-runs">Summary of the three runs</h2>
+<hr />
+<h1
+id="reproducibility-check--run-4-prompt-v7--spec--supplied-tests">Reproducibility
+check — run 4 (prompt v7 + spec + supplied tests)</h1>
+<p>Date: 2026-09-27. Same method, with the final prompt v7 (iteration 7:
+work and payroll history from the contracts, automatic monthly payroll
+draft) and the 89 supplied tests.</p>
+<h2 id="result-2">Result</h2>
+<ul>
+<li><code>npm test</code>: 94 tests, 94 pass, 0 fail — the 89 supplied
+tests plus 5 added by the session; the core modules passed all 89
+supplied tests on their first run. The team re-ran the supplied tests in
+the rebuilt folder: 89/89.</li>
+<li>Supplied test files unchanged (shasum at start = at end):
+rules.test.js 83182afc4cc26a0fea6b127fbb379b63b01f6668, services.test.js
+72f08f2d5c9f17c031a0ad0d1b0891a6dedd2482.</li>
+<li>Done criteria 1–7 all PASS. The session's own headless check (68
+screen states at 360 and 1280 px, 249 assertions, 0 failures, no console
+errors) covered the tour (4), S8 (5), S9 (6: March–August confirmed; at
+2026-10-01 the Home card "9월 급여 초안이 준비됐어요" and the automatic
+September draft with Doyun's warning; no second draft at 10-03 and
+10-20) and the one-primary audit (7).</li>
+<li>The rebuild reproduced the same UI module layout as the reference
+(home.js, me.js, components.js, slots.js …).</li>
+</ul>
+<h2 id="ambiguities-reported-in-run-4-21--main-ones">Ambiguities
+reported in run 4 (21) — main ones</h2>
+<ol type="1">
+<li>The prompt's export lists omit several functions the tests require
+(hasNoTaker, prepareMonthlyPayroll, listPayrollMonths, routesFor,
+previewCandidates, …) — built as the tests call them (prompt §0
+rule).</li>
+<li>One filled primary per screen vs. an action on every Home card — the
+first stays primary, later ones grey; screens without a natural action
+get a navigation primary.</li>
+<li>Seeded weekly summaries stated "up to the week of 09-14" although
+09-21 is also worked — seeded through 09-14, later weeks recomputed on
+demand.</li>
+<li>BR-12 expiry inside the accept/approve transaction vs. tests that
+need EXPIRED saved — expiry committed first, then REQUEST_CLOSED.</li>
+<li>Unspecified choices: payroll rows only for workers with shifts or
+holiday pay in the month; "prepared automatically" derived from the
+notification; reason chips stored in English and shown in Korean; Pay
+opens on the weekly segment.</li>
+</ol>
+<h2 id="summary-of-the-four-runs">Summary of the four runs</h2>
 <table>
 <thead>
 <tr>
@@ -233,6 +278,13 @@ recorded once the shift has started.</li>
 <td>prompt + spec + tests</td>
 <td>84/84</td>
 <td>1–6 met</td>
+</tr>
+<tr>
+<td>4</td>
+<td>v7</td>
+<td>prompt + spec + tests</td>
+<td>89/89</td>
+<td>1–7 met</td>
 </tr>
 </tbody>
 </table>

@@ -26,8 +26,8 @@
 <ol>
   <li>The browser loads <code>app/index.html</code>, the style sheet, <code>vendor/sql-wasm.js</code> and the module <code>main.js</code>. While the database is being prepared, the page shows a loading message.</li>
   <li><code>main.js</code> initialises sql.js, which loads the WebAssembly file <code>vendor/sql-wasm.wasm</code> (about 650 KB) from the same site. No database server is contacted.</li>
-  <li>If the browser's <code>localStorage</code> holds a saved database under <code>shiftswap.db.v1</code> with the current schema, it is opened. Otherwise the schema of spec §8 is created, the demonstration data of spec §10 is inserted, and the database is saved. The demo clock is read from <code>shiftswap.clock.v1</code> (default Monday 2026-09-28 09:00) and the language from <code>shiftswap.lang</code>; without a saved choice the interface is in Korean. The progress of the demo tour is kept under <code>shiftswap.tour.v1</code>, and an unfinished substitute request is kept in <code>sessionStorage</code>, so that a reload does not lose the flow.</li>
-  <li>The router calls <code>expireOverdue()</code> and renders the sign-in screen, which doubles as a guided demo tour (Section 4.9). From now on, every change is saved to <code>localStorage</code> after its transaction commits.</li>
+  <li>If the browser's <code>localStorage</code> holds a saved database under <code>shiftswap.db.v2</code> with the current schema, it is opened. Otherwise the schema of spec §8 is created, the demonstration data of spec §10 is inserted — including each worker's work history since the contract start and the confirmed payroll up to August 2026 — and the database is saved. A database saved by a version before iteration 7, under <code>shiftswap.db.v1</code>, is not used. The demo clock is read from <code>shiftswap.clock.v1</code> (default Monday 2026-09-28 09:00) and the language from <code>shiftswap.lang</code>; without a saved choice the interface is in Korean. The progress of the demo tour is kept under <code>shiftswap.tour.v1</code>, and an unfinished substitute request is kept in <code>sessionStorage</code>, so that a reload does not lose the flow.</li>
+  <li>The router runs the System Clock — <code>expireOverdue()</code>, then <code>prepareMonthlyPayroll()</code> — and renders the sign-in screen, which doubles as a guided demo tour (Section 4.9). From now on, every change is saved to <code>localStorage</code> after its transaction commits.</li>
 </ol>
 
 <p>The fonts (Pretendard and JetBrains Mono) are loaded from public font services. If they cannot be reached, the browser uses its own fonts; the application works the same, only its appearance differs. The first load therefore needs a network connection for the application files, and later work happens entirely in the browser.</p>
@@ -144,13 +144,32 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 <p>The <i>Pay</i> tab has two segments. <i>Weekly</i> shows, for the chosen week, each worker's contract, scheduled and worked hours, whether the week earns the weekly holiday allowance, and the amount or the reason. For a week in progress the result is a projection, because scheduled shifts do not break attendance until they are marked absent.</p>
 
 <figure>
-  <img src="img/ui-10-payroll.png" alt="Pay tab, Monthly segment for September 2026 with four rows, a minimum-wage warning and a disabled confirm button" style="max-height:4.3in">
-  <figcaption>Figure {{fig}}. Pay → Monthly (UC-09), September 2026 draft: Lee Seoyeon 20 h and Choi Minho 21 h ("Estimated"), Minho with ₩33,024 holiday pay; Jung Hana with "Probation minimum 90 %"; Kang Doyun "Below minimum wage" with the sentence "Doyun's hourly wage of ₩10,000 is below the 2026 minimum wage of ₩10,320" and <i>Acknowledge</i>; total ₩703,584; <i>Confirm September pay</i> disabled, with its reason under it</figcaption>
+  <img src="img/ui-10-payroll.png" alt="Pay tab, Monthly segment for the September 2026 draft with four rows, a minimum-wage warning and a disabled confirm button" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Pay → Monthly (UC-09), September 2026 draft created on 28 September, with the chip "Draft" next to the month: Lee Seoyeon 45 h, ₩472,500 and Choi Minho 69 h, ₩712,080 + ₩132,096 holiday pay = ₩844,176 (both "Estimated"); Jung Hana 48 h, ₩495,360 with "Probation minimum 90 %"; Kang Doyun 48 h, ₩480,000, "Below minimum wage" with the sentence "Doyun's hourly wage of ₩10,000 is below the 2026 minimum wage of ₩10,320" and <i>Acknowledge</i>; all workers ₩2,292,036; <i>Confirm September pay</i> disabled, with its reason under it</figcaption>
 </figure>
 
-<p><i>Monthly</i> shows the payroll of a month. Without a draft, the primary action is <i>Create September pay draft</i>, with the month named in the button. Each row has hours, base pay, holiday pay, premium and total, with flags: "Estimated" when some shifts have no confirmed attendance and are counted with their scheduled hours (BR-11), "Probation minimum 90 %" when all probation conditions hold (BR-10), and "Below minimum wage" with an explanation (BR-09). <i>Confirm September pay</i> stays disabled, with the reason written under it, until every warning has been acknowledged with <i>Acknowledge</i>; the acknowledgement is saved. A confirmed month is read-only. <i>Rebuild draft</i> replaces only draft rows, and warnings must then be acknowledged again. The note under the table explains that premium pay applies only with five or more regular employees.</p>
+<p><i>Monthly</i> shows the payroll of a month. The arrows ‹ › move between months, back to the first contract month, March 2026, and a chip next to the month shows its state: "Confirmed" (확정됨) or "Draft" (초안). Without a draft, the primary action is <i>Create September pay draft</i>, with the month named in the button. Each row has hours, base pay, holiday pay, premium and total, with flags: "Estimated" when some shifts have no confirmed attendance and are counted with their scheduled hours (BR-11), "Probation minimum 90 %" when all probation conditions hold (BR-10), and "Below minimum wage" with an explanation (BR-09). <i>Confirm September pay</i> stays disabled, with the reason written under it, until every warning has been acknowledged with <i>Acknowledge</i>; the acknowledgement is saved. A confirmed month is read-only. <i>Rebuild draft</i> replaces only draft rows, and warnings must then be acknowledged again. The note under the table explains that premium pay applies only with five or more regular employees.</p>
 
-<h3 id="guide-staff">7.2.8 Staff and settings (owner)</h3>
+<figure>
+  <img src="img/ui-17-payroll-history.png" alt="Pay tab, Monthly segment for August 2026, confirmed and read-only" style="max-height:4.3in">
+  <figcaption>Figure {{fig}}. Pay → Monthly for a month of the seeded history (UC-09, iteration 7): August 2026 with the chip "Confirmed" and the sentence "August pay is confirmed and can no longer be changed"; Lee Seoyeon 45 h, ₩472,500; Choi Minho 70 h, ₩722,400 + ₩165,120 holiday pay (five weeks with their Sunday in August) = ₩887,520; Kang Doyun 36 h, ₩360,000, "Below minimum wage", marked "Acknowledged"; all workers ₩1,720,020; the primary button reads "August pay confirmed" and is disabled</figcaption>
+</figure>
+
+<p>The months before September come from the seeded work history and are confirmed, so they are read-only: the button at the top says that the month is confirmed, and the rows cannot be changed. Jung Hana has no row in August, because her contract starts on 1 September.</p>
+
+<h3 id="guide-payroll-auto">7.2.8 Last month's payroll prepared automatically (owner)</h3>
+
+<figure class="bare">
+  <div style="display:flex;gap:14pt;justify-content:center;align-items:flex-start">
+    <img src="img/ui-18-payroll-auto.png" alt="Owner Home on 1 October with the card that the September payroll draft is ready" style="height:3.4in;width:auto;max-width:62%;border:1px solid var(--line)">
+    <img src="img/ko-payroll-auto.png" alt="The same owner Home in Korean on a phone" style="height:3.4in;width:auto;max-width:34%;border:1px solid var(--line)">
+  </div>
+  <figcaption>Figure {{fig}}. Walkthrough S9, the automatic payroll draft (UC-14, FR-23, BR-14). (a) Owner Home, English, with the demo clock at Thu 10/1 09:00: "2 things to handle today"; the section "Payroll draft" with the card "The September payroll draft is ready. Please review and confirm it." and the primary button <i>Review payroll</i>; below, "Pay warnings" with Doyun's below-minimum wage and <i>Check in Pay</i>. (b) The same screen in Korean at 360 px: "9월 급여 초안이 준비됐어요. 확인하고 확정해 주세요." with 급여 확인하기, and the warning card for 강도윤님</figcaption>
+</figure>
+
+<p>On or after the first day of a month, the System Clock prepares the previous month's payroll draft by itself (walkthrough S9 of the specification). To see it, open <i>Demo tools</i> and set the clock to 1 October 2026. The owner's Home then shows the card that the September payroll draft is ready; <i>Review payroll</i> opens <i>Pay</i> → <i>Monthly</i> for September and marks the notification as read. The draft is the same as one created by hand, and it carries the note "This draft was made automatically on the 1st of the month." (매월 1일에 자동으로 만든 초안이에요). The system never confirms a payroll: Doyun's below-minimum warning must still be acknowledged, and the owner confirms the month as described in Section 7.2.7. Moving the clock further within October creates no second draft and no second notification. If the owner has already created or confirmed the September payroll before 1 October, nothing is prepared.</p>
+
+<h3 id="guide-staff">7.2.9 Staff and settings (owner)</h3>
 
 <figure>
   <img src="img/ui-11-workers.png" alt="Staff detail of Choi Minho with personal and contract data and the fixed-shift editor" style="max-height:4.3in">
@@ -166,7 +185,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
 
 <p><i>Settings</i> holds the values that the pay rules depend on: the number of regular employees, which switches premium pay on from five; the treatment of shifts handed over by an approved swap; and the minimum wage by year. When a new minimum wage is announced, add a row for the new year; the program does not need to change.</p>
 
-<h3 id="guide-demo-tools">7.2.9 Demo tools</h3>
+<h3 id="guide-demo-tools">7.2.10 Demo tools</h3>
 
 <p>The demo-clock chip in the header ("Mon 9/28 09:00") opens <i>Demo tools</i>, a pop-over on desktops and a sheet on phones. It contains the current demo time with <i>Set this time</i>, <i>+1 hour</i> and <i>+1 day</i>, and <i>Reset demo data</i>, which asks for confirmation inside the panel. Moving the clock past a request's deadline or its shift start makes the request expire the next time any screen is shown (UC-11), and the requester and the owner are told.</p>
 
@@ -186,6 +205,7 @@ npm install &amp;&amp; npm test           # optional: run the automated tests (C
     <tr><td>6</td><td>Park Jiyoung</td><td><i>Pay</i> → <i>Monthly</i>, September 2026, create the draft</td><td>Minho's holiday pay ₩33,024; warning on Kang Doyun's row; confirmation disabled until acknowledged</td></tr>
     <tr><td>7 (optional)</td><td>Any</td><td>Create a request, then <i>+1 day</i> in Demo tools</td><td>The request expires; requester and owner are notified (UC-11)</td></tr>
     <tr><td>8 (optional)</td><td>Jung Hana, then Lee Seoyeon, Choi Minho, Kang Doyun, then Park Jiyoung</td><td>Hana requests a substitute for Sun 10/4 10:00–16:00; each of the three taps <i>Can't</i>; the owner opens Home (walkthrough S8, done criterion 5)</td><td>After the third answer the request has failed: Hana sees "Please contact the owner"; the owner's card "No one can cover" disappears after <i>Got it</i></td></tr>
+    <tr><td>9 (optional)</td><td>Park Jiyoung</td><td><i>Pay</i> → <i>Monthly</i>, page back with ‹; then <i>Demo tools</i>, set the clock to 2026-10-01 and open Home (walkthrough S9, done criterion 6)</td><td>March to August are "Confirmed" and read-only; on 1 October Home shows that the September payroll draft is ready, and <i>Review payroll</i> opens the draft with Doyun's warning to acknowledge</td></tr>
   </tbody>
 </table>
 

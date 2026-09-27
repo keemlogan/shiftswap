@@ -1,12 +1,12 @@
-# ShiftSwap — Final Vibe-Coding Prompt (v7)
+# ShiftSwap — Final Vibe-Coding Prompt (v6)
 
-> Version history: v1 was built in iteration 1; v2 (iteration 2) resolved the build ambiguities and document-review gaps; v3 (iteration 3) applied the UI review of the running app; v4 (iteration 4) applied the UX redesign review from the point of view of a consumer-app product team (task-first home screens, one primary action per screen, consequences shown before committing); v5 (iteration 5) makes the acceptance test files part of the input after reproduction run 1 showed that two correct rebuilds disagree on function signatures (see `docs/reproducibility.md`); v6 (iteration 6) applies a requirements change from the product-owner review: availability is no longer collected, every co-worker is asked, a "can't" answer lets a request end as FAILED with a message to the requester and an acknowledge-only card for the owner (spec §15); v7 (iteration 7) adds the work and payroll history from the contracts and the automatic monthly payroll draft (spec §16). Earlier versions are kept as `prompts/prompt-v1.md` … `prompts/prompt-v6.md`; the reasons for every change are in `prompts/prompt-log.md`.
+> Version history: v1 was built in iteration 1; v2 (iteration 2) resolved the build ambiguities and document-review gaps; v3 (iteration 3) applied the UI review of the running app; v4 (iteration 4) applied the UX redesign review from the point of view of a consumer-app product team (task-first home screens, one primary action per screen, consequences shown before committing); v5 (iteration 5) makes the acceptance test files part of the input after reproduction run 1 showed that two correct rebuilds disagree on function signatures (see `docs/reproducibility.md`); v6 (iteration 6) applies a requirements change from the product-owner review: availability is no longer collected, every co-worker is asked, a "can't" answer lets a request end as FAILED with a message to the requester and an acknowledge-only card for the owner (spec §15). Earlier versions are kept as `prompts/prompt-v1.md` … `prompts/prompt-v5.md`; the reasons for every change are in `prompts/prompt-log.md`.
 >
 > How to use: in an empty folder, place `tests/rules.test.js` and `tests/services.test.js` from the repository, then paste this whole prompt, followed by the complete contents of `spec/spec.md`, into a coding agent that can create files and run shell commands. The agent must produce the same system that is deployed at https://keemlogan.github.io/shiftswap/app/.
 
 ---
 
-You are building **ShiftSwap**, a shift schedule and substitute management web application for a small café with part-time workers. The complete specification (actors, use cases UC-01…UC-14 (UC-02 retired), functional requirements FR-01…FR-23 (FR-03 retired), non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-14, states, SQLite schema, seed data, test IDs) follows this prompt. Treat the specification as the contract: use its identifiers, table and column names, state names and seed data exactly. Do not add features that are not in it.
+You are building **ShiftSwap**, a shift schedule and substitute management web application for a small café with part-time workers. The complete specification (actors, use cases UC-01…UC-13 (UC-02 retired), functional requirements FR-01…FR-22 (FR-03 retired), non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-13, states, SQLite schema, seed data, test IDs) follows this prompt. Treat the specification as the contract: use its identifiers, table and column names, state names and seed data exactly. Do not add features that are not in it.
 
 ## 0. Acceptance tests (supplied — read them first)
 
@@ -16,7 +16,7 @@ The folder already contains `tests/rules.test.js` and `tests/services.test.js`. 
 
 - Static site only: `index.html`, CSS, and JavaScript ES modules. No build step, no framework, no server. It must work when the folder is served by GitHub Pages under the sub-path `/shiftswap/app/` (use only relative URLs).
 - Database: SQLite in the browser with **sql.js** (WebAssembly). Vendor `sql-wasm.js` and `sql-wasm.wasm` into `app/vendor/` (copy them from the `sql.js` npm package) so the app does not depend on a CDN at runtime.
-- Persistence: after every committed transaction, export the database and save it to `localStorage` under the key `shiftswap.db.v2` (base64). The demo clock is stored under `shiftswap.clock.v1` and the language under `shiftswap.lang`. On start, load them if present, otherwise create the schema and insert the seed data. Provide "Reset demo data" in the header menu; it also resets the clock to `2026-09-28T09:00`.
+- Persistence: after every committed transaction, export the database and save it to `localStorage` under the key `shiftswap.db.v1` (base64). The demo clock is stored under `shiftswap.clock.v1` and the language under `shiftswap.lang`. On start, load them if present, otherwise create the schema and insert the seed data. Provide "Reset demo data" in the header menu; it also resets the clock to `2026-09-28T09:00`.
 - Folder layout:
   - `app/index.html`, `app/styles.css`, `app/main.js` (router + bootstrap)
   - `app/core/db.js` — init, schema (exactly the SQL of spec §8), seed (spec §10), `tx(fn)` helper that runs `BEGIN`…`COMMIT` / `ROLLBACK` and persists after commit, `all(sql, params)`, `get(sql, params)`, `run(sql, params)`.
@@ -26,7 +26,7 @@ The folder already contains `tests/rules.test.js` and `tests/services.test.js`. 
   - `app/ui/` — one module per screen: `login.js`, `home.js` (worker and owner Home, §2.3/§2.5), `me.js` (worker Me: profile + attendance), `schedule.js` (weekly board, both roles), `requests.js` (worker: my requests + new request form), `inbox.js`, `approvals.js` (owner), `attendance.js`, `weekly.js` (owner weekly summary), `payroll.js`, `workers.js` (owner: workers, fixed schedules), `settings.js` (owner: workplace + minimum wage), `components.js` (shared UI pieces: icons, buttons with disabled reasons, page header, tracker, sheets, toasts), `slots.js` (weekday + time slot editor used for fixed schedules), `i18n.js` (translations plus shared helpers: HTML escaping, number/date/money formatting, the form error box).
   - `tests/rules.test.js` and `tests/services.test.js` run with `node --test` (use the `sql.js` npm package in Node for service tests). Name each test with its spec test ID (e.g. `TC-081 holiday allowance at exactly 15 h`).
   - `package.json` with `"type": "module"` and script `"test": "node --test tests/*.test.js"` (a bare directory argument fails on Node 24).
-- The System Clock actor runs `expireOverdue()` (UC-11) and then `prepareMonthlyPayroll()` (UC-14, BR-14: draft for the previous month if it has no rows yet, plus one PAYROLL_DRAFT_READY notification for the owner) on app start, on every route change, and after the demo clock changes. The seed builds the work history of spec §10 by calling the same services (generate shifts, record and confirm attendance, generate and confirm payroll with acknowledgements) so that the stored history equals what the rules compute.
+- `expireOverdue()` (the System Clock actor, UC-11) runs on app start, on every route change, and after the demo clock changes.
 
 ## 2. Screens and behaviour
 
@@ -80,7 +80,7 @@ In this order, each section omitted when empty:
 3. **답을 기다리는 요청** — open REQUESTED requests with deadline countdown and each co-worker's answer (대기 중 / 불가).
    **대타를 못 구했어요** — one card per unacknowledged REQUEST_FAILED notification: "정하나님의 10월 4일(일) 10:00–16:00 근무는 동료 모두 불가예요. 직접 연락해 주세요." with only **확인했어요** (marks the notification read; no other action).
 4. **확인할 출근 기록** — recorded but unconfirmed attendance with **확인** / **결근 처리**.
-5. **급여 초안이 준비됐어요** — shown while the owner's PAYROLL_DRAFT_READY notification is unread: "9월 급여 초안이 준비됐어요. 확인하고 확정해 주세요." with the primary-style action **급여 확인하기** (opens Pay → Monthly for that month and marks the notification read). **급여 경고** — unacknowledged minimum-wage warnings of the current draft, linking to Pay.
+5. **급여 경고** — unacknowledged minimum-wage warnings of the current draft, linking to Pay.
 6. **오늘 근무** — who works today and when; **이번 주** — shifts, hours and the estimated holiday-allowance total.
 
 ### 2.6 Schedule (UC-03)
@@ -94,7 +94,7 @@ In this order, each section omitted when empty:
 
 - Two segments: **주간 집계** and **월 급여**; period chosen with ‹ › buttons ("2026년 9월").
 - Weekly summary: one card per worker: contract hours, scheduled/actual hours, eligibility as words with the reason ("계약 주 10시간 · 15시간 미만"; "9/29(화) 결근") and holiday hours/amount.
-- Monthly payroll: the ‹ › month switcher reaches every month back to the first contract month; confirmed months show "확정됨" and their rows read-only; a month that the System Clock prepared shows the note "매월 1일에 자동으로 만든 초안이에요". Primary **9월 급여 초안 만들기** when no draft exists; then one card (mobile) / row (desktop) per worker with base hours, base pay, holiday pay, premium, total and flags (예상치 = estimated, 수습 최저임금 90 %, 최저임금 미만). A below-minimum row shows the sentence "강도윤님 시급 10,000원이 2026년 최저임금 10,320원보다 낮아요" and **확인했어요** (`acknowledgeMinWage`). The sticky primary **9월 급여 확정하기** is disabled with its reason until all warnings are acknowledged; confirmed months are read-only and say so.
+- Monthly payroll: primary **9월 급여 초안 만들기** when no draft exists; then one card (mobile) / row (desktop) per worker with base hours, base pay, holiday pay, premium, total and flags (예상치 = estimated, 수습 최저임금 90 %, 최저임금 미만). A below-minimum row shows the sentence "강도윤님 시급 10,000원이 2026년 최저임금 10,320원보다 낮아요" and **확인했어요** (`acknowledgeMinWage`). The sticky primary **9월 급여 확정하기** is disabled with its reason until all warnings are acknowledged; confirmed months are read-only and say so.
 
 ### 2.8 Staff, Me, Settings
 
@@ -124,5 +124,4 @@ In this order, each section omitted when empty:
 3. Serving the repository root with any static server and opening `/app/` shows the sign-in screen with no console errors.
 4. Walking through the sign-in tour in the browser: as Lee Seoyeon the Swaps tab shows her open request as a tracker; as Choi Minho, Home shows the request card with the effect "16시간 → 21시간" and **수락하기** accepts it in one tap; as Kang Doyun the card says Minho was faster; as the owner, Home shows the decision card for Minho (16 → 21 h, holiday allowance unchanged) and **승인하기** approves it; the schedule then shows the handover marker.
 5. The S8 walkthrough of spec §10 works in the browser: as Jung Hana request Sun 10-04 10:00–16:00; as Lee Seoyeon, Choi Minho and Kang Doyun tap 불가; Hana's Swaps tab shows the FAILED card with the contact-the-owner message; the owner's Home shows the "대타를 못 구했어요" card and 확인했어요 removes it.
-6. The S9 walkthrough of spec §10 works in the browser: Pay → Monthly shows March–August 2026 as confirmed; after setting the demo clock to 2026-10-01 the owner's Home shows "9월 급여 초안이 준비됐어요" and Pay → Monthly shows the September 2026 draft with Doyun's warning to acknowledge; moving the clock further within October does not create a second draft.
-7. Every screen has exactly one filled primary button (a headless check counts them), every disabled button has a visible reason, and all touch targets are at least 44 × 44 px.
+6. Every screen has exactly one filled primary button (a headless check counts them), every disabled button has a visible reason, and all touch targets are at least 44 × 44 px.

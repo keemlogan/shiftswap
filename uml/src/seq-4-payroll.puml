@@ -15,16 +15,25 @@ skinparam sequence {
   BoxBorderColor #1C2230
 }
 
-title UC-09 Generate and confirm monthly payroll (FR-15, FR-16, BR-08, BR-09, BR-10, BR-11; includes UC-08)
+title UC-09 Generate and confirm monthly payroll (FR-15, FR-16, BR-08, BR-09, BR-10, BR-11; includes UC-08)\nUC-14 Prepare last month's payroll automatically (FR-23, BR-14)
 
+actor "A3 System Clock" as Clock
 actor "A2 Owner" as Owner
 boundary "payroll.js" as UI
 control "PayrollService" as Svc
 control "LaborRules" as Rules
+control "NotificationService" as Notif
 database "db.js" as DB
 
-Owner -> UI : pick month, "Generate draft"
-UI -> Svc : generatePayroll(yearMonth)
+alt A2 Owner (UC-09): manual "Generate draft"
+  Owner -> UI : pick month, "Generate draft"
+  UI -> Svc : generatePayroll(yearMonth)
+else A3 System Clock (UC-14, FR-23, BR-14): app start,\nevery route change, after demo clock changes
+  Clock -> Svc : prepareMonthlyPayroll(nowIso)
+  note right of Clock : let P = month(now) - 1;\nonly proceeds if P is not earlier than the\nearliest contractStart month and no Payroll\nrow exists yet for P (else no-op — already ran)
+  Svc -> Svc : yearMonth := P;\ngeneratePayroll(yearMonth) internally,\nsame computation as UC-09 (BR-14)
+end
+
 activate Svc
 Svc -> DB : tx(fn) begin
 activate DB
@@ -51,9 +60,17 @@ end
 
 Svc -> DB : commit + persist
 deactivate DB
-Svc --> UI : Payroll[] (DRAFT) with minimumHourly, probation per row
 deactivate Svc
-UI --> Owner : table per worker + minimum-wage warning rows (BR-09)
+
+alt triggered by A3 System Clock (UC-14)
+  Svc -> Notif : notify owner: PAYROLL_DRAFT_READY (BR-14)
+  Notif -> DB : insert Notification (kind=PAYROLL_DRAFT_READY,\nonce per month)
+  note right of Svc : System Clock never acknowledges\nwarnings and never confirms (BR-14)
+  Owner -> UI : (later) opens Home, sees\n"OO월 급여 초안이 준비됐어요"
+else triggered by A2 Owner (UC-09)
+  Svc --> UI : Payroll[] (DRAFT) with minimumHourly, probation per row
+  UI --> Owner : table per worker + minimum-wage warning rows (BR-09)
+end
 
 alt row has minWageWarning and not yet acknowledged
   Owner -> UI : Acknowledge (yearMonth, workerId)

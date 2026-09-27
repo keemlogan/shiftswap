@@ -63,6 +63,7 @@ enum NotificationKind {
   REQUEST_CANCELLED
   REQUEST_FAILED
   TARGET_CLOSED
+  PAYROLL_DRAFT_READY
 }
 
 ' ===== domain entities (spec §8) =====
@@ -206,6 +207,7 @@ class PayrollService <<service>> {
   +generatePayroll(yearMonth) : Payroll[]
   +acknowledgeMinWage(yearMonth, workerId) : {workerId, minWageAck}
   +confirmPayroll(yearMonth) : {confirmed}
+  +prepareMonthlyPayroll(nowIso) : {yearMonth, created}
 }
 
 class NotificationService <<service>> {
@@ -235,6 +237,7 @@ class HomeQueries <<query>> {
   +getOwnerHome() : {today, decisions, open, failed,\n  toConfirm, payWarnings, taskCount, todayShifts, week}
   +previewCandidates(shiftId, requesterId) : {id, name}[]
   +getShiftDetail(shiftId) : {...Shift, history, canDelete}
+  +listPayrollMonths() : {yearMonth, status,\n  autoPrepared}[]
 }
 note bottom of HomeQueries : read-only queries for the\ntask-first Home screens (NFR-13)
 
@@ -278,6 +281,7 @@ AttendanceService ..> LaborRules
 PayrollService ..> Payroll
 PayrollService ..> MinimumWage
 PayrollService ..> LaborRules
+PayrollService ..> Notification : prepareMonthlyPayroll()\n(UC-14, BR-14)
 NotificationService ..> Notification
 HomeQueries ..> Worker
 HomeQueries ..> Workplace

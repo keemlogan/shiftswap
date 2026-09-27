@@ -1,7 +1,7 @@
 // Home (NFR-13): what is waiting for this person right now, most urgent first, each item with its own action.
 // The first actionable item carries the screen's single primary button; the rest are secondary.
 import * as svc from '../core/services.js';
-import { t, esc, fmtDate, fmtShift, fmtHours, fmtWon, dday, given, displayName } from './i18n.js';
+import { t, esc, fmtDate, fmtShift, fmtHours, fmtWon, fmtMonthShort, dday, given, displayName } from './i18n.js';
 import { icon, button, sectionHead, shiftChips, shiftClasses } from './components.js';
 import { incomingCard, takenCard, failedCard, myRequestCard, bindRequestActions, bindFailedAck } from './requests.js';
 import { decisionCard, openRequestCard, bindDecisionActions } from './approvals.js';
@@ -104,6 +104,12 @@ function renderOwner(view, ctx) {
       <div class="actions">${button({ label: t('failed.ack'), kind: takePrimary() ? 'primary' : 'secondary', block: true, attrs: `data-ack-failed="${f.notificationId}"` })}</div>
     </article>`).join('');
   const confirms = home.toConfirm.map((s) => confirmCard(s, { primary: takePrimary() })).join('');
+  const ready = home.payrollReady;
+  const readyCard = ready ? `
+    <article class="card req-card">
+      <div class="card-row"><h3 class="card-title">${esc(t('owner.payrollReadyLine', { month: fmtMonthShort(ready.yearMonth) }))}</h3>${icon('pay')}</div>
+      <div class="actions">${button({ label: t('owner.payrollOpen'), kind: takePrimary() ? 'primary' : 'secondary', block: true, attrs: `data-payroll-ready="${ready.notificationId}" data-month="${esc(ready.yearMonth)}"` })}</div>
+    </article>` : '';
   const warnings = home.payWarnings.map((p) => `
     <article class="card req-card">
       <div class="card-row"><h3 class="card-title">${esc(t('owner.payWarning', { name: given(p.workerName), year: p.yearMonth.slice(0, 4) }))}</h3>${icon('alert', 'alert-icon')}</div>
@@ -122,6 +128,7 @@ function renderOwner(view, ctx) {
     ${home.decisions.length ? `<section class="section">${sectionHead(t('owner.decisions'), home.decisions.length)}<div class="stack">${decisions}</div></section>` : ''}
     ${home.failed.length ? `<section class="section">${sectionHead(t('owner.failed'), home.failed.length)}<div class="stack">${failed}</div></section>` : ''}
     ${home.toConfirm.length ? `<section class="section">${sectionHead(t('owner.toConfirm'), home.toConfirm.length)}<div class="stack">${confirms}</div></section>` : ''}
+    ${readyCard ? `<section class="section">${sectionHead(t('owner.payrollReady'))}<div class="stack">${readyCard}</div></section>` : ''}
     ${home.payWarnings.length ? `<section class="section">${sectionHead(t('owner.payWarnings'), home.payWarnings.length)}<div class="stack">${warnings}</div></section>` : ''}
     ${home.open.length ? `<section class="section">${sectionHead(t('owner.open'), home.open.length)}<div class="stack">${home.open.map((r) => openRequestCard(r, ctx.now)).join('')}</div></section>` : ''}
     <section class="section">
@@ -143,4 +150,10 @@ function renderOwner(view, ctx) {
   bindDecisionActions(view, ctx);
   bindFailedAck(view, ctx);
   bindConfirmActions(view, ctx);
+  const readyBtn = view.querySelector('[data-payroll-ready]');
+  if (readyBtn) readyBtn.addEventListener('click', () => {
+    // UC-14: opening the draft is what "read" means for this notification.
+    svc.markNotificationsRead(ctx.user.id, [Number(readyBtn.dataset.payrollReady)]);
+    ctx.go(`#/pay/month/${readyBtn.dataset.month}`);
+  });
 }

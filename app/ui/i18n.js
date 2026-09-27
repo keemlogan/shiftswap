@@ -205,6 +205,9 @@ const ko = {
   'owner.payWarnings': '급여 경고',
   'owner.payWarning': '{name}님 시급이 {year}년 최저임금보다 낮아요',
   'owner.toPay': '급여에서 확인하기',
+  'owner.payrollReady': '급여 초안',
+  'owner.payrollReadyLine': '{month} 급여 초안이 준비됐어요. 확인하고 확정해 주세요.',
+  'owner.payrollOpen': '급여 확인하기',
   'owner.today': '오늘 근무',
   'owner.todayNone': '오늘은 근무가 없어요.',
   'owner.week': '이번 주',
@@ -308,6 +311,10 @@ const ko = {
   'pay.premiumNote': '가산수당은 상시 근로자 5명 이상일 때만 붙어요 (지금 {n}명).',
   'pay.statusDRAFT': '초안',
   'pay.statusCONFIRMED': '확정',
+  'pay.monthConfirmed': '확정됨',
+  'pay.monthDraft': '초안',
+  'pay.autoNote': '매월 1일에 자동으로 만든 초안이에요.',
+  'pay.firstMonth': '{month}부터 기록이 있어요.',
   'staff.title': '직원',
   'staff.sub': '직원 정보와, 근무표를 만드는 기준인 고정 근무를 관리해요.',
   'staff.add': '직원 추가',
@@ -376,6 +383,7 @@ const ko = {
   'notif.REQUEST_FAILED': '{shift} 근무는 모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요.',
   'notif.REQUEST_FAILEDowner': '{requester}님의 {shift} 근무는 동료 모두 불가예요. 직접 연락해 주세요.',
   'notif.TARGET_CLOSED': '{acceptor}님이 먼저 수락했어요: {shift}',
+  'notif.PAYROLL_DRAFT_READY': '{month} 급여 초안이 준비됐어요. 확인하고 확정해 주세요.',
   'settings.title': '설정',
   'settings.sub': '매장 정보와 급여 계산 기준을 정해요.',
   'settings.store': '매장 이름',
@@ -638,6 +646,9 @@ const en = {
   'owner.payWarnings': 'Pay warnings',
   'owner.payWarning': "{name}'s hourly wage is below the {year} minimum wage",
   'owner.toPay': 'Check in Pay',
+  'owner.payrollReady': 'Payroll draft',
+  'owner.payrollReadyLine': 'The {month} payroll draft is ready. Please review and confirm it.',
+  'owner.payrollOpen': 'Review payroll',
   'owner.today': 'Working today',
   'owner.todayNone': 'No shifts today.',
   'owner.week': 'This week',
@@ -741,6 +752,10 @@ const en = {
   'pay.premiumNote': 'Premium pay applies only with 5 or more regular employees (now {n}).',
   'pay.statusDRAFT': 'Draft',
   'pay.statusCONFIRMED': 'Confirmed',
+  'pay.monthConfirmed': 'Confirmed',
+  'pay.monthDraft': 'Draft',
+  'pay.autoNote': 'This draft was made automatically on the 1st of the month.',
+  'pay.firstMonth': 'Records start in {month}.',
   'staff.title': 'Staff',
   'staff.sub': 'Workers and the fixed weekly shifts the schedule is built from.',
   'staff.add': 'Add worker',
@@ -809,6 +824,7 @@ const en = {
   'notif.REQUEST_FAILED': "No co-worker can cover your shift on {shift}. Please contact the owner.",
   'notif.REQUEST_FAILEDowner': "No co-worker can cover {requester}'s shift on {shift}. Please contact them directly.",
   'notif.TARGET_CLOSED': '{acceptor} was faster: {shift}',
+  'notif.PAYROLL_DRAFT_READY': 'The {month} payroll draft is ready. Please review and confirm it.',
   'settings.title': 'Settings',
   'settings.sub': 'Store details and the rules pay is calculated with.',
   'settings.store': 'Store name',
@@ -1056,6 +1072,7 @@ export function errorText(err) {
 
 /** Text of a notification, rebuilt from its request so it follows the language switch. */
 export function notificationText(n, nowIso, viewer = null) {
+  if (n.kind === 'PAYROLL_DRAFT_READY') return t('notif.PAYROLL_DRAFT_READY', { month: fmtMonthShort(n.yearMonth) });
   if (!n.workDate) return n.message;
   const owner = n.kind === 'REQUEST_FAILED' && viewer && viewer.role === 'OWNER';
   return t(`notif.${n.kind}${owner ? 'owner' : ''}`, {

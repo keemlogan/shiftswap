@@ -1,5 +1,5 @@
 // Bootstrap, header, navigation and hash router. Every route change first lets the System Clock expire
-// overdue requests (UC-11).
+// overdue requests (UC-11) and prepare last month's payroll draft (UC-14, BR-14).
 import { openDatabase, resetDatabase } from './core/db.js';
 import { attachClockStorage, now, setNow, advance, resetClock } from './core/clock.js';
 import * as svc from './core/services.js';
@@ -80,6 +80,7 @@ function markTour(step) {
 function render() {
   closeSheet();
   svc.expireOverdue();
+  svc.prepareMonthlyPayroll();
   document.documentElement.lang = getLang();
   const user = currentUser();
   const { name, args } = parseHash();

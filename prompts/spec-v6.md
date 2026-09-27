@@ -19,9 +19,9 @@
 
 | Name (EN) | Name (KR) | Student ID | Affiliation | E-mail | Role |
 |---|---|---|---|---|---|
-| Hyewon Kim | 김혜원 | 24102028 | Dept. of Industrial Engineering, ITM Program, SeoulTech | gokhw123@g.seoultech.ac.kr | Requirements lead — problem definition, owner/worker interviews, functional & non-functional requirements, scenarios |
-| Hyoungdo Kim | 김형도 | 18102075 | Dept. of Industrial Engineering, ITM Program, SeoulTech | domo5776@seoultech.ac.kr | Project manager & design/implementation lead — WBS/schedule, UML design models, vibe-coding prompts, deployment |
-| Minkyung Kim | 김민경 | 23102004 | Dept. of Industrial Engineering, ITM Program, SeoulTech | min23@g.seoultech.ac.kr | UI & quality lead — UI screens, test cases, presentation deck, report integration |
+| Hyewon Kim | 김혜원 | 24102028 | Dept. of Industrial Engineering, ITM Program, SeoulTech | (to be provided by member) | Requirements lead — problem definition, owner/worker interviews, functional & non-functional requirements, scenarios |
+| Hyoungdo Kim | 김형도 | 18102075 | Dept. of Industrial Engineering, ITM Program, SeoulTech | zloganway@gmail.com | Project manager & design/implementation lead — WBS/schedule, UML design models, vibe-coding prompts, deployment |
+| Minkyung Kim | 김민경 | 23102004 | Dept. of Industrial Engineering, ITM Program, SeoulTech | (to be provided by member) | UI & quality lead — UI screens, test cases, presentation deck, report integration |
 
 (Topic origin: proposed by Hyewon Kim from her own part-time job experience; selected by the team after comparing seven candidate topics on 2026-09-27.)
 
@@ -58,7 +58,6 @@ In small stores (cafés, convenience stores, restaurants) with fewer than ten pa
 | UC-11 | Expire overdue substitute request | System Clock | Must | SubRequest, SubRequestTarget, Notification |
 | UC-12 | Cancel own substitute request | Worker | Should | SubRequest, SubRequestTarget |
 | UC-13 | Sign in by role (demo account selection) | Worker, Owner | Must | Worker |
-| UC-14 | Prepare last month's payroll automatically | System Clock | Must | Payroll, Notification |
 
 Relationships for the use case diagram:
 - UC-04 «include» *Find eligible candidates* (BR-01).
@@ -93,7 +92,6 @@ Relationships for the use case diagram:
 | FR-18 | When a request's deadline passes, or its shift starts, while it is still REQUESTED or ACCEPTED, the system shall mark it EXPIRED, close its targets and notify requester and owner. | UC-11 |
 | FR-19 | A requester shall cancel their own request while it is REQUESTED or ACCEPTED; all PENDING targets become CLOSED, and every target that was PENDING or ACCEPTED receives a REQUEST_CANCELLED notification. | UC-12 |
 | FR-20 | Users shall sign in by choosing a demo account, either from a guided three-step demo tour or from the list of all accounts; the UI shows only the menus of that role. | UC-13 |
-| FR-23 | On or after the first day of a month, the system shall prepare the previous month's payroll as a DRAFT (the same computation as FR-15) without any user action, notify the owner with PAYROLL_DRAFT_READY, and never overwrite rows that already exist; the owner still reviews, acknowledges warnings and confirms (FR-15, FR-16). | UC-14 |
 | FR-21 | Every user shall have an in-app notification inbox listing notifications newest first with unread count. | UC-04–06, 11, 12 |
 
 ## 5. Non-functional requirements (classified as in Chapter 8: Product / Organisational / External)
@@ -129,7 +127,6 @@ Relationships for the use case diagram:
 - **BR-11 Monthly payroll.** Month = calendar month. Base pay = Σ actual hours of WORKED shifts in the month × wage for WORKED shifts (recorded clock-in/out); SCHEDULED shifts in the month count with their scheduled hours and set estimated = 1 on the row; ABSENT shifts count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.
 - **BR-12 Expiry.** A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED. Accept and approve check this themselves inside their transaction (REQUEST_CLOSED), independent of the periodic expiry run.
 - **BR-13 No taker.** A REQUESTED request ends as FAILED (final) when it has no eligible candidate at creation, or when every SubRequestTarget has response DECLINED. FAILED sends REQUEST_FAILED to the requester and the owner; the owner's only action is to acknowledge (mark the notification read). Accepting a FAILED request is refused (REQUEST_CLOSED).
-- **BR-14 Automatic monthly payroll draft.** Whenever the System Clock runs (app start, every route change, after the demo clock changes), let M be the month of now and P = M − 1. If P is not earlier than the month of the earliest contractStart and no Payroll row exists yet for P, generate the DRAFT for P exactly as generatePayroll does and insert one PAYROLL_DRAFT_READY notification for the owner. It runs at most once per month (existing rows — DRAFT or CONFIRMED — mean it has already run) and never confirms anything.
 
 ## 7. States
 
@@ -177,14 +174,13 @@ CREATE TABLE Notification (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REF
 
 Dates are ISO `YYYY-MM-DD`, times `HH:MM` (24 h; an end time ≤ start time means the shift ends next day — seed data contains no overnight shift, but the rule functions support it and TC-09x test it). Datetimes are ISO `YYYY-MM-DDTHH:MM`.
 
-Attendance.clockIn/clockOut are `HH:MM` on the shift date (end ≤ start means next day). A WeeklySummary row exists only for workers who have a shift (as current or original worker) in that week — recomputing a week deletes the rows of workers who no longer have one; the seed contains the Payroll rows and WeeklySummary rows that its work history produces (confirmed payroll up to 2026-08, summaries up to the week of 2026-09-14); everything else is derived.
+Attendance.clockIn/clockOut are `HH:MM` on the shift date (end ≤ start means next day). A WeeklySummary row exists only for workers who have a shift (as current or original worker) in that week — recomputing a week deletes the rows of workers who no longer have one; the seed contains no WeeklySummary or Payroll rows — they are derived.
 
 Notification recipients:
 
 | kind | recipients |
 |---|---|
 | REQUEST_RECEIVED | each eligible candidate (UC-04) |
-| PAYROLL_DRAFT_READY | owner, once per month, when the System Clock prepared last month's draft (UC-14, BR-14) |
 | REQUEST_FAILED | requester ("no co-worker can take it — contact the owner") and owner (acknowledge only) when the request ends FAILED (FR-08, FR-22, BR-13) |
 | REQUEST_ACCEPTED | requester and owner (UC-05) |
 | TARGET_CLOSED | the other PENDING targets when someone accepts (UC-05) |
@@ -223,7 +219,6 @@ State diagrams: SubRequest, Shift, Payroll. Activity diagrams: AD-1 Holiday-allo
   - id 3 **Choi Minho (최민호)** 10,320; 2026-06-01 ~ 2026-12-31; Tue & Thu 18:00–23:00, Sat 12:00–18:00 (16 h/wk).
   - id 4 **Jung Hana (정하나)** 10,320; 2026-09-01 ~ open-ended, probationEnd 2026-11-30, simpleLabor 0; Fri 17:00–23:00, Sun 10:00–16:00 (12 h/wk).
   - id 5 **Kang Doyun (강도윤)** 10,000 (below minimum — triggers BR-09 warning); 2026-08-15 ~ 2026-11-15, simpleLabor 1; Sat 10:00–16:00 & Sun 16:00–22:00 (12 h/wk).
-- Work history (iteration 7): for every worker, shifts are generated from the fixed schedule for every date from contractStart up to 2026-09-20 (Seoyeon from 2026-03-02, Minho from 2026-06-01, Doyun from 2026-08-15, Hana from 2026-09-01), each WORKED with a confirmed attendance at the scheduled times. Payroll rows for every month from the contract-start month to **2026-08** are CONFIRMED, computed exactly as generatePayroll (BR-06…BR-11); rows with a minimum-wage warning carry minWageAck = 1 (Doyun, 2026-08). No payroll row exists for 2026-09 in the seed, and the demo clock is in September, so no automatic draft is due until 2026-10-01 (demo walkthrough S9).
 - Demo clock default: **2026-09-28T09:00** (Monday). Weeks of 2026-09-21 and 2026-09-28 are generated; week of 2026-09-21 has confirmed attendance for all shifts.
 - Seed request: Lee Seoyeon requests a substitute for Wed 2026-09-30 18:00–23:00, deadline 2026-09-29T21:00, reason "Midterm exam", createdAt 2026-09-28T08:30 → eligible: Choi Minho, Jung Hana and Kang Doyun (all co-workers; none works Wed 18–23). Status REQUESTED.
 
@@ -231,13 +226,11 @@ Demo walkthrough S7 (ABSENT policy, used in the reports): the owner sets the pol
 
 Demo walkthrough S8 (no taker, iteration 6): Jung Hana requests a substitute for Sun 2026-10-04 10:00–16:00 → targets Lee Seoyeon, Choi Minho and Kang Doyun (Doyun's Sun 16:00–22:00 does not overlap); all three answer can't → the request ends FAILED; Hana sees "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요." and the owner's Home shows a "대타를 못 구했어요" card with only 확인했어요.
 
-Demo walkthrough S9 (automatic payroll, iteration 7): the owner opens Pay → Monthly and sees March–August 2026 as confirmed months; in Demo tools the clock is moved to 2026-10-01; the owner's Home then shows "9월 급여 초안이 준비됐어요" and Pay → Monthly shows the September 2026 DRAFT (Doyun's below-minimum warning still has to be acknowledged before confirming).
-
 Worked example used in the reports (must match the app): if Choi Minho takes Seoyeon's Wednesday shift, Seoyeon's contractual hours stay 10 (not eligible either way, < 15), Minho's contractual hours stay 16 (eligible, holiday hours = 16/40×8 = 3.2 h → 3.2 × 10,320 = 33,024 KRW) while his scheduled hours for the week rise from 16 to 21.
 
 ## 11. Test case IDs (unit tests in `tests/rules.test.js`, run with `node --test`)
 
-TC-01x overlap & eligibility (BR-01); TC-02x request validity (BR-03); TC-05x first-acceptance concurrency (BR-02, NFR-04); TC-06x approval effect (BR-04); TC-08x holiday allowance incl. 15 h boundary (14.99 / 15) and 40 h cap, both policies (BR-06/07); TC-09x premium below/at 5 employees, night hours (BR-08); TC-10x minimum wage & probation conditions (BR-09/10); TC-11x monthly payroll totals (BR-11); TC-12x expiry (BR-12); TC-13x no taker (BR-13); TC-14x automatic monthly payroll draft and seeded history (BR-14, FR-23).
+TC-01x overlap & eligibility (BR-01); TC-02x request validity (BR-03); TC-05x first-acceptance concurrency (BR-02, NFR-04); TC-06x approval effect (BR-04); TC-08x holiday allowance incl. 15 h boundary (14.99 / 15) and 40 h cap, both policies (BR-06/07); TC-09x premium below/at 5 employees, night hours (BR-08); TC-10x minimum wage & probation conditions (BR-09/10); TC-11x monthly payroll totals (BR-11); TC-12x expiry (BR-12).
 
 ## 12. Traceability rule
 
@@ -263,7 +256,3 @@ Week n runs Monday–Sunday starting 2026-08-31 (Week 1 = 08-31…09-06). Deadli
 ## 15. Requirements change in iteration 6 (product-owner review, 2026-09-27)
 
 Finding: when no co-worker's availability matched, the owner was only told "no candidate" and had nothing to do; availability slots were extra data workers had to maintain. Decision: availability is removed (UC-02, FR-03, table Availability, availability condition of BR-01 retired; IDs are kept retired, not reused). Every other active co-worker without an overlapping shift is asked; the first acceptance still wins (BR-02); a new "can't" answer lets the request end early as FAILED when nobody can take it (BR-13, FR-22), with a message to the requester to contact the owner and an acknowledge-only notification for the owner. Counts after the change: use cases 12 (UC-01, UC-03…UC-13), functional requirements 21 (FR-01, FR-02, FR-04…FR-22), business rules 13, tables 11.
-
-## 16. Iteration 7 — history data and automatic monthly payroll (product-owner request, 2026-09-27)
-
-Request: payroll data for past months based on the employees' contracts, and last month's payroll filled in automatically on the first day of every month. Decision: the seed now contains the full work history of each worker from contractStart (shifts, confirmed attendance) and confirmed payroll up to August 2026; a new use case UC-14 (actor System Clock), FR-23 and BR-14 prepare the previous month's draft automatically and notify the owner. Confirmation stays with the owner because of the minimum-wage acknowledgement (BR-09). Counts after the change: use cases 13 active (UC-01, UC-03…UC-14), functional requirements 22 active, business rules 14, tables 11.

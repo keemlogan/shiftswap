@@ -1,8 +1,8 @@
 <h1 id="appendix-prompt">Appendix A. Final Vibe-Coding Prompt (v5)</h1>
 <p>The complete prompt, verbatim. To reproduce the system it is given to the coding assistant together with the two test files and followed by the specification file spec/spec.md (all in the repository). Source file: <code>prompts/final-prompt.md</code>.</p>
 <div class="appendix small"><h3
-id="appendix-prompt-shiftswap--final-vibe-coding-prompt-v6">ShiftSwap —
-Final Vibe-Coding Prompt (v6)</h3>
+id="appendix-prompt-shiftswap--final-vibe-coding-prompt-v7">ShiftSwap —
+Final Vibe-Coding Prompt (v7)</h3>
 <blockquote>
 <p>Version history: v1 was built in iteration 1; v2 (iteration 2)
 resolved the build ambiguities and document-review gaps; v3 (iteration
@@ -16,9 +16,11 @@ that two correct rebuilds disagree on function signatures (see
 requirements change from the product-owner review: availability is no
 longer collected, every co-worker is asked, a "can't" answer lets a
 request end as FAILED with a message to the requester and an
-acknowledge-only card for the owner (spec §15). Earlier versions are
-kept as <code>prompts/prompt-v1.md</code> …
-<code>prompts/prompt-v5.md</code>; the reasons for every change are in
+acknowledge-only card for the owner (spec §15); v7 (iteration 7) adds
+the work and payroll history from the contracts and the automatic
+monthly payroll draft (spec §16). Earlier versions are kept as
+<code>prompts/prompt-v1.md</code> … <code>prompts/prompt-v6.md</code>;
+the reasons for every change are in
 <code>prompts/prompt-log.md</code>.</p>
 <p>How to use: in an empty folder, place
 <code>tests/rules.test.js</code> and <code>tests/services.test.js</code>
@@ -31,9 +33,9 @@ href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/sh
 <hr />
 <p>You are building <strong>ShiftSwap</strong>, a shift schedule and
 substitute management web application for a small café with part-time
-workers. The complete specification (actors, use cases UC-01…UC-13
-(UC-02 retired), functional requirements FR-01…FR-22 (FR-03 retired),
-non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-13,
+workers. The complete specification (actors, use cases UC-01…UC-14
+(UC-02 retired), functional requirements FR-01…FR-23 (FR-03 retired),
+non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-14,
 states, SQLite schema, seed data, test IDs) follows this prompt. Treat
 the specification as the contract: use its identifiers, table and column
 names, state names and seed data exactly. Do not add features that are
@@ -65,7 +67,7 @@ the <code>sql.js</code> npm package) so the app does not depend on a CDN
 at runtime.</li>
 <li>Persistence: after every committed transaction, export the database
 and save it to <code>localStorage</code> under the key
-<code>shiftswap.db.v1</code> (base64). The demo clock is stored under
+<code>shiftswap.db.v2</code> (base64). The demo clock is stored under
 <code>shiftswap.clock.v1</code> and the language under
 <code>shiftswap.lang</code>. On start, load them if present, otherwise
 create the schema and insert the seed data. Provide "Reset demo data" in
@@ -143,8 +145,14 @@ Name each test with its spec test ID (e.g.
 script <code>"test": "node --test tests/*.test.js"</code> (a bare
 directory argument fails on Node 24).</li>
 </ul></li>
-<li><code>expireOverdue()</code> (the System Clock actor, UC-11) runs on
-app start, on every route change, and after the demo clock changes.</li>
+<li>The System Clock actor runs <code>expireOverdue()</code> (UC-11) and
+then <code>prepareMonthlyPayroll()</code> (UC-14, BR-14: draft for the
+previous month if it has no rows yet, plus one PAYROLL_DRAFT_READY
+notification for the owner) on app start, on every route change, and
+after the demo clock changes. The seed builds the work history of spec
+§10 by calling the same services (generate shifts, record and confirm
+attendance, generate and confirm payroll with acknowledgements) so that
+the stored history equals what the rules compute.</li>
 </ul>
 <h4 id="appendix-prompt-2-screens-and-behaviour">2. Screens and
 behaviour</h4>
@@ -308,8 +316,12 @@ REQUEST_FAILED notification: "정하나님의 10월 4일(일) 10:00–16:00 근�
 action).</li>
 <li><strong>확인할 출근 기록</strong> — recorded but unconfirmed
 attendance with <strong>확인</strong> / <strong>결근 처리</strong>.</li>
-<li><strong>급여 경고</strong> — unacknowledged minimum-wage warnings of
-the current draft, linking to Pay.</li>
+<li><strong>급여 초안이 준비됐어요</strong> — shown while the owner's
+PAYROLL_DRAFT_READY notification is unread: "9월 급여 초안이 준비됐어요.
+확인하고 확정해 주세요." with the primary-style action <strong>급여
+확인하기</strong> (opens Pay → Monthly for that month and marks the
+notification read). <strong>급여 경고</strong> — unacknowledged
+minimum-wage warnings of the current draft, linking to Pay.</li>
 <li><strong>오늘 근무</strong> — who works today and when; <strong>이번
 주</strong> — shifts, hours and the estimated holiday-allowance
 total.</li>
@@ -343,12 +355,15 @@ UC-09)</h5>
 <li>Weekly summary: one card per worker: contract hours,
 scheduled/actual hours, eligibility as words with the reason ("계약 주
 10시간 · 15시간 미만"; "9/29(화) 결근") and holiday hours/amount.</li>
-<li>Monthly payroll: primary <strong>9월 급여 초안 만들기</strong> when
-no draft exists; then one card (mobile) / row (desktop) per worker with
-base hours, base pay, holiday pay, premium, total and flags (예상치 =
-estimated, 수습 최저임금 90 %, 최저임금 미만). A below-minimum row shows
-the sentence "강도윤님 시급 10,000원이 2026년 최저임금 10,320원보다
-낮아요" and <strong>확인했어요</strong>
+<li>Monthly payroll: the ‹ › month switcher reaches every month back to
+the first contract month; confirmed months show "확정됨" and their rows
+read-only; a month that the System Clock prepared shows the note "매월
+1일에 자동으로 만든 초안이에요". Primary <strong>9월 급여 초안
+만들기</strong> when no draft exists; then one card (mobile) / row
+(desktop) per worker with base hours, base pay, holiday pay, premium,
+total and flags (예상치 = estimated, 수습 최저임금 90 %, 최저임금 미만).
+A below-minimum row shows the sentence "강도윤님 시급 10,000원이 2026년
+최저임금 10,320원보다 낮아요" and <strong>확인했어요</strong>
 (<code>acknowledgeMinWage</code>). The sticky primary <strong>9월 급여
 확정하기</strong> is disabled with its reason until all warnings are
 acknowledged; confirmed months are read-only and say so.</li>
@@ -447,6 +462,12 @@ request Sun 10-04 10:00–16:00; as Lee Seoyeon, Choi Minho and Kang Doyun
 tap 불가; Hana's Swaps tab shows the FAILED card with the
 contact-the-owner message; the owner's Home shows the "대타를 못
 구했어요" card and 확인했어요 removes it.</li>
+<li>The S9 walkthrough of spec §10 works in the browser: Pay → Monthly
+shows March–August 2026 as confirmed; after setting the demo clock to
+2026-10-01 the owner's Home shows "9월 급여 초안이 준비됐어요" and Pay →
+Monthly shows the September 2026 draft with Doyun's warning to
+acknowledge; moving the clock further within October does not create a
+second draft.</li>
 <li>Every screen has exactly one filled primary button (a headless check
 counts them), every disabled button has a visible reason, and all touch
 targets are at least 44 × 44 px.</li>

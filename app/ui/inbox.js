@@ -1,11 +1,11 @@
 // Notifications (FR-21): each notification as a sentence with its time, newest first; actionable ones link to
-// the card where the action is (Home).
+// the card where the action is (Home), including the owner's unread PAYROLL_DRAFT_READY (UC-14).
 import * as svc from '../core/services.js';
 import { t, esc, fmtWhen, notificationText } from './i18n.js';
 import { icon, button, pageHead, emptyState } from './components.js';
 
 function actionable(n, user) {
-  if (n.kind === 'REQUEST_FAILED') return !n.readAt;
+  if (n.kind === 'REQUEST_FAILED' || n.kind === 'PAYROLL_DRAFT_READY') return !n.readAt;
   if (user.role === 'WORKER') return n.kind === 'REQUEST_RECEIVED' && n.state === 'OPEN';
   return n.kind === 'REQUEST_ACCEPTED' && n.requestStatus === 'ACCEPTED';
 }

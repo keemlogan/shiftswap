@@ -334,8 +334,10 @@ function unreadFailed(userId, extra = '') {
  * - open: REQUESTED requests with their candidates' answers;
  * - failed: the owner's unread REQUEST_FAILED notifications (BR-13), acknowledge-only;
  * - toConfirm: recorded, unconfirmed attendance; payWarnings: unacknowledged minimum-wage warnings of DRAFT payrolls;
+ * - payrollReady: the newest unread PAYROLL_DRAFT_READY notification as { notificationId, yearMonth } or null (UC-14),
+ *   acknowledged with markNotificationsRead(ownerId, [notificationId]);
  * - today: today's shifts; week: this week's shifts, hours and the estimated holiday-allowance total.
- * `taskCount` counts the items only the owner can act on (decisions, failed requests, attendance, pay warnings).
+ * `taskCount` counts the items only the owner can act on (decisions, failed requests, attendance, pay warnings, payroll ready).
  */
 export function getOwnerHome() {
   const t = now();
@@ -352,6 +354,10 @@ export function getOwnerHome() {
     `SELECT p.*, w.name AS workerName, w.hourlyWage FROM Payroll p JOIN Worker w ON w.id = p.workerId
      WHERE p.status = 'DRAFT' AND p.minWageWarning = 1 AND p.minWageAck = 0 ORDER BY p.yearMonth, w.id`);
   const failed = unreadFailed(ownerId());
+  const ready = get(
+    "SELECT id, createdAt FROM Notification WHERE workerId = ? AND kind = 'PAYROLL_DRAFT_READY' AND readAt IS NULL ORDER BY createdAt DESC, id DESC LIMIT 1",
+    [ownerId()]);
+  const payrollReady = ready ? { notificationId: ready.id, yearMonth: payrollReadyMonth(ready.createdAt) } : null;
   const weekStart = weekStartOf(today);
   const weekShifts = getWeekShifts(weekStart);
   const people = [...new Set(weekShifts.flatMap((s) => [s.workerId, s.originalWorkerId]).filter(Boolean))];
@@ -363,7 +369,8 @@ export function getOwnerHome() {
     failed,
     toConfirm,
     payWarnings,
-    taskCount: decisions.length + failed.length + toConfirm.length + payWarnings.length,
+    payrollReady,
+    taskCount: decisions.length + failed.length + toConfirm.length + payWarnings.length + (payrollReady ? 1 : 0),
     todayShifts: weekShifts.filter((s) => s.workDate === today),
     week: {
       weekStart,
@@ -380,10 +387,12 @@ export function listAttendance(weekStart, viewer) {
   return viewer && viewer.role === 'WORKER' ? rows.filter((s) => s.workerId === viewer.id) : rows;
 }
 
+/** The payroll rows of a month; autoPrepared is true on every row when the System Clock made the draft (UC-14). */
 export function getPayroll(yearMonth) {
+  const autoPrepared = autoPreparedMonths().has(yearMonth);
   return all(
     `SELECT p.*, w.name AS workerName, w.hourlyWage FROM Payroll p JOIN Worker w ON w.id = p.workerId
-     WHERE p.yearMonth = ? ORDER BY w.id`, [yearMonth]);
+     WHERE p.yearMonth = ? ORDER BY w.id`, [yearMonth]).map((p) => ({ ...p, autoPrepared }));
 }
 
 export function unreadCount(workerId) {
@@ -885,6 +894,74 @@ export function generatePayroll(yearMonth) {
   });
 }
 
+/** 'YYYY-MM' shifted by n months. */
+function addMonths(yearMonth, n) {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + n, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+/** The month of the earliest contractStart among the workers (the first month that can have payroll), or null. */
+function firstContractMonth() {
+  const row = get("SELECT MIN(contractStart) AS d FROM Worker WHERE role = 'WORKER' AND contractStart IS NOT NULL");
+  return row && row.d ? row.d.slice(0, 7) : null;
+}
+
+/** BR-14: a PAYROLL_DRAFT_READY notification created in month M announces the draft of month M − 1. */
+function payrollReadyMonth(createdAt) {
+  return addMonths(createdAt.slice(0, 7), -1);
+}
+
+/** The months whose draft the System Clock prepared (UC-14), from the PAYROLL_DRAFT_READY notifications. */
+function autoPreparedMonths() {
+  return new Set(all("SELECT createdAt FROM Notification WHERE kind = 'PAYROLL_DRAFT_READY'").map((n) => payrollReadyMonth(n.createdAt)));
+}
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * UC-14 / FR-23, BR-14 (System Clock): P = the month before `nowIso`. When P is not earlier than the first contract
+ * month and has no Payroll row yet (DRAFT or CONFIRMED), generate its DRAFT exactly as generatePayroll does and send
+ * the owner one PAYROLL_DRAFT_READY notification (createdAt = nowIso, so its month is P + 1). Idempotent; never confirms.
+ * @param {string} [nowIso] defaults to the demo clock
+ * @returns {{yearMonth:string, created:number}} created = the number of draft rows made (0 when nothing was due)
+ */
+export function prepareMonthlyPayroll(nowIso = now()) {
+  return tx(() => {
+    const yearMonth = addMonths(nowIso.slice(0, 7), -1);
+    const first = firstContractMonth();
+    if (!first || yearMonth < first) return { yearMonth, created: 0 };
+    if (get('SELECT id FROM Payroll WHERE yearMonth = ? LIMIT 1', [yearMonth])) return { yearMonth, created: 0 };
+    const rows = generatePayroll(yearMonth);
+    if (!rows.length) return { yearMonth, created: 0 };
+    const label = `${MONTH_NAMES[Number(yearMonth.slice(5)) - 1]} ${yearMonth.slice(0, 4)}`;
+    run("INSERT INTO Notification (workerId, subRequestId, kind, message, createdAt) VALUES (?, NULL, 'PAYROLL_DRAFT_READY', ?, ?)",
+      [ownerId(), `The ${label} payroll draft is ready. Review and confirm it.`, nowIso]);
+    return { yearMonth, created: rows.length };
+  });
+}
+
+/**
+ * Pay → Monthly month switcher: every month from the first contract month to the month of the demo clock, oldest
+ * first. status: CONFIRMED when every row is confirmed, DRAFT when any row is a draft, NONE without rows;
+ * autoPrepared: the System Clock made its draft (UC-14).
+ * @returns {Array<{yearMonth:string, status:'CONFIRMED'|'DRAFT'|'NONE', autoPrepared:boolean}>}
+ */
+export function listPayrollMonths() {
+  const first = firstContractMonth();
+  if (!first) return [];
+  const current = now().slice(0, 7);
+  const counts = new Map(all(
+    "SELECT yearMonth, SUM(status = 'DRAFT') AS drafts, COUNT(*) AS n FROM Payroll GROUP BY yearMonth").map((r) => [r.yearMonth, r]));
+  const auto = autoPreparedMonths();
+  const months = [];
+  for (let m = first; m <= current; m = addMonths(m, 1)) {
+    const c = counts.get(m);
+    months.push({ yearMonth: m, status: !c ? 'NONE' : c.drafts > 0 ? 'DRAFT' : 'CONFIRMED', autoPrepared: auto.has(m) });
+  }
+  return months;
+}
+
 /**
  * UC-09 / BR-09: the owner acknowledges the minimum-wage warning of one DRAFT row (Payroll.minWageAck = 1).
  */
@@ -946,7 +1023,8 @@ export function updateSettings({ name, regularEmployees, subAttendancePolicy, mi
 
 /**
  * FR-21: the user's notifications newest first, with the unread count. REQUEST_RECEIVED items carry
- * the live state of the request so the inbox can show Accept / Decline or "Already taken by …".
+ * the live state of the request so the inbox can show Accept / Decline or "Already taken by …";
+ * PAYROLL_DRAFT_READY items carry the prepared month as yearMonth ('YYYY-MM'; null on other kinds).
  */
 export function listNotifications(workerId) {
   return tx(() => {
@@ -960,7 +1038,11 @@ export function listNotifications(workerId) {
        LEFT JOIN Worker ac ON ac.id = r.acceptorId
        LEFT JOIN SubRequestTarget t ON t.subRequestId = n.subRequestId AND t.workerId = n.workerId
        WHERE n.workerId = ? ORDER BY n.createdAt DESC, n.id DESC`, [workerId])
-      .map((n) => ({ ...n, state: n.kind === 'REQUEST_RECEIVED' ? receivedState(n, workerId) : null }));
+      .map((n) => ({
+        ...n,
+        state: n.kind === 'REQUEST_RECEIVED' ? receivedState(n, workerId) : null,
+        yearMonth: n.kind === 'PAYROLL_DRAFT_READY' ? payrollReadyMonth(n.createdAt) : null,
+      }));
     return { items, unread: items.filter((n) => !n.readAt).length };
   });
 }
@@ -990,3 +1072,37 @@ export function markNotificationsRead(workerId, ids = null) {
   });
 }
 
+// ---- Seed work history (spec §10, iteration 7) ------------------------------
+
+/**
+ * Spec §10: every worker's shifts from the fixed schedule for each date from contractStart (and not after
+ * contractEnd) to `lastDate`, recorded at the scheduled times (inserted directly: recordAttendance checks the demo clock,
+ * and the seed must not depend on it) and confirmed with confirmAttendance; then the payroll
+ * of every month from the first contract month to `lastMonth` generated, acknowledged (BR-09) and confirmed with the
+ * payroll services, so the stored history equals what the rules compute. Called by the seed inside its transaction.
+ */
+export function seedWorkHistory(lastDate = '2026-09-20', lastMonth = '2026-08') {
+  return tx(() => {
+    const first = firstContractMonth();
+    if (!first) return;
+    const schedules = all(
+      `SELECT f.*, w.contractStart, w.contractEnd FROM FixedSchedule f JOIN Worker w ON w.id = f.workerId
+       WHERE w.role = 'WORKER' AND w.contractStart IS NOT NULL ORDER BY f.startTime, f.id`);
+    for (let date = `${first}-01`; date <= lastDate; date = addDays(date, 1)) {
+      const weekday = isoWeekday(date);
+      for (const f of schedules) {
+        if (f.weekday !== weekday || date < f.contractStart || (f.contractEnd && date > f.contractEnd)) continue;
+        const shiftId = run('INSERT INTO Shift (workDate, startTime, endTime, workerId, fixedScheduleId) VALUES (?, ?, ?, ?, ?)',
+          [date, f.startTime, f.endTime, f.workerId, f.id]).id;
+        run('INSERT INTO Attendance (shiftId, clockIn, clockOut, confirmed) VALUES (?, ?, ?, 0)', [shiftId, f.startTime, f.endTime]);
+        confirmAttendance(shiftId);
+      }
+    }
+    for (let month = first; month <= lastMonth; month = addMonths(month, 1)) {
+      const rows = generatePayroll(month);
+      if (!rows.length) continue;
+      for (const p of rows) if (p.minWageWarning) acknowledgeMinWage(month, p.workerId);
+      confirmPayroll(month);
+    }
+  });
+}
