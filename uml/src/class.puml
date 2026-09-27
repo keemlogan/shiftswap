@@ -1,0 +1,273 @@
+@startuml class
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam classFontColor #1C2230
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  ArrowColor #1C2230
+}
+skinparam class<<service>> {
+  BackgroundColor #FFFFFF
+  BorderColor #E9A23B
+}
+hide circle
+hide empty members
+
+' ===== enumerations =====
+enum Role {
+  OWNER
+  WORKER
+}
+enum SubAttendancePolicy {
+  EXCUSED
+  ABSENT
+}
+enum ShiftStatus {
+  SCHEDULED
+  WORKED
+  ABSENT
+}
+enum SubRequestStatus {
+  REQUESTED
+  ACCEPTED
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+enum TargetResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CLOSED
+}
+enum PayrollStatus {
+  DRAFT
+  CONFIRMED
+}
+enum NotificationKind {
+  REQUEST_RECEIVED
+  REQUEST_ACCEPTED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_EXPIRED
+  REQUEST_CANCELLED
+  NO_CANDIDATE
+  TARGET_CLOSED
+}
+
+' ===== domain entities (spec §8) =====
+class Workplace {
+  id : int <<PK>>
+  name : string
+  regularEmployees : int
+  subAttendancePolicy : SubAttendancePolicy
+}
+
+class Worker {
+  id : int <<PK>>
+  workplaceId : int <<FK>>
+  role : Role
+  name : string
+  phone : string
+  hourlyWage : int
+  contractStart : date
+  contractEnd : date
+  probationEnd : date
+  simpleLabor : boolean
+  active : boolean
+}
+
+class FixedSchedule {
+  id : int <<PK>>
+  workerId : int <<FK>>
+  weekday : int
+  startTime : time
+  endTime : time
+}
+
+class Availability {
+  id : int <<PK>>
+  workerId : int <<FK>>
+  weekday : int
+  startTime : time
+  endTime : time
+}
+
+class Shift {
+  id : int <<PK>>
+  workDate : date
+  startTime : time
+  endTime : time
+  workerId : int <<FK>>
+  originalWorkerId : int <<FK>>
+  fixedScheduleId : int <<FK>>
+  status : ShiftStatus
+}
+
+class SubRequest {
+  id : int <<PK>>
+  shiftId : int <<FK>>
+  requesterId : int <<FK>>
+  acceptorId : int <<FK>>
+  reason : string
+  deadline : datetime
+  status : SubRequestStatus
+  createdAt : datetime
+  decidedAt : datetime
+}
+
+class SubRequestTarget {
+  id : int <<PK>>
+  subRequestId : int <<FK>>
+  workerId : int <<FK>>
+  response : TargetResponse
+  respondedAt : datetime
+}
+
+class Attendance {
+  id : int <<PK>>
+  shiftId : int <<FK>>
+  clockIn : datetime
+  clockOut : datetime
+  confirmed : boolean
+}
+
+class WeeklySummary {
+  id : int <<PK>>
+  workerId : int <<FK>>
+  weekStart : date
+  contractHours : float
+  scheduledHours : float
+  actualHours : float
+  perfectAttendance : boolean
+  holidayEligible : boolean
+  holidayHours : float
+}
+
+class Payroll {
+  id : int <<PK>>
+  workerId : int <<FK>>
+  yearMonth : string
+  baseHours : float
+  basePay : int
+  holidayPay : int
+  premiumPay : int
+  total : int
+  minWageWarning : boolean
+  estimated : boolean
+  status : PayrollStatus
+}
+
+class MinimumWage {
+  year : int <<PK>>
+  hourly : int
+}
+
+class Notification {
+  id : int <<PK>>
+  workerId : int <<FK>>
+  subRequestId : int <<FK>>
+  kind : NotificationKind
+  message : string
+  createdAt : datetime
+  readAt : datetime
+}
+
+' ===== services (app/core/services.js) =====
+class ScheduleService <<service>> {
+  +registerWorker(data) : Worker
+  +saveFixedSchedule(workerId, slots) : void
+  +saveAvailability(workerId, slots) : void
+  +generateWeek(weekStart) : Shift[]
+  +editShift(shiftId, changes) : Shift
+  +updateSettings(settings) : Workplace
+}
+
+class SubstituteService <<service>> {
+  +createSubRequest(shiftId, reason, deadline) : SubRequest
+  +respondToRequest(targetId, response) : SubRequestTarget
+  +decideRequest(requestId, decision) : SubRequest
+  +cancelRequest(requestId) : SubRequest
+  +expireOverdue(now) : SubRequest[]
+}
+
+class AttendanceService <<service>> {
+  +recordAttendance(shiftId, clockIn, clockOut) : Attendance
+  +confirmAttendance(shiftId) : Attendance
+  +markAbsent(shiftId) : Shift
+  +recomputeWeek(workerId, weekStart) : WeeklySummary
+}
+
+class PayrollService <<service>> {
+  +generatePayroll(yearMonth) : Payroll[]
+  +confirmPayroll(payrollId) : Payroll
+}
+
+class NotificationService <<service>> {
+  +listNotifications(workerId) : Notification[]
+  +markNotificationsRead(workerId) : void
+}
+
+class LaborRules <<service>> {
+  +{static} overlaps(a, b) : boolean
+  +{static} durationHours(start, end) : float
+  +{static} weekStartOf(date) : date
+  +{static} isEligibleCandidate(worker, shift) : boolean
+  +{static} validateRequest(shift, requester, deadline) : boolean
+  +{static} contractHours(worker) : float
+  +{static} computeWeeklySummary(worker, weekStart) : WeeklySummary
+  +{static} holidayHours(contractHours) : float
+  +{static} premiumHours(worker, shifts) : float
+  +{static} minimumWageFor(year) : int
+  +{static} probationApplies(worker, date) : boolean
+  +{static} computePayrollRow(worker, yearMonth) : Payroll
+}
+
+' ===== relationships =====
+Workplace "1" -- "*" Worker
+Worker "1" -- "*" FixedSchedule
+Worker "1" -- "*" Availability
+Worker "1" -- "*" Shift : currently assigned >
+Worker "0..1" -- "*" Shift : originally owned >
+FixedSchedule "0..1" -- "*" Shift : generated from >
+Shift "1" -- "*" SubRequest
+Worker "1" -- "*" SubRequest : requests >
+Worker "0..1" -- "*" SubRequest : accepts >
+SubRequest "1" -- "*" SubRequestTarget
+Worker "1" -- "*" SubRequestTarget
+Shift "1" -- "0..1" Attendance
+Worker "1" -- "*" WeeklySummary
+Worker "1" -- "*" Payroll
+Worker "1" -- "*" Notification
+SubRequest "0..1" -- "*" Notification
+
+Worker::role .. Role
+Workplace::subAttendancePolicy .. SubAttendancePolicy
+Shift::status .. ShiftStatus
+SubRequest::status .. SubRequestStatus
+SubRequestTarget::response .. TargetResponse
+Payroll::status .. PayrollStatus
+Notification::kind .. NotificationKind
+
+ScheduleService ..> Worker
+ScheduleService ..> FixedSchedule
+ScheduleService ..> Availability
+ScheduleService ..> Shift
+ScheduleService ..> Workplace
+SubstituteService ..> SubRequest
+SubstituteService ..> SubRequestTarget
+SubstituteService ..> LaborRules
+AttendanceService ..> Attendance
+AttendanceService ..> Shift
+AttendanceService ..> WeeklySummary
+AttendanceService ..> LaborRules
+PayrollService ..> Payroll
+PayrollService ..> MinimumWage
+PayrollService ..> LaborRules
+NotificationService ..> Notification
+@enduml

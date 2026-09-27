@@ -1,0 +1,59 @@
+@startuml activity-holiday
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #1C2230
+}
+
+title AD-1 Holiday-allowance determination for worker W, week (BR-06 / BR-07)
+
+start
+:contractHours := sum of W's fixed-schedule hours for the week (BR-06);
+
+if (contractHours >= 15 h?) then (no)
+  :holidayEligible := false;
+  :holidayHours := 0;
+  stop
+else (yes)
+  :perfectAttendance := true;
+  :originalShifts := shifts of the week whose\noriginal worker is W (BR-06);
+
+  while (more shifts in originalShifts?) is (yes)
+    :shift := next shift;
+    if (shift was given away\n(current workerId != W, approved substitution)?) then (yes)
+      if (Workplace.subAttendancePolicy == ABSENT?) then (yes)
+        :perfectAttendance := false;
+      else (EXCUSED - default)
+        :attendance not broken\n(agreed handover);
+      endif
+    else (no - still W's own shift)
+      if (shift.status == ABSENT?) then (yes)
+        :perfectAttendance := false;
+      else (WORKED / SCHEDULED)
+        :attendance not broken;
+      endif
+    endif
+  endwhile (no more shifts)
+
+  if (perfectAttendance?) then (no)
+    :holidayEligible := false;
+    :holidayHours := 0;
+    stop
+  else (yes)
+    :holidayEligible := true;
+    :cappedHours := min(contractHours, 40 h) (BR-07 40 h cap);
+    :holidayHours := round(cappedHours / 40 * 8, 2);
+    :effectiveWage := worker.hourlyWage;
+    :holidayPay := floor(holidayHours * effectiveWage);
+    stop
+  endif
+endif
+@enduml

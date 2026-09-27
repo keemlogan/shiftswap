@@ -1,0 +1,28 @@
+@startuml state-payroll
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+}
+
+title Payroll.status state machine (spec §7)
+
+[*] --> DRAFT : generatePayroll(yearMonth) (UC-09, FR-15, BR-11)
+
+state DRAFT {
+  DRAFT : minWageWarning must be acknowledged\nbefore Confirm is enabled (FR-16, BR-09)
+  DRAFT --> DRAFT : re-generate month\n[replaces DRAFT rows only] / generatePayroll (UC-09)
+}
+
+DRAFT --> CONFIRMED : owner confirms\n[warning acknowledged if present] / confirmPayroll (UC-09, FR-15)
+
+CONFIRMED --> [*]
+
+note right of CONFIRMED : final state — read-only,\nnot replaced by re-generation
+@enduml

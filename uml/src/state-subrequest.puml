@@ -1,0 +1,46 @@
+@startuml state-subrequest
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+}
+skinparam state<<sub>> {
+  BorderColor #E9A23B
+}
+
+title SubRequest.status state machine (spec §7)
+
+[*] --> REQUESTED : createSubRequest (UC-04, FR-06)
+
+state REQUESTED <<sub>>
+state ACCEPTED <<sub>>
+state APPROVED <<sub>>
+state REJECTED <<sub>>
+state EXPIRED <<sub>>
+state CANCELLED <<sub>>
+
+REQUESTED --> ACCEPTED : candidate accepts\n[first acceptance, BR-02] / respondToRequest (UC-05)
+REQUESTED --> EXPIRED : deadline <= now\nor shift.start <= now (BR-12) / expireOverdue (UC-11)
+REQUESTED --> CANCELLED : requester cancels (UC-12, FR-19)
+
+ACCEPTED --> APPROVED : owner approves\n[BR-04: request must be ACCEPTED] / decideRequest (UC-06)
+ACCEPTED --> REJECTED : owner rejects / decideRequest (UC-06)
+ACCEPTED --> EXPIRED : deadline <= now\nor shift.start <= now (BR-12) / expireOverdue (UC-11)
+ACCEPTED --> CANCELLED : requester cancels (UC-12, FR-19)
+
+APPROVED --> [*]
+REJECTED --> [*]
+EXPIRED --> [*]
+CANCELLED --> [*]
+
+note right of APPROVED : final state
+note right of REJECTED : final state
+note right of EXPIRED : final state\n(A3 System Clock actor)
+note right of CANCELLED : final state
+@enduml

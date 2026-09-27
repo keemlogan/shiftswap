@@ -1,0 +1,41 @@
+@startuml state-shift
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+}
+
+title Shift.status state machine (spec §7)
+
+[*] --> SCHEDULED : generateWeek (UC-03, FR-04)
+
+state SCHEDULED {
+  SCHEDULED : reassignable while SCHEDULED
+  SCHEDULED --> SCHEDULED : approved substitution\n[BR-04] / workerId := acceptor,\noriginalWorkerId := requester (if null) (UC-06)
+}
+
+SCHEDULED --> WORKED : owner confirms attendance\n(clockIn/clockOut recorded) / confirmAttendance (UC-07, FR-13)
+SCHEDULED --> ABSENT : owner marks absent / markAbsent (UC-07, FR-13)
+
+WORKED --> [*]
+ABSENT --> [*]
+
+note right of SCHEDULED
+  a SCHEDULED shift may be reassigned
+  any number of times by an approved
+  substitution (BR-04); status itself
+  does not change
+end note
+
+note right of ABSENT
+  affects BR-06 perfect-attendance
+  unless the shift was given away under
+  Workplace.subAttendancePolicy = EXCUSED
+end note
+@enduml

@@ -1,0 +1,113 @@
+<h1 id="introduction">1. Introduction</h1>
+
+<p>This chapter explains why the team built ShiftSwap, what the project set out to achieve, which features are inside and outside the scope of the delivered system, and how the development process was organised. The last section outlines the rest of the report.</p>
+
+<h2 id="ch1-motivation">1.1 Motivation</h2>
+
+<p>Small stores in Korea — cafés, convenience stores, bakeries and small restaurants — depend on part-time workers (아르바이트). A typical store of this kind employs fewer than ten such workers, and each of them has a fixed weekly pattern of shifts, for example every Monday and Wednesday from 18:00 to 23:00. The pattern is agreed in the employment contract and changes rarely. What changes often is attendance on a particular day: a worker has an examination, falls ill or has a family event, and asks for someone else to cover the shift. In the café where one team member works, such requests are a routine part of running the store rather than an exception.</p>
+
+<p>The owner, who in a store of this size is also the manager, handles each such case personally. The owner phones or messages the other workers one by one until someone agrees, updates the schedule spreadsheet, and tells the worker who asked. The work does not end there. Korean labour law ties part of a part-time worker's pay to the number of hours worked each week: a worker whose weekly contractual hours are 15 or more and who attended every scheduled working day is entitled to a paid weekly holiday, the weekly holiday allowance (주휴수당) [3], [5]. A swap therefore changes the hours and possibly the entitlement of two people at once, and the owner has to recheck both at the end of the month. In the reference store these checks are made from memory with a spreadsheet; the legal thresholds are not written down anywhere in the store.</p>
+
+<p>The team chose this problem for three reasons. First, one member knows the process from the inside, so requirements could be drawn from a real workplace rather than from assumptions. Second, the problem is a transaction-processing problem of the kind the course recommends: it has several actors, a clear life cycle for each substitute request, and a relational data model. Third, the core difficulty is not the user interface but the rules — who is eligible, who wins when two people accept at the same moment, and how weekly and monthly pay change after a swap — which makes the requirements and design phases substantial and gives the testing phase concrete targets.</p>
+
+<h2 id="ch1-objectives">1.2 Objectives</h2>
+
+<p>The overall goal of the project is to deliver a working web application that replaces the telephone-and-spreadsheet process of a small store for three tasks: finding a substitute, keeping the schedule correct, and computing the weekly holiday allowance and monthly pay. The proposal broke this goal down into six measurable objectives, G1 to G6, which are kept unchanged in this report so that they can be checked at the end of the project (Chapter 8). Four of them are tied to the problems P1–P3 defined in Chapter 2; the other two follow from the course requirements.</p>
+
+<table>
+  <caption>Table {{tab}}. Project objectives, linked problems and measures of achievement</caption>
+  <thead>
+    <tr><th style="width:6%">ID</th><th style="width:32%">Objective</th><th>Measure of achievement</th><th style="width:9%">Problem</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts when a substitute is needed.</td><td>The owner makes 0 contacts per request (reference store before the system: 3–5). All eligible workers are notified in the same transaction that creates the request (FR-07). The owner's only action is one approve or reject decision.</td><td>P1</td></tr>
+    <tr><td class="req-id">G2</td><td>Let a candidate answer quickly.</td><td>A candidate accepts a request in at most 2 clicks from the inbox (NFR-01). Only the first acceptance can succeed (BR-02, NFR-04).</td><td>P1</td></tr>
+    <tr><td class="req-id">G3</td><td>Keep the schedule and weekly hours of both workers correct after every swap.</td><td>On approval the shift is reassigned and the weekly summaries of both workers are recomputed with no manual step (FR-12). The approval screen shows both workers' hours and eligibility before and after the swap (FR-11); for the seed example it shows Choi Minho's scheduled hours changing from 16 to 21 with eligibility unchanged.</td><td>P2</td></tr>
+    <tr><td class="req-id">G4</td><td>Apply the legal pay rules automatically and flag violations before payday.</td><td>Business rules BR-06 to BR-11 are implemented as tested functions, and every business rule has at least one unit test (spec §12), including the 15-hour boundary (14.99 h and 15 h) and the 40-hour cap. The payroll screen warns when a wage is below the applicable minimum and blocks confirmation until the warning is acknowledged (FR-16).</td><td>P3</td></tr>
+    <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires.</td><td>At least 5 core use cases (delivered: 13, of which 9 are core) and at least 4 database tables (delivered: 12).</td><td>—</td></tr>
+    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly.</td><td>Working system deployed at a public URL by Week 14 (2026-12-04, NFR-07). Re-running the final prompt in an empty folder produces a system that passes the same unit tests.</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>G6 also reflects a practical need of the target users: a small store has no server and no IT staff, so the system must run in a browser without installation (NFR-06), and it must be possible to rebuild it from its documentation alone.</p>
+
+<h2 id="ch1-scope">1.3 Scope</h2>
+
+<p>The team classified features with the MoSCoW scheme (Must, Should, Could, Won't). Use-case priorities are the ones recorded in spec §3. Nine of the thirteen use cases correspond one to one to the nine functions announced in the proposal (UC-01 to UC-09); UC-10 to UC-13 are supporting use cases that make settings, expiry, cancellation and role selection explicit, because the core use cases are incomplete without them.</p>
+
+<table>
+  <caption>Table {{tab}}. Scope of the delivered system</caption>
+  <thead>
+    <tr><th style="width:14%">Priority</th><th>Included features</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>Must</b></td><td>UC-01 Register worker and fixed schedule; UC-02 Register availability; UC-03 Generate weekly schedule; UC-04 Request substitute (with automatic candidate selection, BR-01); UC-05 Respond to substitute request; UC-06 Approve or reject substitution; UC-08 Compute weekly hours and holiday allowance; UC-11 Expire overdue substitute request; UC-13 Sign in by role; in-app notification inbox (FR-21).</td></tr>
+    <tr><td><b>Should</b></td><td>UC-07 Record and confirm attendance; UC-09 Generate and confirm monthly payroll (base pay, holiday allowance, premium pay, minimum-wage warning, probation reduction); UC-10 Manage workplace settings and minimum wage table; UC-12 Cancel own substitute request; Korean/English language switch; adjustable demo clock.</td></tr>
+    <tr><td><b>Won't (this version)</b></td><td>Password authentication and user accounts on a server; push notifications, KakaoTalk or SMS messaging (notifications are in-app only); bank transfer of wages; GPS or QR-code clock-in (excluded on purpose by NFR-12); multiple stores per owner; automatic optimisation of the weekly schedule; payslip export, tax and social-insurance deductions; annual leave, severance pay and the four-week averaging of the 15-hour rule beyond the weekly contractual value (see BR-06).</td></tr>
+  </tbody>
+</table>
+
+<p>Two scope decisions need comment. The system runs entirely in the browser with an embedded SQLite database, and sign-in is a choice among demo accounts (UC-13). This keeps the deployed system free of a server, but it also means that data stays in one browser and that the prototype is a demonstration system, not a multi-user production service. The second decision concerns payroll. The payroll function stops at gross pay: base pay, holiday allowance and premium pay. Deductions such as income tax and national insurance depend on rules that change every year and are outside the three problems the project addresses.</p>
+
+<h2 id="ch1-approach">1.4 Development Approach</h2>
+
+<h3 id="ch1-lifecycle">1.4.1 Choice of life-cycle model</h3>
+
+<p>Chapter 1 of the lecture presents the linear sequential (waterfall) model, the prototyping model, the incremental model, Boehm's spiral model, the Rational Unified Process and agile methods [6]. The team compared them against four facts about the project: the course fixes three document deadlines (proposal in Week 5, interim report in Week 7, final report in Week 14); the requirements for the substitute workflow were known well from the reference store, but the screens were not; code is produced by an AI coding assistant from prompts, so a working version can be generated in hours rather than weeks; and the team has three members with no dedicated customer on site.</p>
+
+<table>
+  <caption>Table {{tab}}. Life-cycle models considered</caption>
+  <thead>
+    <tr><th style="width:19%">Model</th><th style="width:40%">Fit with this project</th><th>Decision</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Waterfall</td><td>Matches the fixed course documents, but a phase must be completed before the next begins, and feedback on screens would arrive only after implementation.</td><td>Rejected as the main model; its document sequence is kept for the course deliverables.</td></tr>
+    <tr><td>Prototyping</td><td>Suited to the unknown part of the requirements (screens, approval comparison panel). The lecture warns that prototypes omit error checking and non-functional requirements.</td><td>Adopted for the user interface only.</td></tr>
+    <tr><td>Incremental</td><td>Delivers a minimal useful subset first and adds increments; reduces rework when requirements change; allows demonstration at each increment.</td><td>Adopted as the main model.</td></tr>
+    <tr><td>Spiral</td><td>Explicit risk analysis per loop; heavy for a three-person, fourteen-week project.</td><td>Not adopted; the main risks are tracked in the WBS instead.</td></tr>
+    <tr><td>RUP</td><td>Iterative phases with UML; its good practices (manage requirements, visual modelling) were adopted, but the four-phase structure adds little for a small system.</td><td>Practices adopted, process not.</td></tr>
+    <tr><td>Agile / XP</td><td>Test-first development and small releases fit vibe coding well; the course, however, requires full requirement and design documents.</td><td>Test-first practice adopted within increments.</td></tr>
+  </tbody>
+</table>
+
+<p>The resulting approach is an <b>incremental model with UI prototyping</b>. The incremental model addresses the main weakness the lecture identifies in the waterfall model, the difficulty of accommodating change after the process is under way. The prototype addresses the part of the requirements that only becomes clear when users can see a screen. The known weaknesses of the incremental model are that the process is less visible and that structure degrades as increments are added [6]. The team countered the first with the fixed course documents and the prompt log, and the second with a layered architecture that was fixed before the first increment (Chapter 4) and with the rule that domain rules live only in one module of pure functions.</p>
+
+<h3 id="ch1-increments">1.4.2 Increments</h3>
+
+<p>Following the proposal, the requirements and analysis models were written once for the whole system (WBS 3 Requirements and 4.1 UML models), and implementation was then delivered in two increments (WBS 5.2.1), followed by deployment (5.2.2), testing (6) and the freezing of the final prompt kept under prompt engineering (5.1). The table below shows the content of each increment.</p>
+
+<table>
+  <caption>Table {{tab}}. Increments of the ShiftSwap development</caption>
+  <thead>
+    <tr><th style="width:14%">Increment</th><th style="width:30%">Content</th><th style="width:20%">Use cases</th><th>Planned week and exit criterion</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Increment 1 (Must)</td><td>Database schema and seed data, demo clock, sign-in, worker and schedule registration, availability, weekly board, the complete substitute workflow (request, candidate notification, first acceptance, approval with before/after comparison, expiry), weekly holiday allowance, inbox.</td><td>UC-01, UC-02, UC-03, UC-04, UC-05, UC-06, UC-08, UC-11, UC-13</td><td>End of Week 10, 2026-11-06 (WBS 5.2.1). Seed request with two candidates reproduced; worked example (Choi Minho, 3.2 h, KRW 33,024) shown on the approval screen; test groups TC-01x, TC-02x, TC-05x, TC-06x, TC-08x, TC-12x pass.</td></tr>
+    <tr><td>Increment 2 (Should)</td><td>Attendance recording and confirmation, monthly payroll with premium pay, minimum-wage warning and probation reduction, workplace settings and minimum-wage table, cancellation of an own request.</td><td>UC-07, UC-09, UC-10, UC-12</td><td>End of Week 11, 2026-11-13 (WBS 5.2.1). Test groups TC-09x, TC-10x, TC-11x pass together with all groups of Increment 1 (regression).</td></tr>
+    <tr><td>Deployment and testing</td><td>Deployment to GitHub Pages, test runs, scenario walkthroughs, cross-browser and responsive checks, reproduction run of the final prompt in an empty folder.</td><td>All</td><td>Weeks 12–14 (WBS 5.2.2, 6.1.2, 6.2). Deployed URL and all test groups run in Week 12; NFR-02 and NFR-06 checks and final prompt frozen in Week 13; final report, slides and live demonstration on 2026-12-04 (Week 14).</td></tr>
+  </tbody>
+</table>
+
+<p>Increment 1 is the "minimal subset of the whole system that is still useful" in the sense of the lecture [6]: with it, a store can already find substitutes, approve swaps and see weekly holiday-allowance eligibility. If Increment 2 had slipped, the core of the project would still have been delivered. Placing all Must use cases in the first increment was the main mitigation of the scope-creep risk identified in the proposal.</p>
+
+<h3 id="ch1-prototype">1.4.3 UI prototyping</h3>
+
+<p>The prototyping model of the lecture runs requirement analysis, prototype development, prototype evaluation, and then implementation [6]. In this project the prototype was not a separate throwaway artefact. The first version of each screen was generated by the AI coding assistant from a short description, evaluated by the team against the scenarios of Section 3.8, and then either kept or regenerated. Three screens went through this loop more than once: the weekly board (how to show a handed-over shift), the inbox (how to reach the accept button in two clicks), and the approval comparison panel (which figures to show for the two workers). The decisions from these loops were written back into the specification as visual design rules, which is why the final prompt contains exact colours, spacing and a single decorative element (Chapter 5). The lecture notes that prototypes tend to skip error handling and non-functional requirements; to avoid this, the error messages and the non-functional requirements NFR-01 to NFR-06 were added to the prompt from the first increment onward rather than left for the end.</p>
+
+<h3 id="ch1-vibe">1.4.4 How vibe coding fits each increment</h3>
+
+<p>Vibe coding means that source code is produced by an AI coding assistant from natural-language prompts, and that the developer's work moves from typing code to specifying, reviewing and testing it. The team used the same cycle inside each increment:</p>
+
+<ol>
+  <li><b>Specify.</b> The identifiers, rules, states and seed data needed by the increment are added to <code>spec/spec.md</code> first. Nothing is allowed into a prompt that is not in the specification.</li>
+  <li><b>Prompt.</b> A prompt for the increment is written that refers to the specification by ID (for example, "implement BR-02 inside one transaction that re-checks the request state").</li>
+  <li><b>Generate.</b> The AI coding assistant generates or modifies the code.</li>
+  <li><b>Test.</b> The unit tests named after the spec test IDs are run with <code>node --test</code>, and the scenarios of Section 3.8 are walked through in the browser.</li>
+  <li><b>Review and refine.</b> Failures and unwanted behaviour are traced either to an ambiguous prompt or to a gap in the specification. The prompt or the specification is corrected, never the generated code by hand alone, and the change is recorded in the prompt log.</li>
+</ol>
+
+<p>This cycle keeps the course deliverables and the code consistent: the final prompt is not written after the fact but is the accumulated result of the refinements made in all four increments. Test-first practice from extreme programming fits this cycle naturally, because a test named <code>TC-081 holiday allowance at exactly 15 h</code> is itself a precise prompt. Chapter 5 presents the final prompt and the prompt log in detail.</p>
+
+<h2 id="ch1-organisation">1.5 Organisation of the Report</h2>
+
+<p>Chapter 2 describes the current substitute process in the reference store, the three problems it causes, the legal background, and existing shift-scheduling products. Chapter 3 is the requirements specification: actors, use cases with full descriptions, functional and non-functional requirements, business rules, scenarios, analysis models and the validation of the requirements. Chapter 4 is the design specification with the architecture, class diagram, sequence diagrams, state diagrams and database design. Chapter 5 covers implementation by vibe coding, including the final prompt and the prompt log. Chapter 6 presents testing and validation and the traceability matrix. Chapter 7 explains deployment and gives a user guide for owners and workers. Chapter 8 concludes the report and lists limitations and future work. The references follow Chapter 8; the source code is submitted separately as an attached file.</p>

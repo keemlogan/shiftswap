@@ -1,0 +1,13 @@
+{
+  "name": "shiftswap",
+  "version": "1.0.0",
+  "description": "ShiftSwap: shift schedule and substitute management for small part-time workplaces",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "sql.js": "^1.14.2"
+  }
+}

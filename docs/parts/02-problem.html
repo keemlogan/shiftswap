@@ -1,0 +1,209 @@
+<h1 id="problem">2. Problem Statement, Background and Related Work</h1>
+
+<p>This chapter describes the problem that ShiftSwap addresses. Section 2.1 describes how substitutes are arranged today in the reference store and models the process as a data flow diagram. Section 2.2 states the three problems P1–P3 that the process causes. Section 2.3 summarises the legal rules that govern part-time pay in Korea and that the system must apply. Section 2.4 compares existing shift-scheduling products, and Section 2.5 identifies the gap that ShiftSwap fills.</p>
+
+<h2 id="ch2-asis">2.1 Current Process in the Reference Store</h2>
+
+<h3 id="ch2-store">2.1.1 The reference store</h3>
+
+<p>The requirements were drawn from one real workplace, a small café where Hyewon Kim works part-time. To protect the store and its staff, the report does not name the store; the demonstration data of the system uses a fictitious café, Dalbit Café (달빛카페), with one owner and four part-time workers, which has the same structure. The real store has the following characteristics, which are typical of the stores the system targets:</p>
+
+<ul>
+  <li>fewer than ten part-time workers; whether the store reaches five regular employees, the threshold for premium pay (Section 2.3.3), depends on how many workers it employs at a given time, so the system treats the number as a setting;</li>
+  <li>the owner acts as the manager, sets the schedule and pays the wages; there is no separate HR or payroll staff;</li>
+  <li>each worker has a fixed weekly pattern of shifts written in the employment contract, and the pattern changes rarely;</li>
+  <li>the schedule is kept in a spreadsheet maintained by the owner, and messages about substitutes are sent by phone call or personal message;</li>
+  <li>wages are paid monthly, and the owner calculates them at the end of the month from the spreadsheet.</li>
+</ul>
+
+<h3 id="ch2-steps">2.1.2 The as-is substitute process, step by step</h3>
+
+<p>The following description is the current procedure for one substitute request, as reported by the team member who works in the reference store. It is written as the normal sequence; the variations are listed afterwards.</p>
+
+<ol>
+  <li><b>The worker reports the absence.</b> A worker who cannot attend a coming shift sends the owner a personal message with the date and the reason, for example "I cannot come on Wednesday evening because of a midterm exam."</li>
+  <li><b>The owner looks up possible substitutes.</b> The owner opens the schedule spreadsheet, checks who is not working at that time, and recalls from memory who is usually free on that weekday. Availability is not recorded anywhere.</li>
+  <li><b>The owner contacts workers one by one.</b> The owner calls or messages the first person on the mental list and waits for an answer. If the person refuses or does not answer within a reasonable time, the owner contacts the next person. In the reference store this typically takes three to five contacts per request.</li>
+  <li><b>A worker agrees.</b> When one worker agrees, the owner confirms to that worker and to the worker who asked. The other workers who were contacted may not be told that the shift has been filled.</li>
+  <li><b>The owner updates the spreadsheet.</b> The owner changes the name in the cell for that shift and tells the workers concerned.</li>
+  <li><b>The owner rechecks weekly hours at month end.</b> At the end of the month the owner adds up each worker's hours per week from the spreadsheet, including the swapped shifts.</li>
+  <li><b>The owner decides the holiday allowance.</b> For each worker and week, the owner decides from memory whether the worker had at least 15 contractual hours and attended every working day, and whether a swapped shift counts as an absence.</li>
+  <li><b>The owner calculates the monthly pay.</b> The owner multiplies hours by the hourly wage, adds the holiday allowance, and transfers the pay. Whether the hourly wage is still above the current minimum wage is not checked systematically.</li>
+</ol>
+
+<p>Three variations occur regularly. Workers sometimes arrange a swap between themselves and only inform the owner afterwards, or not at all, in which case the spreadsheet does not match reality. Two workers may both agree when the owner has contacted them in parallel, and one of them must then be told that the shift is no longer free. Finally, when nobody agrees, the owner covers the shift personally, and this is often not recorded.</p>
+
+<h3 id="ch2-dfd">2.1.3 Data flow diagram of the as-is process</h3>
+
+<p>The figure below models the procedure as a data flow diagram (DFD) following the rules of Chapter 2 of the lecture [6]: boxes are processes named with verb phrases, arcs are data named with noun phrases, control is not shown, and actors are not included. Arcs that enter from outside the diagram carry data supplied by a person (the worker or the owner) whose identity is omitted by the DFD rules. Two outputs from one box mean that one or the other is produced: process 3 produces either a refusal, which feeds process 2 again, or a substitute agreement.</p>
+
+<figure class="bare">
+<svg viewBox="0 0 700 395" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Data flow diagram of the as-is substitute process" style="width:100%;max-width:6.2in;font-family:'Pretendard Variable','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <marker id="dfd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1C2230"/>
+    </marker>
+  </defs>
+  <g fill="#FFFFFF" stroke="#1C2230" stroke-width="1.4">
+    <rect x="10" y="70" width="110" height="60" rx="8"/>
+    <rect x="190" y="70" width="110" height="60" rx="8"/>
+    <rect x="370" y="70" width="110" height="60" rx="8"/>
+    <rect x="550" y="70" width="110" height="60" rx="8"/>
+    <rect x="550" y="250" width="110" height="60" rx="8"/>
+    <rect x="370" y="250" width="110" height="60" rx="8"/>
+    <rect x="190" y="250" width="110" height="60" rx="8"/>
+  </g>
+  <g font-size="11" fill="#1C2230" text-anchor="middle">
+    <text x="65" y="94" font-weight="700">1.0</text><text x="65" y="110">Report absence</text>
+    <text x="245" y="94" font-weight="700">2.0</text><text x="245" y="110">Contact workers</text><text x="245" y="123">one by one</text>
+    <text x="425" y="94" font-weight="700">3.0</text><text x="425" y="110">Agree on</text><text x="425" y="123">substitute</text>
+    <text x="605" y="94" font-weight="700">4.0</text><text x="605" y="110">Update schedule</text><text x="605" y="123">spreadsheet</text>
+    <text x="605" y="274" font-weight="700">5.0</text><text x="605" y="290">Recheck weekly</text><text x="605" y="303">hours</text>
+    <text x="425" y="274" font-weight="700">6.0</text><text x="425" y="290">Decide holiday</text><text x="425" y="303">allowance</text>
+    <text x="245" y="274" font-weight="700">7.0</text><text x="245" y="290">Calculate</text><text x="245" y="303">monthly pay</text>
+  </g>
+  <g stroke="#1C2230" stroke-width="1.2" fill="none" marker-end="url(#dfd-arrow)">
+    <line x1="65" y1="18" x2="65" y2="69"/>
+    <line x1="245" y1="18" x2="245" y2="69"/>
+    <line x1="120" y1="100" x2="189" y2="100"/>
+    <line x1="300" y1="92" x2="369" y2="92"/>
+    <line x1="370" y1="116" x2="301" y2="116"/>
+    <line x1="480" y1="100" x2="549" y2="100"/>
+    <line x1="605" y1="130" x2="605" y2="249"/>
+    <line x1="640" y1="370" x2="640" y2="311"/>
+    <line x1="550" y1="290" x2="481" y2="290"/>
+    <line x1="425" y1="370" x2="425" y2="311"/>
+    <line x1="370" y1="290" x2="301" y2="290"/>
+    <line x1="245" y1="370" x2="245" y2="311"/>
+    <line x1="190" y1="290" x2="40" y2="290"/>
+  </g>
+  <g font-size="10" fill="#4A5163" text-anchor="middle" font-style="italic">
+    <text x="71" y="14" text-anchor="start">shift conflict</text>
+    <text x="251" y="14" text-anchor="start">current schedule</text>
+    <text x="155" y="84">absence</text><text x="155" y="94">notice</text>
+    <text x="335" y="76">substitute</text><text x="335" y="86">inquiry</text>
+    <text x="335" y="129">refusal</text>
+    <text x="515" y="84">substitute</text><text x="515" y="94">agreement</text>
+    <text x="598" y="194" text-anchor="end">revised schedule</text>
+    <text x="634" y="362" text-anchor="end">time records</text>
+    <text x="515" y="274">weekly hours</text><text x="515" y="284">record</text>
+    <text x="431" y="386" text-anchor="start">remembered legal rules</text>
+    <text x="335" y="264">holiday-</text><text x="335" y="274">allowance</text><text x="335" y="284">decision</text>
+    <text x="251" y="386" text-anchor="start">hourly wages</text>
+    <text x="115" y="282">pay statement</text>
+  </g>
+</svg>
+<figcaption>Figure {{fig}}. Data flow diagram of the as-is substitute and pay process in the reference store (lecture Chapter 2 notation: processes as verb phrases, data as noun phrases, actors omitted)</figcaption>
+</figure>
+
+<p>The diagram makes two properties of the current process visible. First, the loop between processes 2.0 and 3.0 carries one inquiry and one refusal at a time; the number of iterations of this loop is the cost described as problem P1. Second, processes 5.0 to 7.0 depend on data that is not recorded in the store: "time records" are notes kept by the owner, and "remembered legal rules" is literally the owner's memory. These two inputs are the source of problems P2 and P3.</p>
+
+<h2 id="ch2-problems">2.2 Problems of the Current Process</h2>
+
+<p>The as-is process causes three problems. Each problem statement below gives the observable symptom, the cause in the data flow diagram of Section 2.1.3, and the consequence.</p>
+
+<h3 id="ch2-p1">P1. Finding a substitute costs repeated one-to-one contacts</h3>
+
+<p>For every substitute request the owner contacts workers one at a time, typically three to five contacts per request in the reference store. The cause is that the information needed to choose a candidate — who is free at that time and who is willing to work extra — exists only in the owner's memory and in the workers' heads, so the owner has to ask. Because each inquiry waits for an answer, the elapsed time grows with the number of contacts, and a request made late in the evening may not be settled until the next day. When the owner contacts several people in parallel to save time, two of them may agree, and one has to be disappointed. The workers who refused or were not asked do not see whether the shift has been filled.</p>
+
+<h3 id="ch2-p2">P2. Every swap changes the hours of two workers, and all recalculation is manual</h3>
+
+<p>A swap removes a shift from one worker's week and adds it to another's. Both workers' weekly scheduled hours change, and the holiday-allowance eligibility of either of them may change depending on how the missed shift is counted. In the current process the spreadsheet cell is edited (process 4.0), but the effect on hours is not calculated until the end of the month (process 5.0), when the owner must reconstruct from the edited spreadsheet which shifts were swapped and when. The owner approves a swap without seeing its effect on pay, and if the spreadsheet was not updated for a swap arranged directly between workers, the monthly calculation is wrong.</p>
+
+<h3 id="ch2-p3">P3. Legal pay rules are applied from memory, so errors are not caught before payday</h3>
+
+<p>The weekly holiday allowance, the minimum wage, the five-employee threshold for premium pay and the probation reduction are all conditional rules with numeric thresholds (Section 2.3). In the reference store they are applied from memory at month end. Errors that this practice allows include paying a holiday allowance to a worker below 15 contractual hours, not paying it to a worker at or above the threshold, continuing to pay the previous year's minimum wage after 1 January, and applying the 90 % probation rate to a worker whose contract does not qualify for it. Because no check is made before the transfer, these errors are discovered, if at all, only when a worker complains.</p>
+
+<table>
+  <caption>Table {{tab}}. Summary of problems, causes in the as-is process and consequences</caption>
+  <thead>
+    <tr><th style="width:6%">ID</th><th style="width:28%">Problem</th><th style="width:33%">Cause (DFD process)</th><th>Consequence</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="req-id">P1</td><td>Repeated one-to-one contacts to find a substitute</td><td>Availability not recorded; inquiries sent one at a time (2.0 ↔ 3.0)</td><td>3–5 contacts per request; delays; double acceptances when contacts are made in parallel</td></tr>
+    <tr><td class="req-id">P2</td><td>Manual recalculation for two workers per swap</td><td>Spreadsheet edited without calculation (4.0); hours rebuilt at month end (5.0)</td><td>Swaps approved without knowing their pay effect; mismatches between schedule and reality</td></tr>
+    <tr><td class="req-id">P3</td><td>Legal rules applied from memory</td><td>Rules not recorded (input "remembered legal rules" of 6.0 and 7.0)</td><td>Pay errors discovered only after payday</td></tr>
+  </tbody>
+</table>
+
+<h2 id="ch2-legal">2.3 Legal Background</h2>
+
+<p>Part-time workers in Korea are covered by the same labour statutes as full-time workers. The provisions below determine the pay rules the system implements as business rules BR-06 to BR-10 (Chapter 3). The team read the statutes on the National Law Information Center [3], [4] and the explanations of the government's legal information service for part-time workers [5]. The system is a tool for applying these rules consistently; it is not legal advice, and the rules were simplified in the ways stated below.</p>
+
+<h3 id="ch2-minwage">2.3.1 Minimum wage</h3>
+
+<p>Under the Minimum Wage Act, the Minister of Employment and Labor announces the minimum hourly wage for each year. For 2026 the minimum hourly wage is KRW 10,320, up from KRW 10,030 in 2025, an increase of about 2.9 % [1], [2]. An employer who pays less than the minimum wage breaks the law regardless of what the contract says. For the system this means that the applicable minimum depends on the year of the pay period, so the minimum wage is stored as a table of yearly values (table MinimumWage, UC-10) rather than as a constant, and each payroll row is checked against the value for its year (BR-09).</p>
+
+<h3 id="ch2-holiday">2.3.2 Weekly paid holiday and the 15-hour threshold</h3>
+
+<p>Article 55 ① of the Labor Standards Act requires an employer to give a worker at least one paid holiday per week on average. Article 30 ① of the Enforcement Decree specifies that this paid holiday is given to a worker who has attended all the working days agreed for that week. Article 18 ③ excludes from this provision workers whose contractual working hours, averaged over four weeks, are less than 15 hours per week [3]. For a part-time worker the paid holiday is proportional to the worker's hours; the government's guidance computes the paid holiday hours as weekly contractual hours ÷ 40 × 8, with the weekly hours capped at 40 [5]. The money paid for this holiday is what Korean workers call 주휴수당, rendered in this report as the weekly holiday allowance.</p>
+
+<p>Two points required interpretation. The first is the four-week average. In the target stores a worker's contractual hours come from a fixed weekly schedule, which is the same every week; the four-week average therefore equals the weekly value, and the system uses the weekly contractual hours directly (BR-06). The second is a swapped shift. When a worker gives a shift to a colleague with the owner's approval, the working day has been changed by agreement, and the team's reading of [5] is that this should not count as a failure to attend. Because store practice differs, the system makes this a workplace setting (subAttendancePolicy = EXCUSED, the default, or ABSENT) rather than hard-coding one interpretation.</p>
+
+<h3 id="ch2-premium">2.3.3 Premium pay and the five-employee threshold</h3>
+
+<p>Article 56 of the Labor Standards Act requires an additional 50 % of the ordinary wage for extended work (beyond 8 hours a day or 40 hours a week) and for night work between 22:00 and 06:00. Article 11 limits the application of the Act: a workplace that ordinarily employs fewer than five workers is subject only to the provisions listed in the Enforcement Decree, and Article 56 is not among them [3]. Many small cafés fall below this threshold; the demonstration store Dalbit Café is configured with four regular employees. The system therefore stores the number of regular employees as a workplace setting and computes premium pay only when it is five or more (BR-08). Holiday-work premium under Article 56 ② is outside the scope of the system.</p>
+
+<h3 id="ch2-probation">2.3.4 Probation reduction</h3>
+
+<p>Article 5 ② of the Minimum Wage Act allows an employer to pay 90 % of the minimum wage during the first three months of employment for a worker under probation, but only if the employment contract is for one year or more, and not for workers in simple labour occupations designated by the Ministry of Employment and Labor (Enforcement Decree Art. 3) [4]. Many part-time jobs in cafés and convenience stores, such as serving and cashier work, fall into the designated simple labour occupations. The system requires all conditions to hold before it lowers the minimum-wage threshold for a worker (BR-10).</p>
+
+<table>
+  <caption>Table {{tab}}. Legal provisions and the business rules that implement them</caption>
+  <thead>
+    <tr><th style="width:30%">Provision</th><th style="width:44%">Content used by the system</th><th>Business rule</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Minimum Wage Act; MOEL notice for 2026 [1], [2]</td><td>Minimum hourly wage KRW 10,320 (2026), KRW 10,030 (2025)</td><td>BR-09</td></tr>
+    <tr><td>Labor Standards Act Art. 55 ①; Enforcement Decree Art. 30 ① [3]</td><td>One paid holiday per week for a worker who attended all agreed working days</td><td>BR-06, BR-07</td></tr>
+    <tr><td>Labor Standards Act Art. 18 ③ [3], [5]</td><td>No weekly paid holiday below 15 contractual hours per week (four-week average)</td><td>BR-06</td></tr>
+    <tr><td>Labor Standards Act Art. 11, Art. 56 [3]</td><td>+50 % for daily hours over 8, weekly hours over 40 and night hours 22:00–06:00; only with five or more regular employees</td><td>BR-08</td></tr>
+    <tr><td>Minimum Wage Act Art. 5 ②; Enforcement Decree Art. 3 [4]</td><td>90 % of the minimum wage for the first three months of probation, contract of one year or more, not simple labour</td><td>BR-10</td></tr>
+  </tbody>
+</table>
+
+<h2 id="ch2-related">2.4 Related Work</h2>
+
+<p>Shift scheduling is an established product category. The team examined five products or product groups named in [10]: Shiftee, a Korean workforce-management service; the schedule and work-management functions of the Korean job portals Albamon (알바몬 근무관리) and Alba Cheonguk (알바천국 스케줄); and three international products, When I Work, Homebase and Deputy. The comparison uses five features that correspond to the core of ShiftSwap:</p>
+
+<ul>
+  <li><b>Substitute broadcast</b>: a request for cover is sent to several workers at once, restricted to those who are eligible;</li>
+  <li><b>First-accept</b>: the first worker to accept is the substitute, and later acceptances are refused;</li>
+  <li><b>Owner approval</b>: the swap takes effect only after a manager or owner approves it;</li>
+  <li><b>Holiday-allowance recomputation at approval</b>: the effect of the swap on both workers' weekly holiday allowance is shown when the owner approves;</li>
+  <li><b>Korean legal rules</b>: the 15-hour threshold, the five-employee threshold and the probation reduction are applied in pay calculation.</li>
+</ul>
+
+<p>The comparison table below records only what the team could confirm from the public product descriptions available to it. "Supported" means the team found the feature described; "not documented" means the team did not find a description of it, which does not prove that the feature is absent. The products change frequently, and the table reflects the team's reading at the time of writing.</p>
+
+<table>
+  <caption>Table {{tab}}. Feature comparison of shift-scheduling products (based on public product descriptions; see text for the meaning of each entry)</caption>
+  <thead>
+    <tr><th style="width:22%">Product</th><th>Substitute broadcast</th><th>First-accept</th><th>Owner approval</th><th>Holiday-allowance recomputation at approval</th><th>Korean legal rules</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Shiftee</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Albamon work management / Alba Cheonguk schedule</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>When I Work</td><td>supported (shifts offered to eligible staff)</td><td>not documented</td><td>supported (manager approves swaps and drops)</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Homebase</td><td>not documented</td><td>not documented</td><td>supported (manager approves trades and cover requests)</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Deputy</td><td>supported (shift offers to qualified staff)</td><td>not documented</td><td>supported (manager approves swaps and offers)</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td><b>ShiftSwap</b></td><td>supported (FR-07, BR-01)</td><td>supported (FR-09, BR-02)</td><td>supported (FR-12, BR-04)</td><td>supported (FR-11)</td><td>supported (BR-06…BR-10)</td></tr>
+  </tbody>
+</table>
+
+<p>The international products share a pattern: a worker offers or trades a shift, colleagues who are qualified for it can pick it up, and a manager approves the change. They are designed for the labour law of other countries and for larger organisations with several locations and roles, and their pay features, where present, are connected to external payroll services. The Korean services are closer to the target users in language and in their awareness of part-time work, but the team did not find a description of a substitute workflow with first acceptance and approval in them. None of the products, in the descriptions the team read, shows the owner the change in both workers' holiday-allowance eligibility at the moment of approving a swap [10].</p>
+
+<p>Besides products, the course material provides the methods used in this project. The life-cycle models and the requirements classification come from the course textbook [6] and from Sommerville's classification of non-functional requirements used in the lecture on requirements [7]. The UML diagrams follow the OMG UML 2.5.1 specification [8], and the embedded database is SQLite compiled to WebAssembly (sql.js) [9].</p>
+
+<h2 id="ch2-gap">2.5 The Gap ShiftSwap Fills</h2>
+
+<p>ShiftSwap targets the part of the problem that general scheduling products do not address for small Korean stores. Its contribution is the combination of four elements in one workflow:</p>
+
+<ol>
+  <li>candidate selection from recorded availability and existing shifts, so that a request reaches only the workers who can take it (addresses P1);</li>
+  <li>a first-acceptance-wins rule enforced in a single database transaction, so that two acceptances can never both succeed (addresses the double-acceptance variation of P1);</li>
+  <li>an approval step that shows, for both workers, contractual hours, scheduled hours and holiday-allowance eligibility before and after the swap, and recomputes the weekly summaries on approval (addresses P2);</li>
+  <li>pay rules taken from Korean law and stored as data where they change (minimum wage by year, number of regular employees, substitution-attendance policy), with warnings before payroll confirmation (addresses P3).</li>
+</ol>
+
+<p>The system is deliberately small. It serves one store, runs without a server and does not replace a full payroll or HR system. Its value lies in making the rules explicit and applying them at the moment a decision is made, rather than at the end of the month. Chapter 3 turns these four elements into use cases, functional requirements and business rules.</p>

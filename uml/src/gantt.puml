@@ -1,0 +1,84 @@
+@startgantt gantt
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ganttDiagram {
+  BackgroundColor #FFFFFF
+  BarColor #DDE1E8
+  BarFontColor #1C2230
+  progressColor #4A5163
+  milestoneBackgroundColor #E9A23B
+  milestoneFontColor #1C2230
+  TimelineBackgroundColor #FFFFFF
+  TodayLineColor #C93A31
+}
+
+Project starts 2026-09-01
+printscale weekly with calendar date
+language en
+
+' Project weeks per spec.md §14: week n starts Monday 2026-08-31 + 7(n-1);
+' W14 is truncated, ending Friday 2026-12-04 (not the usual Sunday).
+' W1 08-31..09-06  W2 09-07..09-13  W3 09-14..09-20  W4 09-21..09-27
+' W5 09-28..10-04  W6 10-05..10-11  W7 10-12..10-18  W8 10-19..10-25
+' W9 10-26..11-01  W10 11-02..11-08 W11 11-09..11-15 W12 11-16..11-22
+' W13 11-23..11-29 W14 11-30..12-04 (Friday close)
+
+-- Project management --
+[1 Project management (W1-W14)] starts 2026-09-01 and ends 2026-12-04
+
+-- Proposal --
+[2 Proposal (W1-W5)] starts 2026-09-01 and ends 2026-10-02
+[2.1 Topic selection] starts 2026-09-01 and ends 2026-09-27
+[2.2 Proposal document] starts 2026-09-28 and ends 2026-10-02
+
+-- Requirements --
+[3 Requirements interim report (W3-W7)] starts 2026-09-14 and ends 2026-10-16
+[3.1 Elicitation] starts 2026-09-14 and ends 2026-09-27
+[3.2 Specification] starts 2026-09-28 and ends 2026-10-16
+
+-- Design --
+[4 Design (W6-W9)] starts 2026-10-05 and ends 2026-10-30
+[4.1 UML models] starts 2026-10-05 and ends 2026-10-21
+[4.2 UI design] starts 2026-10-19 and ends 2026-10-30
+
+-- Implementation --
+[5 Implementation by vibe coding (W9-W11)] starts 2026-10-26 and ends 2026-11-13
+[5.1 Prompt engineering] starts 2026-10-26 and ends 2026-11-01
+[5.2 Increment 1 Must ends 11-06] starts 2026-11-02 and ends 2026-11-06
+[5.3 Increment 2 Should ends 11-13] starts 2026-11-09 and ends 2026-11-13
+
+-- Testing --
+[6 Testing refinement (W12-W13)] starts 2026-11-16 and ends 2026-11-29
+[6.1 Unit testing] starts 2026-11-16 and ends 2026-11-22
+[6.2 Manual QA] starts 2026-11-23 and ends 2026-11-29
+
+-- Final report --
+[7 Final report (W13-W14)] starts 2026-11-23 and ends 2026-12-04
+[7.1 Content writing] starts 2026-11-23 and ends 2026-11-29
+[7.2 Report integration] starts 2026-11-30 and ends 2026-12-04
+
+-- Presentation --
+[8 Presentation (W13-W14)] starts 2026-11-23 and ends 2026-12-04
+[8.1 Slide deck] starts 2026-11-23 and ends 2026-11-29
+[8.2 Delivery] starts 2026-11-30 and ends 2026-12-04
+
+[W3 Team formation (09-18)] happens 2026-09-18
+[W3 Team formation (09-18)] is colored in #E9A23B
+
+[W5 Proposal submitted (10-02)] happens 2026-10-02
+[W5 Proposal submitted (10-02)] is colored in #E9A23B
+
+[W7 Interim report submitted (10-16)] happens 2026-10-16
+[W7 Interim report submitted (10-16)] is colored in #E9A23B
+
+[W14 Final report and presentation (12-04)] happens 2026-12-04
+[W14 Final report and presentation (12-04)] is colored in #E9A23B
+
+' (no explicit dependency arrows into the milestones: their connector lines
+' were rendering on top of the milestone text and corrupting it visually;
+' the milestone diamonds already sit at the correct calendar date on the
+' shared axis, so the arrows added clutter without adding information)
+@endgantt

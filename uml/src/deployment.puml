@@ -1,0 +1,58 @@
+@startuml deployment
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam ArrowColor #1C2230
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+
+actor "A1 Worker /\nA2 Owner" as User
+
+node "Client device\n(desktop or mobile)" as ClientDevice {
+  node "Browser\n(Chrome / Edge / Safari / Firefox)\n<<execution environment>>" as Browser {
+    artifact "app/index.html\napp/main.js\napp/ui/*.js\napp/styles.css" as StaticAssets
+    component "sql.js runtime\n(sql-wasm.js + sql-wasm.wasm)\n<<WebAssembly>>" as SqlJs
+    component "ShiftSwap SPA\n(core/services.js, core/rules.js,\ncore/db.js, core/clock.js)" as SPA
+    database "localStorage\nkey: shiftswap.db.v1\n(base64 SQLite snapshot)" as LocalStorage
+  }
+}
+
+node "GitHub Pages\n<<static hosting>>" as Pages {
+  artifact "shiftswap repository\n/app/ (static files only)" as Repo
+}
+
+User --> Browser : HTTPS (mobile 360px / desktop 1440px)
+Browser --> Pages : GET /shiftswap/app/* (HTTPS, first load / reload)
+Pages --> StaticAssets : serves static files\n(no server-side logic)
+StaticAssets --> SPA : bootstraps
+SPA --> SqlJs : in-memory SQLite queries\n(no network round-trip)
+SPA --> LocalStorage : export DB after each\ncommitted transaction / load on start
+
+note bottom of Pages
+  NFR-08: static web application only —
+  HTML/CSS/ES modules, no build step,
+  no application server
+end note
+
+note bottom of LocalStorage
+  NFR-05: data persists across reloads;
+  "Reset demo data" reseeds it
+end note
+@enduml

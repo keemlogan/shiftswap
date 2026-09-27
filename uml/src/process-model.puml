@@ -1,0 +1,59 @@
+@startuml process-model
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam card {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  RoundCorner 20
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+
+title Team 7 development process model (Ch. 2 standard process model style)\ncard = task (action) · rectangle = artifact (object node)
+
+rectangle "Proposal" as ArtProposal
+card "Elicit requirements\n(interviews, scope)" as ActReq
+rectangle "Requirements spec\n(spec.md §1-6)" as ArtReq
+card "Design UML models" as ActUML
+rectangle "UML models\n(uml/*.puml, *.svg, *.png)" as ArtUML
+card "Write vibe-coding prompt" as ActPrompt
+rectangle "Prompt\n(prompts/final-prompt.md)" as ArtPrompt
+card "Generate & integrate code\n(vibe coding)" as ActCode
+rectangle "Code\n(app/*)" as ArtCode
+card "Run tests\n(node --test)" as ActTest
+rectangle "Tests\n(tests/*.test.js results)" as ArtTest
+card "Write final report" as ActReport
+rectangle "Final report +\npresentation deck" as ArtReport
+
+ArtProposal --> ActReq
+ActReq --> ArtReq
+ArtReq --> ActUML
+ActUML --> ArtUML
+ArtUML --> ActPrompt
+ActPrompt --> ArtPrompt
+ArtPrompt --> ActCode
+ActCode --> ArtCode
+ArtCode --> ActTest
+ActTest --> ArtTest
+
+ArtTest --> ActReport
+ArtTest -[#E9A23B,bold]-> ActPrompt : iterate: fix prompt/spec\nwhen tests fail or spec unmet
+ArtCode -[#E9A23B,bold]-> ActCode : iterate: refine code
+
+ActReport --> ArtReport
+
+note right of ArtTest
+  iterative loop (spec §"Done criteria"):
+  Prompt -> Code -> Tests repeats
+  until npm test passes and the
+  seed/worked example matches spec §10
+end note
+@enduml

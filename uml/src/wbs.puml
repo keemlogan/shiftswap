@@ -1,0 +1,96 @@
+@startmindmap wbs
+<style>
+mindmapDiagram {
+  BackGroundColor white
+  LineColor #1C2230
+  FontColor #1C2230
+  FontName Helvetica
+  FontSize 12
+  node {
+    RoundCorner 0
+    Padding 6
+    LineColor #1C2230
+    BackGroundColor white
+    HorizontalAlignment center
+  }
+}
+</style>
+title ShiftSwap — Team 7 semester project — Work Breakdown Structure
+
+* ShiftSwap
+
+left side
+
+** 1 Project management
+*** 1.1 Scheduling & WBS
+**** 1.1.1 Create WBS and Gantt chart — HD
+**** 1.1.2 Track milestones weekly — HD
+*** 1.2 Team coordination
+**** 1.2.1 Weekly team meetings — HD
+**** 1.2.2 Task assignment & tracking — HD
+
+** 2 Proposal
+*** 2.1 Topic selection
+**** 2.1.1 Compare seven candidate topics — HW
+**** 2.1.2 Finalize ShiftSwap topic — HW
+*** 2.2 Proposal document
+**** 2.2.1 Write problem statement & scope — HW
+**** 2.2.2 Team review & submission — HD
+
+** 3 Requirements (interim report)
+*** 3.1 Elicitation
+**** 3.1.1 Owner/worker interviews — HW
+**** 3.1.2 Draft actors & use cases — HW
+*** 3.2 Specification
+**** 3.2.1 Functional & non-functional requirements — HW
+**** 3.2.2 Business rules & data model draft — HD
+
+** 4 Design
+*** 4.1 UML models
+**** 4.1.1 Use case, class, ERD diagrams — HD
+**** 4.1.2 Sequence, state, activity diagrams — HD
+*** 4.2 UI design
+**** 4.2.1 Screen wireframes — MK
+**** 4.2.2 Visual design system (colors, typography) — MK
+
+right side
+
+** 5 Implementation by vibe coding
+*** 5.1 Prompt engineering
+**** 5.1.1 Write final vibe-coding prompt — HD
+**** 5.1.2 Iterate prompt against spec.md — HD
+*** 5.2 Application build
+**** 5.2.1 Generate & integrate app code — HD
+**** 5.2.2 Deploy to GitHub Pages — HD
+
+** 6 Testing
+*** 6.1 Unit testing
+**** 6.1.1 Rules & services test cases — MK
+**** 6.1.2 Run & fix failing tests — MK
+*** 6.2 Manual QA
+**** 6.2.1 Scenario walkthroughs — MK
+**** 6.2.2 Cross-browser & responsive checks — MK
+
+** 7 Final report
+*** 7.1 Content writing
+**** 7.1.1 Requirements & design sections — HW
+**** 7.1.2 Testing & results sections — MK
+*** 7.2 Report integration
+**** 7.2.1 Traceability matrix — HD
+**** 7.2.2 Final formatting & submission — MK
+
+** 8 Presentation
+*** 8.1 Slide deck
+**** 8.1.1 Draft slide content — MK
+**** 8.1.2 Design slide visuals — MK
+*** 8.2 Delivery
+**** 8.2.1 Rehearse presentation — MK
+**** 8.2.2 Live demo of deployed app — HD
+
+legend right
+  |= initials |= member |= role |
+  | HW | Hyewon Kim | Requirements lead |
+  | HD | Hyoungdo Kim | PM & design/implementation lead |
+  | MK | Minkyung Kim | UI & quality lead |
+endlegend
+@endmindmap

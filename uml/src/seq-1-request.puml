@@ -1,0 +1,72 @@
+@startuml seq-1-request
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  ArrowColor #1C2230
+  BoxBorderColor #1C2230
+}
+
+title UC-04 Request substitute (FR-06, FR-07, FR-08, BR-01, BR-03)
+
+actor "A1 Worker\n(requester)" as Worker
+boundary "requests.js\n(Request substitute form)" as UI
+control "SubstituteService" as Svc
+control "LaborRules" as Rules
+database "db.js\n(SQLite / localStorage)" as DB
+
+Worker -> UI : open "Request substitute" for own future shift
+UI -> Worker : show form (reason, deadline)
+Worker -> UI : submit(shiftId, reason, deadline)
+UI -> Svc : createSubRequest(shiftId, reason, deadline)
+
+activate Svc
+Svc -> DB : tx(fn) begin
+activate DB
+Svc -> DB : get Shift, Worker(requester)
+DB --> Svc : shift, requester
+
+Svc -> Rules : validateRequest(shift, requester, deadline)
+activate Rules
+Rules --> Svc : ok / error (BR-03)
+deactivate Rules
+
+alt request invalid (BR-03)
+  Svc --> UI : validation error (cause + fix)
+  UI --> Worker : show error message
+else request valid
+  Svc -> DB : all Worker where active
+  DB --> Svc : candidate pool
+
+  loop for each candidate W in pool
+    Svc -> Rules : isEligibleCandidate(W, shift) <<include UC "Find eligible candidates" (BR-01)>>
+    activate Rules
+    Rules --> Svc : eligible? true/false
+    deactivate Rules
+  end
+
+  Svc -> DB : insert SubRequest(status=REQUESTED)
+  DB --> Svc : subRequestId
+
+  alt at least one eligible candidate (FR-07)
+    Svc -> DB : insert SubRequestTarget per eligible candidate
+    Svc -> DB : insert Notification(REQUEST_RECEIVED) per candidate
+  else no eligible candidate (FR-08)
+    Svc -> DB : insert Notification(NO_CANDIDATE) for Owner
+  end
+
+  Svc -> DB : commit + persist to localStorage
+  deactivate DB
+  Svc --> UI : subRequest, notifiedCandidates[]
+  UI --> Worker : show notified candidates / "no eligible worker"
+end
+deactivate Svc
+@enduml

@@ -1,0 +1,98 @@
+@startuml usecase
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+hide stereotype
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+skinparam usecase<<amber>> {
+  BackgroundColor #FFFFFF
+  BorderColor #E9A23B
+  FontColor #1C2230
+}
+skinparam actor {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+left to right direction
+
+title ShiftSwap — Use Case Diagram — Overview (UC-01 … UC-13)
+
+' spacer to keep smetana from clipping the topmost actor's head against the canvas edge
+actor " " as Spacer #FFFFFF;line:FFFFFF;text:FFFFFF
+
+actor "A1 Worker" as A1
+actor "A3 System Clock" as A3
+
+Spacer -[hidden]-> A1
+A1 -[hidden]-> A3
+
+rectangle "ShiftSwap" as Boundary {
+  ' -- worker-side use cases (near A1) --
+  usecase "UC-02\nRegister availability" as UC02
+  usecase "UC-04\nRequest substitute" as UC04 <<amber>>
+  usecase "UC-05\nRespond to substitute\nrequest (accept/decline)" as UC05 <<amber>>
+  usecase "UC-12\nCancel own\nsubstitute request" as UC12 <<amber>>
+
+  ' -- shared use cases (both actors, drawn in the middle) --
+  usecase "UC-07\nRecord and confirm\nattendance" as UC07
+  usecase "UC-13\nSign in by role\n(demo account selection)" as UC13
+
+  ' -- owner-side use cases (near A2) --
+  usecase "UC-01\nRegister worker and\nfixed schedule" as UC01
+  usecase "UC-03\nGenerate weekly\nschedule" as UC03
+  usecase "UC-06\nApprove or reject\nsubstitution" as UC06 <<amber>>
+  usecase "UC-08\nCompute weekly hours\nand holiday allowance" as UC08
+  usecase "UC-09\nGenerate and confirm\nmonthly payroll" as UC09
+  usecase "UC-10\nManage workplace settings\nand minimum wage table" as UC10
+
+  ' -- system-clock-side use case --
+  usecase "UC-11\nExpire overdue\nsubstitute request" as UC11 <<amber>>
+}
+
+actor "A2 Owner" as A2
+UC10 -[hidden]-> A2
+
+' ===== actor associations only (primary actor per spec §3 table) =====
+' detail of UC-04's include/extend/UC-08 relationships: see usecase-substitute.puml
+A1 -- UC02
+A1 -- UC04
+A1 -- UC05
+A1 -- UC12
+A1 -- UC07
+A1 -- UC13
+
+A2 -- UC01
+A2 -- UC03
+A2 -- UC06
+A2 -- UC07
+A2 -- UC08
+A2 -- UC09
+A2 -- UC10
+A2 -- UC13
+
+A3 -- UC11
+
+note as N1
+  Amber border = substitution-related use case
+  (detail in Figure usecase-substitute).
+  All use cases except UC-11 «include» UC-13.
+end note
+
+Boundary -[hidden]d-> N1
+@enduml

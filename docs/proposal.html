@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ShiftSwap Project Proposal</title>
+<link rel="stylesheet" href="report.css">
+<style>
+  /* Proposal only: sections run on without forced page breaks to keep the document compact. */
+  h1 { break-before: auto; margin-top: 22pt; }
+  nav.toc { break-after: auto; }
+  figure.gantt img { max-height: 5.2in; }
+  .title-page h1 { margin-top: 0; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <div class="kicker">Software Engineering (2026 Fall) &middot; Term Project Proposal &middot; Week 5</div>
+  <h1>ShiftSwap: A Shift Schedule and Substitute Management System for Small Part-Time Workplaces</h1>
+  <p class="subtitle">소규모 매장 아르바이트 근무표&middot;대타 관리 시스템</p>
+  <table>
+    <caption>Table 1. Team 7</caption>
+    <thead><tr><th>Name</th><th>Student ID</th><th>Affiliation</th><th>E-mail</th></tr></thead>
+    <tbody>
+      <tr><td>Hyewon Kim (김혜원)</td><td>24102028</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>(to be provided)</td></tr>
+      <tr><td>Hyoungdo Kim (김형도)</td><td>18102075</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>zloganway@gmail.com</td></tr>
+      <tr><td>Minkyung Kim (김민경)</td><td>23102004</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>(to be provided)</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Course: Software Engineering, Seoul National University of Science and Technology (SeoulTech)<br>
+  Submitted to: jihjim@gmail.com<br>
+  Date: 2 October 2026</p>
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#s1">1. Need for the proposed system</a></li>
+    <li><a href="#s2">2. Project goals</a></li>
+    <li><a href="#s3">3. Description of the problem</a>
+      <ol>
+        <li><a href="#s3-1">3.1 Reference store and current process</a></li>
+        <li><a href="#s3-2">3.2 Problems P1&ndash;P3</a></li>
+      </ol></li>
+    <li><a href="#s4">4. Scope</a></li>
+    <li><a href="#s5">5. Main functions of the target system</a>
+      <ol>
+        <li><a href="#s5-1">5.1 Actors</a></li>
+        <li><a href="#s5-2">5.2 Function overview</a></li>
+        <li><a href="#s5-3">5.3 Core functions in detail</a></li>
+        <li><a href="#s5-4">5.4 Supporting functions</a></li>
+        <li><a href="#s5-5">5.5 Data to be stored</a></li>
+      </ol></li>
+    <li><a href="#s6">6. Development approach</a></li>
+    <li><a href="#s7">7. Work breakdown structure</a></li>
+    <li><a href="#s8">8. Project schedule</a></li>
+    <li><a href="#s9">9. Roles of team members</a></li>
+    <li><a href="#s10">10. Risks and mitigation</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+</nav>
+
+<a id="need"></a>
+<h1 id="s1">1. Need for the proposed system</h1>
+<p>Small stores such as caf&eacute;s, convenience stores and restaurants often run with fewer than ten part-time workers. Each worker has fixed weekly shifts, for example every Monday from 18:00 to 23:00. Workers are often students, so exams and other duties regularly make them miss a shift. When this happens, somebody else has to cover the shift.</p>
+<p>In most such stores the substitute is found by telephone or chat message. The owner contacts other workers one at a time until one of them agrees. The owner then edits the schedule spreadsheet by hand. The swap is not only a schedule change. It also changes the weekly hours of two workers, and in Korea weekly hours decide whether the weekly holiday allowance (주휴수당) is owed. At month end the owner has to reconstruct these changes to pay each worker correctly.</p>
+<p>Korean pay rules for part-time work are detailed. The 2026 minimum hourly wage is KRW 10,320 [1, 2]. A worker whose weekly contractual hours are 15 or more and who attended every scheduled day is entitled to a paid weekly holiday [3, 5]. Overtime and night premiums apply only in workplaces with five or more regular employees [3]. The minimum wage may be reduced to 90&nbsp;% during probation only under specific conditions [4]. An owner of a four-person caf&eacute; applies these rules from memory. Errors are found on payday or later.</p>
+<p>General chat applications broadcast a message but do not know who is free, who answered first, or what a swap does to pay. Shift-scheduling products such as Shiftee, the work-management features of Albamon and Alba Cheonguk, When I Work, Homebase and Deputy manage schedules and shift trades [10]. None of those we examined connects the approval of a substitution with the Korean holiday-allowance rule at the moment of approval. The owner therefore cannot see, before approving a swap, what the swap does to either worker's entitlement. The proposed system, ShiftSwap, closes this gap. It is a conventional transaction-processing business application, as the course recommends: it records shifts, requests, responses, approvals, attendance and payroll, and applies fixed business rules to each transaction.</p>
+
+<a id="goals"></a>
+<h1 id="s2">2. Project goals</h1>
+<p>The overall goal is to deliver a working web application that replaces the telephone-and-spreadsheet process of a small store for three tasks: finding a substitute, keeping the schedule correct, and computing weekly holiday allowance and monthly pay. The goals below are stated so that each one can be checked at the end of the project.</p>
+<table>
+  <caption>Table 2. Measurable project goals</caption>
+  <thead><tr><th>ID</th><th>Goal</th><th>Measure / acceptance check</th><th>Problem</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts when a substitute is needed.</td><td>The owner makes 0 contacts per request (reference store today: 3&ndash;5). All eligible workers are notified in the same transaction that creates the request (FR-07). The owner's only action is one approve or reject decision.</td><td>P1</td></tr>
+    <tr><td class="req-id">G2</td><td>Let a candidate answer quickly.</td><td>A candidate accepts a request in at most 2 clicks from the inbox (NFR-01).</td><td>P1</td></tr>
+    <tr><td class="req-id">G3</td><td>Keep the schedule and weekly hours of both workers correct after every swap.</td><td>On approval, the shift is reassigned and the weekly summaries of both workers are recomputed with no manual step (FR-12). The approval screen shows both workers' hours and eligibility before and after the swap (FR-11).</td><td>P2</td></tr>
+    <tr><td class="req-id">G4</td><td>Apply the legal pay rules automatically and flag violations before payday.</td><td>Business rules BR-06 to BR-11 are implemented as tested functions. Every business rule has at least one unit test (spec &sect;12). The payroll screen warns when a wage is below the applicable minimum and blocks confirmation until the warning is acknowledged (FR-16).</td><td>P3</td></tr>
+    <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires.</td><td>At least 5 core use cases (planned: 13, of which 9 are core) and at least 4 database tables (planned: 12).</td><td>&ndash;</td></tr>
+    <tr><td class="req-id">G6</td><td>Deliver on time and reproducibly.</td><td>Working system deployed at a public URL by Week 14 (2026-12-04, NFR-07). Re-running the final prompt in an empty folder produces a system that passes the same unit tests.</td><td>&ndash;</td></tr>
+  </tbody>
+</table>
+
+<a id="problem"></a>
+<h1 id="s3">3. Description of the problem</h1>
+<h2 id="s3-1">3.1 Reference store and current process</h2>
+<p>The topic was proposed by Hyewon Kim from her own part-time job. Her workplace is our reference store. It is a small store with fewer than ten part-time workers, and the owner also acts as the manager. We selected this topic on 2026-09-27 after comparing seven candidate topics. The current process for a missed shift is as follows.</p>
+<ol>
+  <li>A worker learns that they cannot work one of their fixed shifts. They tell the owner by message or telephone.</li>
+  <li>The owner looks at the schedule and guesses who might be free. The owner contacts these workers one at a time. In the reference store this takes typically 3 to 5 contacts per request.</li>
+  <li>When a worker agrees, the owner edits the schedule spreadsheet by hand and tells both workers.</li>
+  <li>At month end the owner goes back through the spreadsheet. For each worker and each week the owner re-counts the hours, decides whether the weekly holiday allowance is owed, and computes the pay.</li>
+</ol>
+<p>Each step is manual. No step keeps a record of who was asked, who answered, or when the owner agreed. The spreadsheet is the only record of the swap, and it holds the result, not the reason.</p>
+
+<h2 id="s3-2">3.2 Problems P1&ndash;P3</h2>
+<div class="box">
+  <p><span class="req-id">P1</span> Finding a substitute costs the owner repeated one-to-one contacts (reference store: typically 3&ndash;5 contacts per request).</p>
+  <p><span class="req-id">P2</span> The schedule, weekly hours and holiday-allowance eligibility of <em>two</em> workers change with every swap, and all recalculation is manual.</p>
+  <p style="margin-bottom:0"><span class="req-id">P3</span> Legal pay rules (minimum wage, holiday allowance, 5-employee threshold for premiums, probation reduction) are applied from memory, so errors are not caught before payday.</p>
+</div>
+<p>P2 needs an example. Suppose Lee Seoyeon (fixed shifts Monday and Wednesday 18:00&ndash;23:00, 10 hours per week) gives her Wednesday shift to Choi Minho (fixed shifts 16 hours per week). Her scheduled hours for that week fall from 10 to 5. His rise from 16 to 21. His contractual hours stay at 16, so he remains eligible for the holiday allowance: 16 / 40 &times; 8 = 3.2 hours, which is 3.2 &times; 10,320 = KRW 33,024. Her contractual hours stay at 10, so she is not eligible either way. The owner currently has to work this out by hand for every swap.</p>
+<p>P3 has a further difficulty. The law does not say directly whether a shift that was handed over by agreement breaks the worker's &ldquo;perfect attendance&rdquo; for the week. Section 10 explains how the system treats this.</p>
+
+<a id="scope"></a>
+<h1 id="s4">4. Scope</h1>
+<p>We classify every function by MoSCoW priority. <em>Must</em> functions form the first increment; <em>Should</em> functions form the second increment (Section 6). <em>Won't</em> items are outside this project.</p>
+<table>
+  <caption>Table 3. Scope of the project</caption>
+  <thead><tr><th style="width:14%">Priority</th><th>Included items</th></tr></thead>
+  <tbody>
+    <tr><td>Must</td><td>UC-01, UC-02, UC-03, UC-04, UC-05, UC-06, UC-08, UC-11, UC-13 and the in-app notification inbox (FR-21). Together they form a usable system: a store can find substitutes, approve swaps and see weekly holiday-allowance eligibility.</td></tr>
+    <tr><td>Should</td><td>UC-07 attendance, UC-09 payroll with minimum-wage and probation checks, UC-10 settings, UC-12 cancellation.</td></tr>
+    <tr><td>Won't</td><td>KakaoTalk or SMS messaging (notifications are in-app only); the four major social insurances and tax deduction; annual leave and severance pay; bank transfer of wages; QR-code or fingerprint clock-in (attendance is self-reported and owner-confirmed).</td></tr>
+  </tbody>
+</table>
+
+<a id="functions"></a>
+<h1 id="s5">5. Main functions of the target system</h1>
+<h2 id="s5-1">5.1 Actors</h2>
+<p>The system has three actors. <strong>A1 Worker</strong> (primary) is a part-time employee who views their own schedule, registers availability, requests substitutes, responds to requests and records attendance. <strong>A2 Owner</strong> (primary) is the store owner, who also acts as manager: the owner registers workers and fixed schedules, approves or rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll and edits settings. <strong>A3 System Clock</strong> (secondary) is a time-triggered actor that expires unanswered or unapproved requests at their deadline and closes weeks for the weekly summary; in the demo application it is driven by an adjustable demo clock.</p>
+
+<h2 id="s5-2">5.2 Function overview</h2>
+<p>The system has 13 use cases. UC-01 to UC-09 are the nine main functions of this proposal. UC-10 to UC-13 support them. Table 5 lists each use case with its primary actor, the database tables it uses and its priority. Section 5.3 gives, for each main function, the trigger, input, processing with the business rules (BR) it applies, output and outcome.</p>
+<table>
+  <caption>Table 5. Use cases of ShiftSwap</caption>
+  <thead><tr><th>ID</th><th>Use case</th><th>Primary actor</th><th>Main tables</th><th>Priority</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">UC-01</td><td>Register worker and fixed schedule</td><td>Owner</td><td>Worker, FixedSchedule</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-02</td><td>Register availability</td><td>Worker</td><td>Availability</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-03</td><td>Generate weekly schedule</td><td>Owner</td><td>Shift</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-04</td><td>Request substitute</td><td>Worker</td><td>SubRequest, SubRequestTarget, Notification</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-05</td><td>Respond to substitute request (accept / decline)</td><td>Worker (candidate)</td><td>SubRequestTarget, SubRequest</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-06</td><td>Approve or reject substitution</td><td>Owner</td><td>SubRequest, Shift, WeeklySummary</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-07</td><td>Record and confirm attendance</td><td>Worker, Owner</td><td>Attendance, Shift</td><td>Should</td></tr>
+    <tr><td class="req-id">UC-08</td><td>Compute weekly hours and holiday allowance</td><td>Owner (System)</td><td>WeeklySummary, Workplace</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-09</td><td>Generate and confirm monthly payroll</td><td>Owner</td><td>Payroll, MinimumWage, Worker</td><td>Should</td></tr>
+    <tr><td class="req-id">UC-10</td><td>Manage workplace settings and minimum wage table</td><td>Owner</td><td>Workplace, MinimumWage</td><td>Should</td></tr>
+    <tr><td class="req-id">UC-11</td><td>Expire overdue substitute request</td><td>System Clock</td><td>SubRequest, SubRequestTarget, Notification</td><td>Must</td></tr>
+    <tr><td class="req-id">UC-12</td><td>Cancel own substitute request</td><td>Worker</td><td>SubRequest, SubRequestTarget</td><td>Should</td></tr>
+    <tr><td class="req-id">UC-13</td><td>Sign in by role (demo account selection)</td><td>Worker, Owner</td><td>Worker</td><td>Must</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5-3">5.3 Core functions in detail</h2>
+<p>This section describes the nine main functions (F1&ndash;F9 = UC-01 to UC-09) in terms of input, processing and output. Examples use the demo store of the application, Dalbit Caf&eacute; (달빛카페), which has one owner (Park Jiyoung) and four workers.</p>
+
+<h3>F1. Register worker and fixed schedule (UC-01)</h3>
+<p class="small"><strong>Trigger:</strong> A new worker is hired or a contract changes. &nbsp;<strong>Rules:</strong> &ndash; &nbsp;<strong>Tables:</strong> Worker, FixedSchedule</p>
+<p><strong>Input.</strong> Name, phone, hourly wage in KRW, contract start and end date, optional probation end date, simple-labor flag and active flag (FR-01). One or more fixed weekly shifts, each given as weekday, start time and end time (FR-02).</p>
+<p><strong>Processing.</strong> The system rejects a fixed shift that overlaps another fixed shift of the same worker. The sum of a worker's fixed-shift hours is the worker's weekly <em>contractual hours</em>, which BR-06 uses later.</p>
+<p><strong>Output.</strong> The worker list and the worker's fixed schedule. Example: Choi Minho works Tuesday and Thursday 18:00&ndash;23:00 and Saturday 12:00&ndash;18:00, which gives 16 contractual hours per week.</p>
+
+<h3>F2. Register availability (UC-02)</h3>
+<p class="small"><strong>Trigger:</strong> A worker wants to offer time for substitute shifts. &nbsp;<strong>Rules:</strong> BR-01 (input) &nbsp;<strong>Tables:</strong> Availability</p>
+<p><strong>Input.</strong> Availability slots (weekday, start, end) during which the worker can take extra shifts (FR-03).</p>
+<p><strong>Processing.</strong> Slots are stored per worker. They are the second half of the candidate rule BR-01.</p>
+<p><strong>Output.</strong> The worker's own availability list. Example: Choi Minho is available Monday and Wednesday 17:00&ndash;23:00.</p>
+
+<h3>F3. Generate weekly schedule (UC-03)</h3>
+<p class="small"><strong>Trigger:</strong> The owner opens a week that has no shifts yet. &nbsp;<strong>Rules:</strong> BR-05 &nbsp;<strong>Tables:</strong> Shift</p>
+<p><strong>Input.</strong> A week, identified by its Monday date (BR-05: a week runs from Monday 00:00 to Sunday 24:00).</p>
+<p><strong>Processing.</strong> The system creates one shift per active fixed-schedule entry for that week. Generating the same week twice creates no duplicates (FR-04). The owner can then add, move or delete a single shift (FR-05).</p>
+<p><strong>Output.</strong> A weekly board with seven columns, Monday to Sunday. Each shift shows its time range and worker. A shift that was handed over shows the new worker and the original worker.</p>
+
+<h3>F4. Request substitute (UC-04)</h3>
+<p class="small"><strong>Trigger:</strong> A worker cannot work one of their future shifts. &nbsp;<strong>Rules:</strong> BR-01, BR-03 &nbsp;<strong>Tables:</strong> SubRequest, SubRequestTarget, Notification</p>
+<p><strong>Input.</strong> One of the requester's own future shifts, an optional reason and a response deadline (FR-06).</p>
+<p><strong>Processing.</strong> The request must satisfy BR-03: only the shift's current worker may request; the shift is SCHEDULED and starts in the future; at most one open request exists per shift; the deadline is after now and no later than the shift start. The system then selects candidates with BR-01. A worker is eligible if the worker is active, is not the requester, has no shift overlapping the requested shift on that date, and has an availability slot on that weekday that covers the whole shift. One target record and one inbox notification are created per candidate in the same transaction (FR-07). If nobody is eligible, the request is still stored and the owner is notified (FR-08).</p>
+<p><strong>Output.</strong> The list of notified candidates, or the message that no eligible worker exists. Example: Lee Seoyeon requests a substitute for Wednesday 2026-09-30 18:00&ndash;23:00 with the reason &ldquo;Midterm exam&rdquo; and deadline 2026-09-29T21:00. Choi Minho and Kang Doyun are both free and available on Wednesday evening, so both are notified.</p>
+
+<h3>F5. Respond to substitute request (UC-05)</h3>
+<p class="small"><strong>Trigger:</strong> A request arrives in a candidate's inbox. &nbsp;<strong>Rules:</strong> BR-02 &nbsp;<strong>Tables:</strong> SubRequestTarget, SubRequest</p>
+<p><strong>Input.</strong> Accept or decline, chosen directly on the inbox item (at most 2 clicks, NFR-01).</p>
+<p><strong>Processing.</strong> BR-02 &ldquo;first acceptance wins&rdquo;: an acceptance succeeds only if the request is still REQUESTED when the transaction runs. It sets the request to ACCEPTED, records the acceptor, and closes all other pending targets. The check runs inside one database transaction, so two acceptances can never both succeed (NFR-04).</p>
+<p><strong>Output.</strong> The requester and the owner are notified (FR-10). A later candidate sees &ldquo;Already taken by &lt;name&gt;&rdquo;. Example: Choi Minho accepts first; Kang Doyun's acceptance is refused.</p>
+
+<h3>F6. Approve or reject substitution (UC-06)</h3>
+<p class="small"><strong>Trigger:</strong> A request has been accepted. &nbsp;<strong>Rules:</strong> BR-04, BR-06, BR-07 &nbsp;<strong>Tables:</strong> SubRequest, Shift, WeeklySummary</p>
+<p><strong>Input.</strong> The owner's decision on an ACCEPTED request.</p>
+<p><strong>Processing.</strong> Before the decision the system shows a comparison for the requester and the acceptor: contractual hours, scheduled hours for the week and holiday-allowance eligibility, before and after the swap. Any change in eligibility is highlighted (FR-11). On approval (BR-04) the shift is assigned to the acceptor, the original worker is kept on the shift record, the request becomes APPROVED, and the weekly summaries of both workers are recomputed (F8). On rejection the shift stays unchanged and the request becomes REJECTED (FR-12).</p>
+<p><strong>Output.</strong> Notifications to both workers. The weekly board shows the handover marker. Example: in the approval panel, Choi Minho's scheduled hours change from 16 to 21 and his eligibility stays &ldquo;eligible&rdquo;.</p>
+
+<h3>F7. Record and confirm attendance (UC-07)</h3>
+<p class="small"><strong>Trigger:</strong> A shift has ended. &nbsp;<strong>Rules:</strong> BR-06 (input) &nbsp;<strong>Tables:</strong> Attendance, Shift</p>
+<p><strong>Input.</strong> Actual clock-in and clock-out time, entered by the worker for a past shift; the owner's confirmation, or the owner's decision to mark the shift ABSENT (FR-13).</p>
+<p><strong>Processing.</strong> A confirmed record sets the shift to WORKED. An ABSENT shift breaks perfect attendance for that week (BR-06). No location data is collected (NFR-12).</p>
+<p><strong>Output.</strong> Attendance list per shift with its confirmation state.</p>
+
+<h3>F8. Compute weekly hours and holiday allowance (UC-08)</h3>
+<p class="small"><strong>Trigger:</strong> A swap is approved, attendance changes, or the owner opens a week. &nbsp;<strong>Rules:</strong> BR-05, BR-06, BR-07 &nbsp;<strong>Tables:</strong> WeeklySummary, Workplace</p>
+<p><strong>Input.</strong> Fixed schedules, shifts, attendance and the workplace policy for one week.</p>
+<p><strong>Processing.</strong> For each worker the system computes contractual, scheduled and actual hours and the perfect-attendance flag (FR-14). BR-06: the worker is eligible if weekly contractual hours are at least 15 and every shift of the week that the worker did not give away was WORKED. A shift given away by an approved substitution counts according to the workplace policy: EXCUSED (default, attendance not broken) or ABSENT (attendance broken). BR-07: holiday hours = min(contractual hours, 40) / 40 &times; 8, rounded to two decimals; holiday pay = hours &times; hourly wage, rounded down to the won.</p>
+<p><strong>Output.</strong> A weekly summary table per worker with a short reason when a worker is not eligible, for example &ldquo;contract hours below 15&rdquo;.</p>
+
+<h3>F9. Generate and confirm monthly payroll (UC-09)</h3>
+<p class="small"><strong>Trigger:</strong> Month end. &nbsp;<strong>Rules:</strong> BR-08 to BR-11 &nbsp;<strong>Tables:</strong> Payroll, MinimumWage, Worker</p>
+<p><strong>Input.</strong> A calendar month.</p>
+<p><strong>Processing.</strong> BR-11: base pay = actual hours of WORKED shifts in the month &times; wage; if attendance is not recorded yet, scheduled hours are used and the row is flagged &ldquo;estimated&rdquo;. Holiday pay is the sum over weeks whose Sunday falls in the month. BR-08: premium pay (+50&nbsp;% for daily hours beyond 8, weekly hours beyond 40 and night hours 22:00&ndash;06:00) applies only when the workplace has five or more regular employees. BR-09: the system warns when the wage is below the minimum wage of that year. BR-10: the minimum may be reduced to 90&nbsp;% only if the contract is at least one year (or open-ended), the date lies within three months of the contract start and not after the probation end, and the work is not simple labor.</p>
+<p><strong>Output.</strong> A draft payroll per worker with base pay, holiday pay, premium pay, total and flags. A minimum-wage warning must be acknowledged before the owner can confirm. Confirmed rows are read-only (FR-15, FR-16). Example: Kang Doyun earns KRW 10,000 per hour, below the 2026 minimum of KRW 10,320, so his row shows a warning.</p>
+
+<h2 id="s5-4">5.4 Supporting functions</h2>
+<ul>
+  <li><strong>UC-10 Settings</strong> (Owner; Workplace, MinimumWage). Trigger: store data, employee count, policy or legal wage changes. The owner edits the store name, the number of regular employees (drives BR-08), the substitution-attendance policy EXCUSED or ABSENT (drives BR-06) and the yearly minimum wage rows (2025: KRW 10,030; 2026: KRW 10,320) (FR-17).</li>
+  <li><strong>UC-11 Expiry</strong> (System Clock; SubRequest, SubRequestTarget, Notification). When the deadline of an open request passes, or its shift starts, the request becomes EXPIRED. Its targets are closed and the requester and owner are notified (FR-18, BR-12).</li>
+  <li><strong>UC-12 Cancellation</strong> (Worker; SubRequest, SubRequestTarget). A requester cancels their own request while it is REQUESTED or ACCEPTED (FR-19).</li>
+  <li><strong>UC-13 Sign-in</strong> (Worker, Owner; Worker). The user chooses a demo account; the interface shows only the menus of that role (FR-20). A worker never sees another worker's phone number or wage (NFR-11).</li>
+  <li><strong>Notification inbox.</strong> Every user has an in-app inbox with the newest notification first and an unread count (FR-21).</li>
+</ul>
+
+<h2 id="s5-5">5.5 Data to be stored</h2>
+<p>The system stores its data in 12 relational tables, above the course minimum of four: Workplace, Worker, FixedSchedule, Availability, Shift, SubRequest, SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage and Notification. A substitute request moves through the states REQUESTED, ACCEPTED, APPROVED, REJECTED, EXPIRED and CANCELLED. The full schema will be given in the interim report.</p>
+
+<h1 id="s6">6. Development approach</h1>
+<p><strong>Life-cycle model.</strong> We follow the <em>incremental model</em> with <em>prototyping</em> of the user interface (Chapter 1). Requirements and analysis models are written once for the whole system. Implementation is then delivered in two increments. Increment 1 contains all <em>Must</em> use cases and is itself a usable system: a store can find substitutes, approve swaps and see weekly holiday-allowance eligibility. Increment 2 adds the <em>Should</em> use cases: attendance, payroll, settings and cancellation.</p>
+<p>We chose this model for three reasons. First, the deadline is fixed (Week 14), and the incremental model delivers a working system early, so a delay affects only the second increment. Second, the pay rules carry legal uncertainty; a working first increment lets the reference-store owner comment on real screens before the payroll part is built. Third, the waterfall model handles change poorly, and our requirements for the approval screen are likely to change after the owner sees it. A UI prototype of the key screens (weekly board, inbox, approval panel) will be shown to the owner and two co-workers during requirements validation. The prototype is built with the same tool chain as the final system, so it is evolved rather than thrown away.</p>
+<p><strong>Implementation method.</strong> The system is implemented by vibe coding with an AI coding assistant, as the assignment requires. The team writes a specification and a final prompt; the assistant generates the code. Each prompt version and its result is kept in a prompt log so that the final prompt reliably reproduces the system.</p>
+<p><strong>Technology.</strong> A static web application (HTML, CSS and JavaScript modules) with an embedded SQLite database compiled to WebAssembly (sql.js [9]). The data persists in the browser, so no server is needed. The application is hosted on GitHub Pages. Models follow UML 2.5 notation [8].</p>
+
+<a id="wbs"></a>
+<h1 id="s7">7. Work breakdown structure</h1>
+<p>The work breakdown structure (WBS) in Figure 1 has eight top-level packages that follow the course deliverables and the life-cycle phases: project management, proposal, requirements, design, implementation by vibe coding, testing, final report and presentation. Table 6 lists every work package with its deliverables and owner; Figure 1 follows the table. Owners are abbreviated as HW (Hyewon Kim), HD (Hyoungdo Kim) and MK (Minkyung Kim).</p>
+
+<table>
+  <caption>Table 6. Work packages, deliverables and owners (level 3 items are listed in the deliverable column)</caption>
+  <thead><tr><th>ID</th><th>Work package</th><th>Deliverables</th><th>Owner</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">1</td><td colspan="3"><strong>Project management</strong></td></tr>
+    <tr><td class="req-id">1.1</td><td>Scheduling &amp; WBS</td><td>1.1.1 WBS and Gantt chart; 1.1.2 weekly milestone tracking</td><td>HD</td></tr>
+    <tr><td class="req-id">1.2</td><td>Team coordination</td><td>1.2.1 weekly meeting notes; 1.2.2 task list with owners</td><td>HD</td></tr>
+    <tr><td class="req-id">2</td><td colspan="3"><strong>Proposal</strong></td></tr>
+    <tr><td class="req-id">2.1</td><td>Topic selection</td><td>2.1.1 comparison of seven candidate topics; 2.1.2 selected topic (2026-09-27)</td><td>HW</td></tr>
+    <tr><td class="req-id">2.2</td><td>Proposal document</td><td>2.2.1 problem statement and scope (HW); 2.2.2 reviewed proposal PDF (HD)</td><td>HW, HD</td></tr>
+    <tr><td class="req-id">3</td><td colspan="3"><strong>Requirements (interim report)</strong></td></tr>
+    <tr><td class="req-id">3.1</td><td>Elicitation</td><td>3.1.1 interview plan and notes; 3.1.2 actors and use-case list</td><td>HW</td></tr>
+    <tr><td class="req-id">3.2</td><td>Specification</td><td>3.2.1 FR and NFR tables, scenarios (HW); 3.2.2 business rules and data model draft (HD)</td><td>HW, HD</td></tr>
+    <tr><td class="req-id">4</td><td colspan="3"><strong>Design</strong></td></tr>
+    <tr><td class="req-id">4.1</td><td>UML models</td><td>4.1.1 use case, class and ER diagrams; 4.1.2 sequence, state and activity diagrams</td><td>HD</td></tr>
+    <tr><td class="req-id">4.2</td><td>UI design</td><td>4.2.1 screen wireframes and prototype screens; 4.2.2 visual design rules</td><td>MK</td></tr>
+    <tr><td class="req-id">5</td><td colspan="3"><strong>Implementation by vibe coding</strong></td></tr>
+    <tr><td class="req-id">5.1</td><td>Prompt engineering</td><td>5.1.1 final vibe-coding prompt; 5.1.2 prompt log of iterations against the specification</td><td>HD</td></tr>
+    <tr><td class="req-id">5.2</td><td>Application build</td><td>5.2.1 increment 1 (Must) and increment 2 (Should); 5.2.2 public URL on GitHub Pages</td><td>HD</td></tr>
+    <tr><td class="req-id">6</td><td colspan="3"><strong>Testing</strong></td></tr>
+    <tr><td class="req-id">6.1</td><td>Unit testing</td><td>6.1.1 test cases TC-01x to TC-12x; 6.1.2 passing test run</td><td>MK</td></tr>
+    <tr><td class="req-id">6.2</td><td>Manual QA</td><td>6.2.1 scenario walkthrough record and screenshots; 6.2.2 cross-browser and 360/1440 px checks</td><td>MK</td></tr>
+    <tr><td class="req-id">7</td><td colspan="3"><strong>Final report</strong></td></tr>
+    <tr><td class="req-id">7.1</td><td>Content writing</td><td>7.1.1 requirements and design chapters (HW); 7.1.2 testing and results chapters (MK)</td><td>HW, MK</td></tr>
+    <tr><td class="req-id">7.2</td><td>Report integration</td><td>7.2.1 traceability matrix (HD); 7.2.2 final report PDF, 50&ndash;150 pages (MK)</td><td>HD, MK</td></tr>
+    <tr><td class="req-id">8</td><td colspan="3"><strong>Presentation</strong></td></tr>
+    <tr><td class="req-id">8.1</td><td>Slide deck</td><td>8.1.1 slide outline; 8.1.2 PowerPoint deck</td><td>MK</td></tr>
+    <tr><td class="req-id">8.2</td><td>Delivery</td><td>8.2.1 rehearsed 15-minute talk (MK); 8.2.2 live demo of the deployed app (HD)</td><td>MK, HD</td></tr>
+  </tbody>
+</table>
+<figure>
+  <img src="../uml/wbs.svg" alt="Work breakdown structure of the ShiftSwap project with eight top-level packages">
+  <figcaption>Figure 1. Work breakdown structure of the ShiftSwap term project</figcaption>
+</figure>
+
+<a id="schedule"></a>
+<h1 id="s8">8. Project schedule</h1>
+<p>Figure 2 shows the schedule as a Gantt chart. Table 7 gives the same plan week by week. The four course milestones are team formation (Week 3), proposal (Week 5, 2026-10-02), interim report (Week 7, 2026-10-16) and final report with presentation (Week 14, 2026-12-04). Weeks run Monday to Sunday from 2026-08-31 (Week 1); all deadlines are Fridays. Increment 1 is due at the end of Week 10 (2026-11-06) and increment 2 at the end of Week 11 (2026-11-13).</p>
+<figure class="gantt">
+  <img src="../uml/gantt.svg" alt="Gantt chart of the ShiftSwap project from Week 3 to Week 14">
+  <figcaption>Figure 2. Project schedule (Gantt chart), Week 3 to Week 14</figcaption>
+</figure>
+<table>
+  <caption>Table 7. Week-by-week schedule (2026)</caption>
+  <thead><tr><th>Week</th><th>Dates</th><th>Work packages</th><th>Milestone / output</th></tr></thead>
+  <tbody>
+    <tr><td>3</td><td style="white-space:nowrap">09-14 &ndash; 09-20</td><td>1.1.1 WBS and Gantt chart</td><td><strong>M1: team formed</strong> (Fri 2026-09-18)</td></tr>
+    <tr><td>4</td><td style="white-space:nowrap">09-21 &ndash; 09-27</td><td>2.1.1 Topic comparison; 2.1.2 Topic decision; 2.2.1 Problem statement and scope; 3.1.1 Interviews begin</td><td>Topic selected (2026-09-27)</td></tr>
+    <tr><td>5</td><td style="white-space:nowrap">09-28 &ndash; 10-04</td><td>2.2.2 Proposal review and submission; 3.1.2 Actors and use cases; 3.2 Specification; 4.1 UML models start</td><td><strong>M2: proposal submitted</strong> (Fri 2026-10-02)</td></tr>
+    <tr><td>6</td><td style="white-space:nowrap">10-05 &ndash; 10-11</td><td>3.2.1 FR and NFR; 3.2.2 Business rules and data model; 4.1.1 Use case and class diagrams</td><td>Requirements draft</td></tr>
+    <tr><td>7</td><td style="white-space:nowrap">10-12 &ndash; 10-18</td><td>3.2 Specification complete; 4.1.2 State and activity diagrams; 4.2.1 Screen wireframes start</td><td><strong>M3: interim report submitted</strong> (Fri 2026-10-16)</td></tr>
+    <tr><td>8</td><td style="white-space:nowrap">10-19 &ndash; 10-25</td><td>4.1.2 Sequence diagrams; 4.2 UI design; 5.1.1 Prompt writing starts</td><td>Design models complete</td></tr>
+    <tr><td>9</td><td style="white-space:nowrap">10-26 &ndash; 11-01</td><td>4.2.2 Visual design; 5.1 Prompt engineering</td><td>Prompt version 1</td></tr>
+    <tr><td>10</td><td style="white-space:nowrap">11-02 &ndash; 11-08</td><td>5.2.1 Application build, increment 1 (Must)</td><td>Increment 1 delivered (Fri 2026-11-06)</td></tr>
+    <tr><td>11</td><td style="white-space:nowrap">11-09 &ndash; 11-15</td><td>5.2.1 Increment 2 (Should); 6.1.1 Unit test cases</td><td>Increment 2 delivered (Fri 2026-11-13)</td></tr>
+    <tr><td>12</td><td style="white-space:nowrap">11-16 &ndash; 11-22</td><td>5.2.2 Deployment; 6.1.2 Test runs; 6.2.1 Scenario walkthroughs; 7.1 Writing starts</td><td>Deployed URL; all test groups run</td></tr>
+    <tr><td>13</td><td style="white-space:nowrap">11-23 &ndash; 11-29</td><td>6.2.2 Cross-browser checks; 7.1 Content writing; 7.2.1 Traceability matrix; 8.1.1 Slide content</td><td>Final prompt frozen; report draft</td></tr>
+    <tr><td>14</td><td style="white-space:nowrap">11-30 &ndash; 12-06</td><td>7.2.2 Final formatting; 8.1.2 Slides; 8.2 Rehearsal and live demo</td><td><strong>M4: final report, slides and presentation</strong> (Fri 2026-12-04)</td></tr>
+  </tbody>
+</table>
+
+<a id="roles"></a>
+<h1 id="s9">9. Roles of team members</h1>
+<table>
+  <caption>Table 8. Roles and responsibilities</caption>
+  <thead><tr><th>Member</th><th>Student ID</th><th>Role</th><th>Main work packages</th></tr></thead>
+  <tbody>
+    <tr><td>Hyewon Kim</td><td>24102028</td><td>Requirements lead &mdash; problem definition, owner/worker interviews, functional and non-functional requirements, scenarios</td><td>2.1, 2.2.1, 3.1, 3.2.1, 7.1.1</td></tr>
+    <tr><td>Hyoungdo Kim</td><td>18102075</td><td>Project manager and design/implementation lead &mdash; WBS and schedule, UML design models, vibe-coding prompts, deployment</td><td>1, 2.2.2, 3.2.2, 4.1, 5, 7.2.1, 8.2.2</td></tr>
+    <tr><td>Minkyung Kim</td><td>23102004</td><td>UI and quality lead &mdash; UI screens, test cases, presentation deck, report integration</td><td>4.2, 6, 7.1.2, 7.2.2, 8.1, 8.2.1</td></tr>
+  </tbody>
+</table>
+<p>All three members take part in reviews. The author of a deliverable does not approve it alone: requirements are reviewed by HD and MK, design models by HW and MK, and test cases by HW and HD. The team will meet once a week, and HD will update the Gantt chart after each meeting. Each member will present roughly one third of the final presentation.</p>
+
+<h1 id="s10">10. Risks and mitigation</h1>
+<table>
+  <caption>Table 9. Project risks</caption>
+  <thead><tr><th>ID</th><th>Risk</th><th>Effect</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">R1</td><td>Legal interpretation of attendance when a shift is handed over. The Labor Standards Act does not state whether a shift given away by agreement breaks perfect attendance for the weekly holiday.</td><td>A hard-coded choice could make the holiday allowance wrong for some stores.</td><td>The rule is a store setting (BR-06): EXCUSED (default, the working day was changed by agreement) or ABSENT. Both variants are unit-tested (TC-08x). The report will state the legal sources [3, 5] and that the setting is the owner's decision.</td></tr>
+    <tr><td class="req-id">R2</td><td>Scope creep. Owners may ask for messaging, insurance, tax or leave features.</td><td>Increment 2 slips past Week 14.</td><td>The Won't list in Section 4 is fixed. A new requirement enters the specification only with a team decision and its priority. Must use cases are delivered first, so the core system is safe even if Should items slip.</td></tr>
+    <tr><td class="req-id">R3</td><td>Vibe-coding reproducibility. The same prompt can produce different code on a second run.</td><td>The final prompt might not reproduce a working system, which the final report requires.</td><td>One specification is the single source of truth for all IDs, names and data. Every prompt version and its result is kept in a prompt log. Acceptance is defined by unit tests (TC-01x to TC-12x) and a scripted walkthrough. In Week 13 the final prompt is re-run in an empty folder and the tests are run again.</td></tr>
+    <tr><td class="req-id">R4</td><td>Pay rules are implemented incorrectly.</td><td>Wrong amounts on the payroll screen.</td><td>Rules are pure functions separated from the screens. Boundary cases are tested: 14.99 h and 15 h, the 40 h cap, 4 and 5 regular employees, and each probation condition.</td></tr>
+    <tr><td class="req-id">R5</td><td>Reduced availability of members during the midterm and final exam periods.</td><td>Weekly tasks slip.</td><td>No major deliverable is planned in the midterm week. Each work package has one owner and one reviewer who can take over.</td></tr>
+  </tbody>
+</table>
+
+<h1 id="refs">References</h1>
+<ol class="small">
+  <li>Ministry of Employment and Labor, &ldquo;2026 minimum wage KRW 10,320 per hour,&rdquo; MOEL notice, Aug. 2025. https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144</li>
+  <li>Korea Policy Briefing, &ldquo;2026년 시간당 최저임금 10,320원.&rdquo; https://www.korea.kr/news/policyNewsView.do?newsId=148956812</li>
+  <li>Labor Standards Act (근로기준법), Art. 11, 18, 55, 56; Enforcement Decree Art. 30. https://www.law.go.kr</li>
+  <li>Minimum Wage Act (최저임금법), Art. 5 &#9313;; Enforcement Decree Art. 3. https://www.law.go.kr</li>
+  <li>Easy-Law (찾기쉬운 생활법령정보), part-time workers' rest and holidays. https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&amp;csmSeq=896&amp;ccfNo=2&amp;cciNo=3&amp;cnpClsNo=1</li>
+  <li>D. A. Gustafson, <em>Schaum's Outline of Software Engineering</em>, McGraw-Hill, 2002.</li>
+  <li>I. Sommerville, <em>Software Engineering</em>, 10th ed., Pearson, 2016.</li>
+  <li>OMG, <em>Unified Modeling Language Specification</em>, v2.5.1, 2017.</li>
+  <li>sql.js &mdash; SQLite compiled to WebAssembly. https://sql.js.org</li>
+  <li>Shift-scheduling products examined: Shiftee; 알바몬 근무관리; 알바천국 스케줄; When I Work; Homebase; Deputy.</li>
+</ol>
+
+</body>
+</html>

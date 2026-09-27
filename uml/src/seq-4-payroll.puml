@@ -1,0 +1,70 @@
+@startuml seq-4-payroll
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  ArrowColor #1C2230
+  BoxBorderColor #1C2230
+}
+
+title UC-09 Generate and confirm monthly payroll (FR-15, FR-16, BR-08, BR-09, BR-10, BR-11; includes UC-08)
+
+actor "A2 Owner" as Owner
+boundary "payroll.js" as UI
+control "PayrollService" as Svc
+control "LaborRules" as Rules
+database "db.js\n(SQLite / localStorage)" as DB
+
+Owner -> UI : pick month, "Generate draft"
+UI -> Svc : generatePayroll(yearMonth)
+activate Svc
+Svc -> DB : tx(fn) begin
+activate DB
+Svc -> DB : all active Worker, WeeklySummary of month, MinimumWage(year)
+DB --> Svc : workers, summaries, minWage
+
+loop for each Worker W
+  Svc -> Rules : computePayrollRow(W, yearMonth) (BR-11)
+  activate Rules
+  Rules -> Rules : baseHours/basePay from WORKED (or scheduled, "estimated")
+  Rules -> Rules : holidayPay = sum of holiday pay for weeks ending in month (BR-06/07)
+  Rules -> Rules : premiumHours(W, shifts) (BR-08: only if regularEmployees >= 5)
+  Rules -> Rules : probationApplies(W, date) (BR-10)
+  Rules -> Rules : minimumWageFor(year) x (0.9 if probation else 1)
+  Rules --> Svc : payrollRow, minWageWarning?
+  deactivate Rules
+
+  alt worker.hourlyWage < applicable minimum (BR-09)
+    Svc -> DB : insert/replace Payroll row with minWageWarning = 1
+  else wage meets minimum
+    Svc -> DB : insert/replace Payroll row with minWageWarning = 0
+  end
+end
+
+Svc -> DB : commit + persist (replaces DRAFT rows only)
+deactivate DB
+Svc --> UI : Payroll[] (DRAFT), warnings[]
+deactivate Svc
+UI --> Owner : table per worker + minimum-wage warning rows
+
+alt any row has minWageWarning
+  UI --> Owner : block "Confirm" until warning acknowledged
+  Owner -> UI : acknowledge warning
+end
+
+Owner -> UI : Confirm
+UI -> Svc : confirmPayroll(payrollId)
+activate Svc
+Svc -> DB : tx: update Payroll.status = CONFIRMED (read-only afterwards)
+Svc --> UI : confirmed
+deactivate Svc
+UI --> Owner : payroll row becomes read-only
+@enduml

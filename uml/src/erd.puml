@@ -1,0 +1,164 @@
+@startuml erd
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+skinparam ArrowColor #1C2230
+
+entity "Workplace" as Workplace {
+  * id : INTEGER <<PK>>
+  --
+  name : TEXT
+  regularEmployees : INTEGER
+  subAttendancePolicy : TEXT
+}
+
+entity "Worker" as Worker {
+  * id : INTEGER <<PK>>
+  --
+  # workplaceId : INTEGER <<FK>>
+  role : TEXT
+  name : TEXT
+  phone : TEXT
+  hourlyWage : INTEGER
+  contractStart : TEXT
+  contractEnd : TEXT
+  probationEnd : TEXT
+  simpleLabor : INTEGER
+  active : INTEGER
+}
+
+entity "FixedSchedule" as FixedSchedule {
+  * id : INTEGER <<PK>>
+  --
+  # workerId : INTEGER <<FK>>
+  weekday : INTEGER
+  startTime : TEXT
+  endTime : TEXT
+}
+
+entity "Availability" as Availability {
+  * id : INTEGER <<PK>>
+  --
+  # workerId : INTEGER <<FK>>
+  weekday : INTEGER
+  startTime : TEXT
+  endTime : TEXT
+}
+
+entity "Shift" as Shift {
+  * id : INTEGER <<PK>>
+  --
+  workDate : TEXT
+  startTime : TEXT
+  endTime : TEXT
+  # workerId : INTEGER <<FK>>
+  # originalWorkerId : INTEGER <<FK>>
+  # fixedScheduleId : INTEGER <<FK>>
+  status : TEXT
+}
+
+entity "SubRequest" as SubRequest {
+  * id : INTEGER <<PK>>
+  --
+  # shiftId : INTEGER <<FK>>
+  # requesterId : INTEGER <<FK>>
+  # acceptorId : INTEGER <<FK>>
+  reason : TEXT
+  deadline : TEXT
+  status : TEXT
+  createdAt : TEXT
+  decidedAt : TEXT
+}
+
+entity "SubRequestTarget" as SubRequestTarget {
+  * id : INTEGER <<PK>>
+  --
+  # subRequestId : INTEGER <<FK>>
+  # workerId : INTEGER <<FK>>
+  response : TEXT
+  respondedAt : TEXT
+}
+
+entity "Attendance" as Attendance {
+  * id : INTEGER <<PK>>
+  --
+  # shiftId : INTEGER <<FK, UNIQUE>>
+  clockIn : TEXT
+  clockOut : TEXT
+  confirmed : INTEGER
+}
+
+entity "WeeklySummary" as WeeklySummary {
+  * id : INTEGER <<PK>>
+  --
+  # workerId : INTEGER <<FK>>
+  weekStart : TEXT
+  contractHours : REAL
+  scheduledHours : REAL
+  actualHours : REAL
+  perfectAttendance : INTEGER
+  holidayEligible : INTEGER
+  holidayHours : REAL
+  ..
+  UNIQUE (workerId, weekStart)
+}
+
+entity "Payroll" as Payroll {
+  * id : INTEGER <<PK>>
+  --
+  # workerId : INTEGER <<FK>>
+  yearMonth : TEXT
+  baseHours : REAL
+  basePay : INTEGER
+  holidayPay : INTEGER
+  premiumPay : INTEGER
+  total : INTEGER
+  minWageWarning : INTEGER
+  estimated : INTEGER
+  status : TEXT
+  ..
+  UNIQUE (workerId, yearMonth)
+}
+
+entity "MinimumWage" as MinimumWage {
+  * year : INTEGER <<PK>>
+  --
+  hourly : INTEGER
+}
+
+entity "Notification" as Notification {
+  * id : INTEGER <<PK>>
+  --
+  # workerId : INTEGER <<FK>>
+  # subRequestId : INTEGER <<FK>>
+  kind : TEXT
+  message : TEXT
+  createdAt : TEXT
+  readAt : TEXT
+}
+
+Workplace ||--o{ Worker
+Worker ||--o{ FixedSchedule
+Worker ||--o{ Availability
+Worker ||--o{ Shift : workerId
+Worker |o--o{ Shift : originalWorkerId
+FixedSchedule |o--o{ Shift : fixedScheduleId
+Shift ||--o{ SubRequest
+Worker ||--o{ SubRequest : requesterId
+Worker |o--o{ SubRequest : acceptorId
+SubRequest ||--o{ SubRequestTarget
+Worker ||--o{ SubRequestTarget
+Shift ||--o| Attendance
+Worker ||--o{ WeeklySummary
+Worker ||--o{ Payroll
+Worker ||--o{ Notification
+SubRequest |o--o{ Notification
+@enduml

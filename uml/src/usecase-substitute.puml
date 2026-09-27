@@ -1,0 +1,75 @@
+@startuml usecase-substitute
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+hide stereotype
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+skinparam usecase<<amber>> {
+  BackgroundColor #FFFFFF
+  BorderColor #E9A23B
+  FontColor #1C2230
+}
+skinparam actor {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+left to right direction
+
+title ShiftSwap — Use Case Diagram — Substitution detail (UC-04, UC-04a, UC-05, UC-06, UC-08, UC-11, UC-12)
+
+' spacer to keep smetana from clipping the topmost actor's head against the canvas edge
+actor " " as Spacer #FFFFFF;line:FFFFFF;text:FFFFFF
+
+actor "A1 Worker" as A1
+actor "A3 System Clock" as A3
+
+Spacer -[hidden]-> A1
+A1 -[hidden]-> A3
+
+rectangle "ShiftSwap" as Boundary {
+  usecase "UC-11\nExpire overdue\nsubstitute request" as UC11 <<amber>>
+  usecase "UC-12\nCancel own\nsubstitute request" as UC12 <<amber>>
+  usecase "UC-04\nRequest substitute" as UC04 <<amber>>
+  usecase "UC-05\nRespond to substitute\nrequest (accept/decline)" as UC05 <<amber>>
+  usecase "UC-04a\nFind eligible\ncandidates (BR-01)" as UC04a <<amber>>
+  usecase "UC-06\nApprove or reject\nsubstitution" as UC06 <<amber>>
+  usecase "UC-08\nCompute weekly hours\nand holiday allowance" as UC08
+}
+
+actor "A2 Owner" as A2
+UC08 -[hidden]-> A2
+
+' ===== actor associations =====
+A1 -- UC04
+A1 -- UC05
+A1 -- UC12
+A3 -- UC11
+A2 -- UC06
+A2 -- UC08
+
+' ===== include / extend detail (spec §3) =====
+UC04 ..> UC04a : <<include>>
+UC06 ..> UC08 : <<include>>
+UC11 ..> UC04 : <<extend>>
+note on link
+  extension point: deadline reached
+  with no approved acceptance
+end note
+UC12 ..> UC04 : <<extend>>
+@enduml

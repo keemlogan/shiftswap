@@ -1,0 +1,70 @@
+@startuml seq-2-accept
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 1
+skinparam sequenceParticipant underline
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  ArrowColor #1C2230
+  BoxBorderColor #1C2230
+}
+
+title UC-05 Respond to substitute request — first acceptance wins (FR-09, FR-10, BR-02, NFR-04)
+
+actor "A1 Worker\n(candidate 1)" as W1
+actor "A1 Worker\n(candidate 2)" as W2
+boundary "inbox.js" as UI
+control "SubstituteService" as Svc
+database "db.js\n(SQLite / localStorage)" as DB
+
+note over W1, W2 : both candidates see the same PENDING\nSubRequestTarget in their inbox (BR-01)
+
+par candidate 1 accepts
+  W1 -> UI : Accept (targetId=T1)
+  UI -> Svc : respondToRequest(T1, ACCEPTED)
+  activate Svc
+  Svc -> DB : tx(fn) begin
+  activate DB
+  Svc -> DB : select SubRequest for update (re-check status)
+  DB --> Svc : status = REQUESTED
+  Svc -> DB : update SubRequest set status=ACCEPTED, acceptorId=W1 (BR-02)
+  Svc -> DB : update target(T1).response = ACCEPTED
+  Svc -> DB : update other PENDING targets -> CLOSED
+  Svc -> DB : insert Notification(REQUEST_ACCEPTED) to requester, owner
+  Svc -> DB : insert Notification(TARGET_CLOSED) to other candidates
+  Svc -> DB : commit + persist
+  deactivate DB
+  Svc --> UI : accepted
+  deactivate Svc
+  UI --> W1 : "You accepted the shift"
+else candidate 2 accepts (near-simultaneous)
+  W2 -> UI : Accept (targetId=T2)
+  UI -> Svc : respondToRequest(T2, ACCEPTED)
+  activate Svc
+  Svc -> DB : tx(fn) begin
+  activate DB
+  Svc -> DB : select SubRequest for update (re-check status)
+  DB --> Svc : status = ACCEPTED (already taken)
+  alt request no longer REQUESTED (BR-02, NFR-04)
+    Svc -> DB : rollback (no state change)
+    deactivate DB
+    Svc --> UI : refused: "Already taken by <acceptor name>"
+    deactivate Svc
+    UI --> W2 : show "Already taken by <name>"
+  end
+end
+
+note over DB
+  the re-check of SubRequest.status happens
+  inside the same transaction as the update,
+  so only one of the two branches can commit
+  as ACCEPTED — the other always sees the
+  post-commit state and is refused (BR-02)
+end note
+@enduml

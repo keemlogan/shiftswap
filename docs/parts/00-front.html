@@ -1,0 +1,74 @@
+<div class="title-page" id="title">
+  <div class="kicker">Final Report — Software Engineering (Fall 2026)<br>Seoul National University of Science and Technology (SeoulTech)</div>
+  <h1 id="title-heading">ShiftSwap: A Shift Schedule and Substitute Management System for Small Part-Time Workplaces</h1>
+  <p class="subtitle">소규모 매장 아르바이트 근무표·대타 관리 시스템<br>Team 7</p>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Student ID</th><th>Affiliation</th><th>E-mail</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Hyewon Kim (김혜원)</td><td>24102028</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>(to be provided by member)</td></tr>
+      <tr><td>Hyoungdo Kim (김형도)</td><td>18102075</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>zloganway@gmail.com</td></tr>
+      <tr><td>Minkyung Kim (김민경)</td><td>23102004</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>(to be provided by member)</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <tbody>
+      <tr><th style="width:28%">Submission date</th><td>2026-12-04 (Week 14)</td></tr>
+      <tr><th>Deployed application</th><td><a href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/shiftswap/app/</a></td></tr>
+      <tr><th>Source repository</th><td><a href="https://github.com/keemlogan/shiftswap">https://github.com/keemlogan/shiftswap</a></td></tr>
+      <tr><th>Submitted to</th><td>jihjim@gmail.com</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h1 id="roles">Roles of Team Members</h1>
+
+<p>Team 7 has three members. The topic was proposed by Hyewon Kim, who works part-time in a small café and has seen at first hand how substitute shifts are arranged there. In Week 4 the team compared seven candidate topics and on 2026-09-27 selected ShiftSwap because it is a conventional transaction-processing application with a clear owner–worker workflow, more than five core use cases and a relational data model of twelve tables, which satisfies the minimum scope set by the term project description (five use cases, four tables).</p>
+
+<p>Work was divided along the work breakdown structure (WBS) of the proposal, which has eight top-level packages that follow the course deliverables and the life-cycle phases: 1 Project management, 2 Proposal, 3 Requirements (interim report), 4 Design, 5 Implementation by vibe coding, 6 Testing, 7 Final report, and 8 Presentation. Each work package has one owner who is accountable for its deliverables. Every deliverable was also reviewed by a member who did not write it: requirements by Hyoungdo Kim and Minkyung Kim, design models by Hyewon Kim and Minkyung Kim, and test cases by Hyewon Kim and Hyoungdo Kim. The team met once a week, and the Gantt chart was updated after each meeting. The table below lists the responsibilities; the paragraphs after it describe each member's work in more detail.</p>
+
+<table>
+  <caption>Table {{tab}}. Responsibilities of team members mapped to WBS work packages and deliverables</caption>
+  <thead>
+    <tr><th style="width:16%">Member</th><th style="width:20%">Role</th><th style="width:27%">WBS work packages owned</th><th>Main deliverables</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hyewon Kim</td>
+      <td>Requirements lead</td>
+      <td>2.1 Topic selection; 2.2.1 Problem statement and scope; 3.1 Elicitation; 3.2.1 FR and NFR tables, scenarios; 7.1.1 Requirements and design chapters</td>
+      <td>Comparison of seven candidate topics; problem statement P1–P3 and as-is process (Chapter 2); interview plan and notes; actors and use-case list; FR-01…FR-21; NFR-01…NFR-12; scenarios S-1…S-7; use-case descriptions UC-01…UC-13; requirements and design chapters of this report</td>
+    </tr>
+    <tr>
+      <td>Hyoungdo Kim</td>
+      <td>Project manager; design and implementation lead</td>
+      <td>1 Project management (1.1, 1.2); 2.2.2 Reviewed proposal PDF; 3.2.2 Business rules and data model draft; 4.1 UML models; 5 Implementation by vibe coding (5.1, 5.2); 7.2.1 Traceability matrix; 8.2.2 Live demo</td>
+      <td>WBS, Gantt chart, weekly milestone tracking and meeting notes; canonical specification file <code>spec/spec.md</code>; business rules BR-01…BR-12 and data model; use-case, class, ER, sequence, state and activity diagrams; final vibe-coding prompt and prompt log; increments 1 and 2; public URL on GitHub Pages; traceability matrix; live demonstration</td>
+    </tr>
+    <tr>
+      <td>Minkyung Kim</td>
+      <td>UI and quality lead</td>
+      <td>4.2 UI design; 6 Testing (6.1, 6.2); 7.1.2 Testing and results chapters; 7.2.2 Final report PDF; 8.1 Slide deck; 8.2.1 Rehearsed talk</td>
+      <td>Screen wireframes, prototype screens and visual design rules; test cases TC-01x…TC-12x and passing test run; scenario walkthrough record and screenshots; cross-browser and 360/1440 px checks; testing chapters; integrated final report PDF (50–150 pages); PowerPoint deck</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="roles-hyewon">Hyewon Kim — requirements lead</h2>
+
+<p>Hyewon Kim owned the problem domain. The topic came from her own part-time job, and her workplace is the reference store of the project; she prepared the comparison of seven candidate topics that led to its selection on 2026-09-27 (WBS 2.1) and wrote the problem statement and scope of the proposal (2.2.1). She described the current substitute procedure step by step and supplied the figure of three to five one-to-one contacts per substitute request that appears as problem P1. She collected the legal material on the 2026 minimum wage (KRW 10,320), the weekly holiday allowance (주휴수당) under the Labor Standards Act, the five-employee threshold for premium pay and the probation reduction of the Minimum Wage Act. For elicitation (3.1) she prepared the interview plan for the owner and two co-workers (Section 3.1) and the list of actors and use cases; for the specification (3.2.1) she wrote the functional and non-functional requirements, the scenarios of Section 3.8 and the use-case descriptions of Section 3.5. She wrote the requirements and design chapters of this report (7.1.1). In the presentation she covers the problem and the requirements.</p>
+
+<h2 id="roles-hyoungdo">Hyoungdo Kim — project manager, design and implementation lead</h2>
+
+<p>Hyoungdo Kim was responsible for project management (WBS 1): the WBS and the Gantt chart, weekly milestone tracking, the weekly meeting notes and the task list with owners. He reviewed and submitted the proposal (2.2.2). He turned the legal material into the business rules and drafted the data model (3.2.2), and he created the specification file <code>spec/spec.md</code>, which fixes every identifier (UC, FR, NFR, BR, TC), every state name and the seed data, so that the application, the UML models and the reports use the same names and numbers. He drew the UML models (4.1): use-case, class and ER diagrams, and sequence, state and activity diagrams. For implementation by vibe coding (5) he wrote the final prompt and kept the prompt log of iterations against the specification (5.1), produced increments 1 and 2 with the AI coding assistant, and deployed the application on GitHub Pages (5.2). He built the traceability matrix of the final report (7.2.1). In the presentation he covers the design and the implementation by vibe coding and gives the live demonstration of the deployed application (8.2.2).</p>
+
+<h2 id="roles-minkyung">Minkyung Kim — UI and quality lead</h2>
+
+<p>Minkyung Kim owned the user-interface design (WBS 4.2): the screen wireframes and prototype screens (4.2.1) for sign-in, weekly board, inbox, approvals, attendance, weekly summary, payroll and the owner and worker forms, and the visual design rules (4.2.2) that were later written into the final prompt. She owned testing (6): she wrote the unit test cases TC-01x to TC-12x from the business rules and ran them (6.1), and she carried out the scenario walkthroughs with screenshots and the cross-browser checks at 360 px and 1440 px screen width required by NFR-02 (6.2). She wrote the testing and results chapters (7.1.2), integrated the chapters of the three members into the final report PDF and checked the course format rules — A4, 12 pt, single spacing, 1-inch margins, 50–150 pages (7.2.2). She prepared the slide outline and the PowerPoint deck (8.1) and rehearsed the 15-minute talk (8.2.1). In the presentation she covers testing, deployment and the conclusion.</p>
+
+<h1 id="abstract">Abstract</h1>
+
+<p>In small stores such as cafés and convenience stores, part-time workers have fixed weekly shifts, and when one of them cannot come the owner must find a substitute by contacting other workers one at a time, edit a spreadsheet by hand, and later recheck each worker's weekly hours to decide whether the weekly holiday allowance (주휴수당) is still owed. In the reference store of this project, one substitute request typically costs the owner three to five separate contacts, and legal pay rules — the 2026 minimum wage of KRW 10,320, the 15-hour threshold for the holiday allowance, the five-employee threshold for premium pay, and the probation reduction — are applied from memory. This report describes ShiftSwap, a web application built to remove these three problems. A worker requests a substitute for one of their own shifts; the system selects eligible candidates from registered availability and existing shifts, notifies all of them at once, and accepts only the first acceptance. The owner then approves the swap on a screen that shows the weekly contractual hours, scheduled hours and holiday-allowance eligibility of both workers before and after the change.</p>
+
+<p>The system was developed with an incremental life-cycle model combined with UI prototyping, and every increment was implemented by vibe coding, that is, by generating code from natural-language prompts with an AI coding assistant. The report covers the problem statement and related work, a requirements specification of 13 use cases, 21 functional requirements, 12 non-functional requirements and 12 business rules, a design specification with UML 2.5 use-case, class, sequence, state and activity diagrams and a twelve-table SQLite schema, the final prompt that reproduces the system, the testing approach based on test cases derived from the business rules, and a user guide. The application runs entirely in the browser (HTML, CSS and JavaScript with SQLite compiled to WebAssembly) and is deployed at https://keemlogan.github.io/shiftswap/app/.</p>

@@ -1,0 +1,81 @@
+@startuml component
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+
+actor "A1 Worker" as Worker
+actor "A2 Owner" as Owner
+
+package "Presentation\n(app/index.html, app/styles.css)" as Presentation {
+  [main.js\n(router + bootstrap)] as Main
+  package "app/ui/*.js" as UI {
+    [login.js]
+    [schedule.js]
+    [requests.js]
+    [inbox.js]
+    [approvals.js]
+    [attendance.js]
+    [weekly.js]
+    [payroll.js]
+    [workers.js]
+    [availability.js]
+    [settings.js]
+    [i18n.js]
+  }
+}
+
+package "Application services\napp/core/services.js" as AppServices {
+  [ScheduleService]
+  [SubstituteService]
+  [AttendanceService]
+  [PayrollService]
+  [NotificationService]
+}
+
+component "Domain rules\napp/core/rules.js\n(LaborRules, pure functions)" as Rules
+
+component "Data access\napp/core/db.js\n(sql.js, schema, seed, tx())" as DBModule
+
+component "Clock\napp/core/clock.js\n(demo clock now())" as Clock
+
+database "SQLite (sql.js / WASM)\n+ localStorage\n\"shiftswap.db.v1\"" as Storage
+
+Worker --> Main
+Owner --> Main
+Main --> UI
+
+UI ..> AppServices : calls (one fn per UC step)
+AppServices ..> Rules : delegates every decision
+AppServices ..> DBModule : tx(), all(), get(), run()
+AppServices ..> Clock : now()
+Rules ..> Clock : now() (deadline / expiry checks)
+DBModule --> Storage : persist after commit / load on start
+
+note bottom of Rules
+  no DB access, no DOM;
+  unit-tested (tests/rules.test.js)
+end note
+
+note bottom of DBModule
+  A3 System Clock actor drives
+  expireOverdue() on app start,
+  route change, clock change
+end note
+@enduml

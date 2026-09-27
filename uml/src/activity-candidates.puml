@@ -1,0 +1,51 @@
+@startuml activity-candidates
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #1C2230
+}
+
+title AD-2 Find eligible candidates for shift S (date d, start s, end e) — BR-01\n(included by UC-04 Request substitute)
+
+start
+:eligible := empty list;
+:candidates := all Worker of the workplace;
+
+while (more candidates?) is (yes)
+  :W := next candidate;
+
+  if (W.active == true?) then (no)
+    :reject W;
+  else (yes)
+    if (W == requester?) then (yes)
+      :reject W;
+    else (no)
+      if (W has a shift on date d\noverlapping [s, e)?) then (yes)
+        :reject W (schedule conflict);
+      else (no)
+        if (W has an Availability slot on weekday(d)\nwith slotStart <= s and slotEnd >= e?) then (no)
+          :reject W (not available);
+        else (yes)
+          :add W to eligible;
+        endif
+      endif
+    endif
+  endif
+endwhile (no more candidates)
+
+if (eligible is empty?) then (yes)
+  :notify Owner: NO_CANDIDATE (FR-08);
+else (no)
+  :create one SubRequestTarget per\neligible candidate (FR-07);
+  :notify each eligible candidate\n(REQUEST_RECEIVED) at once (FR-07);
+endif
+stop
+@enduml
