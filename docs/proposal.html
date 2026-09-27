@@ -176,7 +176,7 @@
 <p class="small"><strong>Trigger:</strong> A request arrives in a candidate's inbox. &nbsp;<strong>Rules:</strong> BR-02 &nbsp;<strong>Tables:</strong> SubRequestTarget, SubRequest</p>
 <p><strong>Input.</strong> Accept or decline, chosen directly on the inbox item (at most 2 clicks, NFR-01).</p>
 <p><strong>Processing.</strong> BR-02 &ldquo;first acceptance wins&rdquo;: an acceptance succeeds only if the request is still REQUESTED when the transaction runs. It sets the request to ACCEPTED, records the acceptor, and closes all other pending targets. The check runs inside one database transaction, so two acceptances can never both succeed (NFR-04).</p>
-<p><strong>Output.</strong> The requester and the owner are notified (FR-10). A later candidate sees &ldquo;Already taken by &lt;name&gt;&rdquo;. Example: Choi Minho accepts first; Kang Doyun's acceptance is refused.</p>
+<p><strong>Output.</strong> The requester and the owner are notified (FR-10). A later acceptance is refused with an explanatory message (FR-09): the candidate sees &ldquo;Already taken by &lt;name&gt;&rdquo;. Example: Choi Minho accepts first; Kang Doyun's acceptance is refused.</p>
 
 <h3>F6. Approve or reject substitution (UC-06)</h3>
 <p class="small"><strong>Trigger:</strong> A request has been accepted. &nbsp;<strong>Rules:</strong> BR-04, BR-06, BR-07 &nbsp;<strong>Tables:</strong> SubRequest, Shift, WeeklySummary</p>
@@ -212,7 +212,7 @@
 </ul>
 
 <h2 id="s5-5">5.5 Data to be stored</h2>
-<p>The system stores its data in 12 relational tables, above the course minimum of four: Workplace, Worker, FixedSchedule, Availability, Shift, SubRequest, SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage and Notification. A substitute request moves through the states REQUESTED, ACCEPTED, APPROVED, REJECTED, EXPIRED and CANCELLED. The full schema will be given in the interim report.</p>
+<p>The system stores its data in 12 relational tables, above the course minimum of four: Workplace, Worker, FixedSchedule, Availability, Shift, SubRequest, SubRequestTarget, Attendance, WeeklySummary, Payroll, MinimumWage and Notification. A substitute request moves through the states REQUESTED, ACCEPTED, APPROVED, REJECTED, EXPIRED and CANCELLED.</p>
 
 <h1 id="s6">6. Development approach</h1>
 <p><strong>Life-cycle model.</strong> We follow the <em>incremental model</em> with <em>prototyping</em> of the user interface (Chapter 1). Requirements and analysis models are written once for the whole system. Implementation is then delivered in two increments. Increment 1 contains all <em>Must</em> use cases and is itself a usable system: a store can find substitutes, approve swaps and see weekly holiday-allowance eligibility. Increment 2 adds the <em>Should</em> use cases: attendance, payroll, settings and cancellation.</p>
@@ -296,7 +296,7 @@
     <tr><td>Minkyung Kim</td><td>23102004</td><td>UI and quality lead &mdash; UI screens, test cases, presentation deck, report integration</td><td>4.2, 6, 7.1.2, 7.2.2, 8.1, 8.2.1</td></tr>
   </tbody>
 </table>
-<p>All three members take part in reviews. The author of a deliverable does not approve it alone: requirements are reviewed by HD and MK, design models by HW and MK, and test cases by HW and HD. The team will meet once a week, and HD will update the Gantt chart after each meeting. Each member will present roughly one third of the final presentation.</p>
+<p>All three members take part in reviews. The author of a deliverable does not approve it alone: requirements are reviewed by HD and MK, design models by HW and MK, and test cases by HW and HD. The team will meet once a week, and HD will update the Gantt chart after each meeting.</p>
 
 <h1 id="s10">10. Risks and mitigation</h1>
 <table>

@@ -39,7 +39,7 @@ def pdf(html_path: pathlib.Path, pdf_path: pathlib.Path):
 # ------------------------------------------------------------------ prompts
 def build_prompts():
     for name, title in [("final-prompt", "ShiftSwap — Final prompt"), ("prompt-log", "ShiftSwap — Prompt log"),
-                        ("prompt-v1", "ShiftSwap — Prompt v1"), ("prompt-v2", "ShiftSwap — Prompt v2")]:
+                        ("prompt-v1", "ShiftSwap — Prompt v1"), ("prompt-v2", "ShiftSwap — Prompt v2"), ("prompt-v3", "ShiftSwap — Prompt v3"), ("prompt-v4", "ShiftSwap — Prompt v4")]:
         src = ROOT / "prompts" / f"{name}.md"
         if not src.exists():
             continue
@@ -86,16 +86,15 @@ def build_test_report():
 
 # ------------------------------------------------------------------ final report
 APPENDICES = [
-    ("90-appendix-a.html", "appendix-prompt", "Appendix A. Final Vibe-Coding Prompt (v3)", "prompts/final-prompt.md",
-     "The complete prompt, verbatim. To reproduce the system it is given to the coding assistant followed by the specification in Appendix C."),
+    ("90-appendix-a.html", "appendix-prompt", "Appendix A. Final Vibe-Coding Prompt (v5)", "prompts/final-prompt.md",
+     "The complete prompt, verbatim. To reproduce the system it is given to the coding assistant together with the two test files and followed by the specification file spec/spec.md (all in the repository)."),
     ("91-appendix-b.html", "appendix-log", "Appendix B. Prompt Log", "prompts/prompt-log.md",
      "The log of every ambiguity, review finding and change made between prompt versions, verbatim."),
-    ("92-appendix-c.html", "appendix-spec", "Appendix C. Specification (spec.md)", "spec/spec.md",
-     "The specification file that the prompt treats as its contract, verbatim."),
 ]
 
 
 def build_appendices():
+    (DOCS / "parts" / "92-appendix-c.html").unlink(missing_ok=True)
     for fname, hid, title, src, intro in APPENDICES:
         body = subprocess.run(["pandoc", "-f", "gfm", "-t", "html", "--shift-heading-level-by=2", f"--id-prefix={hid}-", str(ROOT / src)],
                               capture_output=True, text=True, check=True).stdout

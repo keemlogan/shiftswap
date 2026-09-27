@@ -223,12 +223,12 @@
     <tr><th>Actors</th><td>Owner</td></tr>
     <tr><th>Preconditions</th><td>The owner is signed in.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The owner opens <em>Workers &amp; schedules</em> and chooses to add a worker.</li>
-      <li>The owner enters name, phone, hourly wage, contract start and end, optional probation end, simple-labor flag and active flag.</li>
+      <li>The owner opens <em>Staff</em> and chooses to add a worker.</li>
+      <li>The owner enters name, phone, hourly wage, contract start and end, optional probation end, the simple-labour flag and the &ldquo;Currently employed&rdquo; (active) flag.</li>
       <li>The system validates the input and stores the worker.</li>
-      <li>The owner adds one or more fixed shifts (weekday, start, end).</li>
+      <li>Under &ldquo;Fixed shifts&rdquo; the owner picks weekdays and sets start and end times.</li>
       <li>The system checks that the new fixed shift does not overlap another fixed shift of the same worker and stores it.</li>
-      <li>The system shows the worker's fixed schedule and weekly contractual hours.</li>
+      <li>The system shows the worker's fixed schedule and weekly contractual hours (&ldquo;Contract of 16 h a week&rdquo;).</li>
     </ol></td></tr>
     <tr><th>Alternative / exception flows</th><td>3a. A required field is missing or the wage is not a positive integer: the system names the field and the fix; nothing is stored.<br>5a. The fixed shift overlaps an existing one: the system rejects it and shows the conflicting shift.<br>1a. The owner edits an existing worker or deactivates them; an inactive worker is no longer included in generated weeks or candidate lists.</td></tr>
     <tr><th>Postconditions</th><td>Worker and FixedSchedule rows exist; the worker is included in the next generated week.</td></tr>
@@ -242,9 +242,9 @@
     <tr><th>Actors</th><td>Worker</td></tr>
     <tr><th>Preconditions</th><td>The worker is signed in and active.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The worker opens <em>Availability</em>.</li>
-      <li>The system lists the worker's existing slots.</li>
-      <li>The worker adds a slot (weekday, start, end) or deletes one.</li>
+      <li>The worker opens <em>Me</em>.</li>
+      <li>Under &ldquo;When you can cover&rdquo; the system shows the worker's availability slots by weekday.</li>
+      <li>The worker adds a weekday with start and end time, or removes one, and chooses <em>Save availability</em>.</li>
       <li>The system validates and stores the change.</li>
     </ol></td></tr>
     <tr><th>Alternative / exception flows</th><td>4a. End time is not after start time: the system rejects the slot and explains the rule.</td></tr>
@@ -259,12 +259,12 @@
     <tr><th>Actors</th><td>Owner</td></tr>
     <tr><th>Preconditions</th><td>At least one active worker with a fixed schedule exists.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The owner opens the weekly board and navigates to a week (Monday to Sunday).</li>
-      <li>The owner chooses to generate the week.</li>
+      <li>The owner opens <em>Schedule</em> and navigates to a week (Monday to Sunday).</li>
+      <li>If the week has no shifts yet, the system generates it.</li>
       <li>The system creates one SCHEDULED shift per fixed-schedule entry of every active worker, skipping entries that already have a shift in that week.</li>
-      <li>The system shows the board with seven columns, shifts ordered by start time.</li>
+      <li>The system shows the week with seven day columns, shifts ordered by start time.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>3a. The week is already generated: no duplicate is created; the board is shown unchanged.<br>4a. The owner adds, moves or deletes a single shift; the system validates and stores the change.<br>1a. A worker opens the board: the board is read-only and the worker's own shifts are emphasised.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>3a. The week is already generated: no duplicate is created; the week is shown unchanged.<br>4a. The owner chooses <em>Add shift</em> or edits a single shift; the system validates and stores the change.<br>1a. A worker opens <em>Schedule</em>: the week is read-only, the worker's own shifts are outlined in blue, and <em>Find a substitute</em> is offered instead of <em>Add shift</em>.</td></tr>
     <tr><th>Postconditions</th><td>Shift rows for the week exist exactly once per fixed-schedule entry.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-05 &nbsp;|&nbsp; FR-04, FR-05</td></tr>
   </tbody>
@@ -276,15 +276,15 @@
     <tr><th>Actors</th><td>Worker (requester); System (candidate selection)</td></tr>
     <tr><th>Preconditions</th><td>The worker is the current worker of a SCHEDULED shift that starts in the future and has no open request.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The worker selects one of their future shifts and chooses <em>Request substitute</em>.</li>
-      <li>The system shows a form with an optional reason and a deadline, pre-filled with the earlier of now + 24 h and the shift start.</li>
-      <li>The worker submits the form.</li>
-      <li>The system checks request validity (BR-03).</li>
+      <li>The worker chooses <em>Find a substitute</em> (on <em>Schedule</em>, on <em>Swaps</em>, or on the next-shift card of <em>Home</em>).</li>
+      <li>The system leads the worker through three steps: the shift (one of the worker's own future shifts), an optional reason, and the reply deadline, pre-filled with the earlier of now + 24 h and the shift start.</li>
       <li>The system finds the eligible candidates (BR-01) &laquo;include&raquo; <em>Find eligible candidates</em>.</li>
+      <li>On the last step (&ldquo;Here's what we'll send&rdquo;) the system shows the shift, the reason, the deadline and the candidates who will be notified; the worker chooses <em>Send swap request</em>.</li>
+      <li>The system checks request validity (BR-03).</li>
       <li>In one transaction the system stores the request as REQUESTED, one PENDING target per candidate, and one REQUEST_RECEIVED notification per candidate.</li>
-      <li>The system shows the requester the list of notified candidates.</li>
+      <li>The request appears on <em>Swaps</em> under &ldquo;Your requests&rdquo; with the progress step &ldquo;Requested&rdquo;.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>4a. BR-03 fails (shift in the past, not the requester's shift, open request exists, deadline invalid): the system states the cause and the fix; nothing is stored.<br>5a. No worker is eligible: the request is stored, the owner receives a NO_CANDIDATE notification, and the requester sees the message that no eligible worker exists.<br>Extension points: deadline reached (UC-11); requester cancels (UC-12).</td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. A shift that already has an open request, or has started, is not offered (BR-03).<br>5a. BR-03 fails at sending time (for example the deadline has become invalid): the system states the cause and the fix; nothing is stored.<br>3a. No worker is eligible: the request is still stored when sent, the owner receives a NO_CANDIDATE notification, and the requester is told that no eligible worker exists.<br>Extension points: deadline reached (UC-11); requester cancels (UC-12).</td></tr>
     <tr><th>Postconditions</th><td>SubRequest is REQUESTED; each candidate has a PENDING target and an unread notification.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-01, BR-03 &nbsp;|&nbsp; FR-06, FR-07, FR-08, FR-21</td></tr>
   </tbody>
@@ -296,13 +296,13 @@
     <tr><th>Actors</th><td>Worker (candidate)</td></tr>
     <tr><th>Preconditions</th><td>The candidate has a PENDING target on a request.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The candidate opens the inbox; the REQUEST_RECEIVED item shows the shift, the requester, the reason and the deadline with <em>Accept</em> and <em>Decline</em> buttons.</li>
+      <li>The candidate opens <em>Home</em>; the card under &ldquo;Swap requests for you&rdquo; shows the requester, the shift, the reason, the reply deadline and the effect on the candidate's own week, with <em>Accept</em> and <em>Decline</em>. The same request is listed on <em>Swaps</em> under &ldquo;Requests for you&rdquo;.</li>
       <li>The candidate chooses <em>Accept</em>.</li>
       <li>In one transaction the system re-reads the request status. It is REQUESTED, so the system sets the request to ACCEPTED, records the acceptor, sets the candidate's target to ACCEPTED and all other PENDING targets to CLOSED.</li>
       <li>The system notifies the requester and the owner (REQUEST_ACCEPTED) and the closed candidates (TARGET_CLOSED).</li>
-      <li>The inbox shows the item as accepted.</li>
+      <li>On the requester's <em>Swaps</em> screen the request moves to the progress step &ldquo;Accepted&rdquo;.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>2a. The candidate chooses <em>Decline</em>: the target becomes DECLINED; the request stays REQUESTED for the other candidates.<br>3a. The request is no longer REQUESTED (another candidate accepted first): the acceptance is refused and the item shows &ldquo;Already taken by &lt;name&gt;&rdquo;.<br>3b. The request has expired or been cancelled: the acceptance is refused with that reason.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The candidate chooses <em>Decline</em>: the target becomes DECLINED; the request stays REQUESTED for the other candidates.<br>3a. The request is no longer REQUESTED (another candidate accepted first): the acceptance is refused with an explanatory message that names the worker who accepted first (FR-09).<br>3b. The request has expired or been cancelled: the acceptance is refused with that reason.</td></tr>
     <tr><th>Postconditions</th><td>At most one acceptor per request; no PENDING target remains once the request is ACCEPTED.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-02 &nbsp;|&nbsp; FR-09, FR-10, FR-21</td></tr>
   </tbody>
@@ -314,15 +314,15 @@
     <tr><th>Actors</th><td>Owner</td></tr>
     <tr><th>Preconditions</th><td>A request is ACCEPTED.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The owner opens <em>Approvals</em>; the system lists ACCEPTED requests and, read-only, open REQUESTED requests with their candidates' responses.</li>
-      <li>The owner opens an ACCEPTED request.</li>
-      <li>The system computes, for requester and acceptor, contractual hours, scheduled hours of the week, holiday-allowance eligibility and holiday hours, before and after the swap, and highlights any change in eligibility.</li>
+      <li>The owner opens <em>Home</em>; the section &ldquo;Swaps waiting for approval&rdquo; lists every ACCEPTED request as a card.</li>
+      <li>For requester and acceptor the system computes contractual hours, scheduled hours of the week, holiday-allowance eligibility and holiday hours, before and after the swap (FR-11).</li>
+      <li>The card shows one line per worker with the change in weekly hours and the effect on holiday allowance, and states any eligibility change.</li>
       <li>The owner chooses <em>Approve</em>.</li>
       <li>The system sets shift.workerId to the acceptor, keeps the original worker in shift.originalWorkerId, and sets the request to APPROVED with the decision time.</li>
       <li>The system recomputes the weekly summaries of both workers &laquo;include&raquo; UC-08.</li>
       <li>The system notifies both workers (REQUEST_APPROVED).</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>4a. The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift is unchanged, both workers receive REQUEST_REJECTED.<br>4b. The request expired while the panel was open (BR-12): the decision is refused and the list is refreshed.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>4a. The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift is unchanged, both workers receive REQUEST_REJECTED.<br>4b. The request expired before the decision (BR-12): the decision is refused and the list is refreshed.</td></tr>
     <tr><th>Postconditions</th><td>Approved: the shift belongs to the acceptor, and both weekly summaries are current. Rejected: no schedule change.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-04, BR-06, BR-07 &nbsp;|&nbsp; FR-11, FR-12, FR-21</td></tr>
   </tbody>
@@ -334,10 +334,10 @@
     <tr><th>Actors</th><td>Worker, Owner</td></tr>
     <tr><th>Preconditions</th><td>The shift has started (it is in the past relative to the demo clock).</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The worker opens <em>Attendance</em>; the system lists the worker's past shifts without a record.</li>
-      <li>The worker enters actual clock-in and clock-out time for a shift.</li>
+      <li>The worker opens <em>Me</em>; the &ldquo;Attendance&rdquo; section lists the worker's shifts with their state (for example &ldquo;Upcoming&rdquo; or &ldquo;Confirmed 18:00&ndash;23:00&rdquo;).</li>
+      <li>For a shift that has ended, the worker enters actual clock-in and clock-out time.</li>
       <li>The system stores the attendance with confirmed = 0.</li>
-      <li>The owner opens <em>Attendance</em>; the system lists unconfirmed records.</li>
+      <li>The owner reviews the unconfirmed records.</li>
       <li>The owner confirms a record; the system sets confirmed = 1 and the shift to WORKED.</li>
       <li>The system recomputes the weekly summary of that worker (UC-08).</li>
     </ol></td></tr>
@@ -353,11 +353,11 @@
     <tr><th>Actors</th><td>Owner; System (when included by UC-06, UC-07 or UC-09)</td></tr>
     <tr><th>Preconditions</th><td>The shifts of the week are generated.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The owner opens <em>Weekly summary</em> and picks a week.</li>
+      <li>The owner opens <em>Pay</em>, tab <em>Weekly</em>, and picks a week.</li>
       <li>For each active worker the system computes contractual hours (sum of fixed-schedule hours), scheduled hours (shifts the worker holds this week) and actual hours (confirmed attendance).</li>
       <li>The system determines perfect attendance, applying the workplace policy (EXCUSED or ABSENT) to shifts given away by approved substitution.</li>
       <li>The system determines eligibility (BR-06) and holiday hours (BR-07) and stores one WeeklySummary row per worker and week.</li>
-      <li>The system shows the table with a short reason for each worker who is not eligible.</li>
+      <li>The system shows one card per worker with the eligibility, the holiday pay if eligible, and a short reason if not (for example &ldquo;under 15 h&rdquo;).</li>
     </ol></td></tr>
     <tr><th>Alternative / exception flows</th><td>2a. The week is not generated: the system shows that the week has no shifts; the owner generates it in UC-03 first.</td></tr>
     <tr><th>Postconditions</th><td>WeeklySummary rows for the week are current (unique per worker and week).</td></tr>
@@ -371,15 +371,15 @@
     <tr><th>Actors</th><td>Owner</td></tr>
     <tr><th>Preconditions</th><td>The owner is signed in; the minimum wage for the year of the month exists.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The owner opens <em>Payroll</em> and picks a month.</li>
-      <li>The owner chooses <em>Generate draft</em>.</li>
+      <li>The owner opens <em>Pay</em>, tab <em>Monthly</em>, and picks a month.</li>
+      <li>The system builds the draft; <em>Rebuild draft</em> builds it again after changes.</li>
       <li>The system recomputes the weekly summaries of the weeks whose Sunday falls in the month &laquo;include&raquo; UC-08.</li>
-      <li>For each worker the system computes base hours and base pay, holiday pay, premium pay and total (BR-08, BR-11), and checks the minimum wage (BR-09, BR-10).</li>
-      <li>The system stores the rows as DRAFT and shows them with flags (estimated, minimum-wage warning).</li>
-      <li>The owner acknowledges any minimum-wage warning and chooses <em>Confirm</em>.</li>
+      <li>For each worker the system computes hours and base pay, holiday pay, premium pay and total (BR-08, BR-11), and checks the minimum wage (BR-09, BR-10).</li>
+      <li>The system stores the rows as DRAFT and shows them with status chips (Draft, Estimated, Probation minimum 90 %, Below minimum wage).</li>
+      <li>The owner chooses <em>Acknowledge</em> on each minimum-wage warning and then <em>Confirm &lt;month&gt; pay</em>.</li>
       <li>The system sets the rows to CONFIRMED; they become read-only.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>5a. Attendance is missing for some shifts: scheduled hours are used and the row is flagged &ldquo;estimated&rdquo;.<br>6a. A warning is not acknowledged: <em>Confirm</em> is blocked and the system says which row needs acknowledgement.<br>2a. The month already has DRAFT rows: they are replaced; CONFIRMED rows are not changed.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>5a. Attendance is missing for some shifts: scheduled hours are used and the row is flagged &ldquo;Estimated&rdquo;.<br>6a. A warning is not acknowledged: the confirm button stays disabled and the screen states how many warnings must be acknowledged.<br>2a. The month already has DRAFT rows: they are replaced; CONFIRMED rows are not changed.</td></tr>
     <tr><th>Postconditions</th><td>One Payroll row per worker and month, DRAFT or CONFIRMED.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-08, BR-09, BR-10, BR-11 &nbsp;|&nbsp; FR-15, FR-16</td></tr>
   </tbody>
@@ -392,8 +392,8 @@
     <tr><th>Preconditions</th><td>The owner is signed in.</td></tr>
     <tr><th>Main flow</th><td><ol>
       <li>The owner opens <em>Settings</em>.</li>
-      <li>The system shows store name, number of regular employees, substitution-attendance policy and the minimum wage rows.</li>
-      <li>The owner edits values and saves.</li>
+      <li>The system shows the store name, the number of regular employees, the policy for handed-over shifts (&ldquo;Do not count as absence&rdquo; = EXCUSED, the default, or &ldquo;Count as absence&rdquo; = ABSENT) and the minimum wage by year.</li>
+      <li>The owner edits values, adds or removes minimum-wage rows, and chooses <em>Save</em>.</li>
       <li>The system validates and stores the settings.</li>
     </ol></td></tr>
     <tr><th>Alternative / exception flows</th><td>4a. Regular employees is not a non-negative integer, or a minimum wage row has a duplicate year: the system rejects the change and explains it.</td></tr>
@@ -425,12 +425,12 @@
     <tr><th>Actors</th><td>Worker (requester)</td></tr>
     <tr><th>Preconditions</th><td>The worker's request is REQUESTED or ACCEPTED.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The worker opens <em>My requests</em>.</li>
-      <li>The worker chooses <em>Cancel</em> on an open request.</li>
+      <li>The worker opens <em>Swaps</em>; under &ldquo;Your requests&rdquo; each request shows its progress (Requested &rarr; Accepted &rarr; Approved).</li>
+      <li>The worker chooses <em>Cancel request</em> on an open request.</li>
       <li>The system sets the request to CANCELLED and closes all PENDING targets.</li>
       <li>The system notifies the candidates and the acceptor, if any (REQUEST_CANCELLED).</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>2a. The request is already APPROVED, REJECTED, EXPIRED or CANCELLED: no <em>Cancel</em> button is shown.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The request is already APPROVED, REJECTED, EXPIRED or CANCELLED: no <em>Cancel request</em> button is shown.</td></tr>
     <tr><th>Postconditions</th><td>The request is CANCELLED; the shift stays with the requester.</td></tr>
     <tr><th>Business rules / FR</th><td>&ndash; &nbsp;|&nbsp; FR-19, FR-21</td></tr>
   </tbody>
@@ -442,9 +442,9 @@
     <tr><th>Actors</th><td>Worker, Owner</td></tr>
     <tr><th>Preconditions</th><td>The application is open in a browser.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The system shows the demo accounts (owner and four workers) with role labels and a note that the demo has no passwords.</li>
-      <li>The user chooses an account.</li>
-      <li>The system keeps the choice for the browser session and shows only the menus of that role.</li>
+      <li>The system shows the demo page: a three-step tour (see Lee Seoyeon's request, accept as Choi Minho, approve as owner Park Jiyoung) and the list of all accounts (owner and four workers) with role labels. There are no passwords.</li>
+      <li>The user starts the tour or chooses an account.</li>
+      <li>The system keeps the choice for the browser session and shows only the menus of that role: <em>Home, Schedule, Swaps, Me</em> for a worker; <em>Home, Schedule, Staff, Pay</em> for the owner, who also has <em>Settings</em>.</li>
     </ol></td></tr>
     <tr><th>Alternative / exception flows</th><td>3a. The user signs out: the session choice is cleared and the sign-in screen is shown.</td></tr>
     <tr><th>Postconditions</th><td>A signed-in user with role OWNER or WORKER.</td></tr>
@@ -487,13 +487,13 @@
 <p><strong>Starting situation.</strong> Lee Seoyeon works Monday and Wednesday 18:00&ndash;23:00. She has a midterm exam on Wednesday 2026-09-30 and cannot work that evening.</p>
 <p><strong>Normal flow.</strong></p>
 <ol>
-  <li>Seoyeon signs in and opens the weekly board of the week of 2026-09-28. Her shifts are shown in blue.</li>
-  <li>She opens her Wednesday 30 September 18:00&ndash;23:00 shift and chooses <em>Request substitute</em>.</li>
+  <li>Seoyeon signs in and opens <em>Schedule</em> for the week of 2026-09-28. Her own shifts are outlined in blue.</li>
+  <li>She chooses <em>Find a substitute</em> and, in the first step, picks her Wednesday 30 September 18:00&ndash;23:00 shift.</li>
   <li>She enters the reason &ldquo;Midterm exam&rdquo; and the deadline 2026-09-29T21:00, and submits.</li>
   <li>The system checks BR-03: the shift is hers, SCHEDULED, in the future, has no open request, and the deadline is before the shift start.</li>
   <li>The system applies BR-01. Choi Minho has no shift on Wednesday and is available Wednesday 17:00&ndash;23:00, which covers 18:00&ndash;23:00. Kang Doyun has no shift on Wednesday and is available Wednesday 18:00&ndash;23:00. Jung Hana is not available on Wednesday. Both Minho and Doyun are eligible.</li>
   <li>The system stores the request as REQUESTED, two PENDING targets, and a REQUEST_RECEIVED notification for each of the two candidates.</li>
-  <li>On <em>My requests</em> Seoyeon sees the request as &ldquo;Waiting for replies&rdquo; with both candidates, Choi Minho and Kang Doyun, marked &ldquo;No reply yet&rdquo; (Figure 14). On the weekly board her Wednesday shift now has a dashed amber outline (Figure 9).</li>
+  <li>On <em>Swaps</em> the request appears under &ldquo;Your requests&rdquo; at the step &ldquo;Requested&rdquo;. On <em>Schedule</em> her Wednesday shift now has a dashed amber outline and the chip &ldquo;Looking for cover&rdquo; (Figures 9 and 10).</li>
 </ol>
 <p><strong>What can go wrong.</strong> If Seoyeon enters a deadline after 2026-09-30 18:00, the system refuses and says that the deadline must be no later than the shift start.</p>
 <p><strong>End state.</strong> One open request with two candidates. This is the state of the demo data.</p>
@@ -502,11 +502,12 @@
 <p><strong>Starting situation.</strong> The end state of S1. Both candidates have an unread notification.</p>
 <p><strong>Normal flow.</strong></p>
 <ol>
-  <li>Minho signs in. The header shows one unread notification. He opens the inbox.</li>
-  <li>The item shows Seoyeon's Wednesday shift, the reason and the deadline, with <em>Accept</em> and <em>Decline</em>. He chooses <em>Accept</em> (two clicks from the header).</li>
+  <li>Minho signs in. The bell in the header shows one unread notification, and <em>Home</em> lists the request under &ldquo;Swap requests for you&rdquo; (Figure 12).</li>
+  <li>The card shows Seoyeon's Wednesday shift, the reason, the reply deadline and the effect on his own week: 16 h &rarr; 21 h, holiday allowance unchanged (KRW 33,024). He chooses <em>Accept</em>, one tap on <em>Home</em>.</li>
   <li>In one transaction the system reads the request status (REQUESTED), sets it to ACCEPTED with Minho as acceptor, sets Minho's target to ACCEPTED and Doyun's target to CLOSED.</li>
   <li>Seoyeon and the owner receive REQUEST_ACCEPTED; Doyun receives TARGET_CLOSED.</li>
-  <li>Doyun signs in and opens the inbox. The request item shows &ldquo;Already taken by Choi Minho&rdquo; and no <em>Accept</em> button.</li>
+  <li>Doyun can no longer accept the request. An acceptance attempt is refused with a message that Choi Minho accepted first (FR-09).</li>
+  <li>On Seoyeon's <em>Swaps</em> screen the request moves to the step &ldquo;Accepted&rdquo; with the text &ldquo;Minho accepted. Waiting for the owner's approval.&rdquo; (Figure 13).</li>
 </ol>
 <p><strong>Concurrent activity.</strong> If Doyun had pressed <em>Accept</em> at almost the same moment as Minho, his transaction would read the status after Minho's transaction committed. The status would be ACCEPTED, not REQUESTED, so his acceptance is refused with the same message (BR-02, NFR-04, TC-05x).</p>
 <p><strong>End state.</strong> Request ACCEPTED, acceptor Choi Minho. The shift still belongs to Seoyeon until the owner decides.</p>
@@ -515,8 +516,8 @@
 <p><strong>Starting situation.</strong> The end state of S2.</p>
 <p><strong>Normal flow.</strong></p>
 <ol>
-  <li>Park Jiyoung signs in as owner and opens <em>Approvals</em>. The request of Seoyeon is listed as ACCEPTED by Minho.</li>
-  <li>She opens it. The comparison panel shows:
+  <li>Park Jiyoung signs in as owner. <em>Home</em> reads &ldquo;1 thing to handle today&rdquo; and lists the swap under &ldquo;Swaps waiting for approval&rdquo; (Figure 14).</li>
+  <li>The system compares both workers before and after the swap:
     <table>
       <caption>Table 20. Approval panel for S3 (week of 2026-09-28, policy EXCUSED)</caption>
       <thead><tr><th>Worker</th><th class="num">Contract h (before &rarr; after)</th><th class="num">Scheduled h this week</th><th>Holiday allowance</th><th class="num">Holiday h</th></tr></thead>
@@ -525,11 +526,11 @@
         <tr><td>Choi Minho (acceptor)</td><td class="num">16 &rarr; 16</td><td class="num">16 &rarr; 21</td><td>Eligible &rarr; eligible</td><td class="num">3.2 &rarr; 3.2</td></tr>
       </tbody>
     </table>
-    No eligibility changes, so no line is highlighted.</li>
+    The card summarises this in two lines: &ldquo;Seoyeon: this week 10 h &rarr; 5 h &middot; no holiday allowance (contract 10 h a week)&rdquo; and &ldquo;Minho: this week 16 h &rarr; 21 h &middot; holiday allowance unchanged (KRW 33,024)&rdquo;. No eligibility changes.</li>
   <li>She chooses <em>Approve</em>. The shift's worker becomes Minho; its original worker is recorded as Seoyeon; the request becomes APPROVED.</li>
   <li>The system recomputes both weekly summaries. Minho's holiday allowance for the week remains 16 / 40 &times; 8 = 3.2 h, that is 3.2 &times; 10,320 = KRW 33,024, provided he works all his shifts of the week.</li>
   <li>Seoyeon and Minho receive REQUEST_APPROVED.</li>
-  <li>On the weekly board, the Wednesday shift has an amber left edge and stripe pattern, shows &ldquo;Choi Minho&rdquo; in bold and &ldquo;Lee Seoyeon&rdquo; struck through beneath it.</li>
+  <li>On <em>Schedule</em>, the Wednesday shift has an amber left edge and stripe pattern, shows &ldquo;Choi Minho&rdquo; in bold and &ldquo;Lee Seoyeon&rdquo; struck through beneath it (Figure 15).</li>
 </ol>
 <p><strong>What can go wrong.</strong> If the owner chooses <em>Reject</em>, the request becomes REJECTED, the shift stays with Seoyeon and both receive REQUEST_REJECTED. Seoyeon then has to request again or work the shift.</p>
 <p><strong>End state.</strong> Minho holds the Wednesday shift; the weekly summaries are current.</p>
@@ -541,7 +542,7 @@
   <li>The demo clock is advanced from Monday 09:00 with <em>+1 day</em> to Tuesday 2026-09-29 09:00. The request is still REQUESTED.</li>
   <li>The clock is advanced with <em>+1 hour</em> until it reaches 2026-09-29T21:00.</li>
   <li>On the next screen change the System Clock runs the expiry check. The deadline &le; now, so the request becomes EXPIRED and both PENDING targets become CLOSED (BR-12).</li>
-  <li>Seoyeon and the owner receive REQUEST_EXPIRED. The inbox items of Minho and Doyun no longer show <em>Accept</em>.</li>
+  <li>Seoyeon and the owner receive REQUEST_EXPIRED. Minho and Doyun can no longer accept the request.</li>
 </ol>
 <p><strong>What can go wrong.</strong> The same happens if the request is ACCEPTED but the owner does not decide before the deadline. The owner then sees the request disappear from the ACCEPTED list.</p>
 <p><strong>End state.</strong> The Wednesday shift stays with Seoyeon. She may create a new request, because no open request exists for the shift any more, as long as the new deadline is before 2026-09-30 18:00.</p>
@@ -557,27 +558,27 @@
 <p><strong>End state.</strong> The owner now knows, without any telephone call, that the shift has to be solved by other means. If nothing changes, the request expires at its deadline as in S4.</p>
 
 <h3>S6. Month-end payroll for September 2026 (UC-09)</h3>
-<p><strong>Starting situation.</strong> The owner has finished the month and opens <em>Payroll</em> for 2026-09. The store has 4 regular employees.</p>
+<p><strong>Starting situation.</strong> The owner has finished the month and opens <em>Pay</em>, tab <em>Monthly</em>, for September 2026. The store has 4 regular employees.</p>
 <p><strong>Normal flow.</strong></p>
 <ol>
-  <li>The owner chooses <em>Generate draft</em>. The system computes one row per worker.</li>
+  <li>The system builds the draft with one row per worker (Figure 20).</li>
   <li>Premium pay is 0 for every worker, because the store has fewer than 5 regular employees (BR-08).</li>
   <li>Holiday pay counts the weeks whose Sunday falls in September. For the week of 2026-09-21 (Sunday 2026-09-27), all shifts have confirmed attendance. Minho is eligible (16 h contract) and receives KRW 33,024 for that week. Seoyeon (10 h), Hana (12 h) and Doyun (12 h) are below 15 h and receive no holiday pay for it.</li>
   <li>Kang Doyun's wage is KRW 10,000. BR-10 does not apply to him: his contract (2026-08-15 to 2026-11-15) is shorter than one year and his work is simple labor. His applicable minimum is therefore the full KRW 10,320. His row shows a minimum-wage warning (BR-09).</li>
   <li>For Jung Hana the system checks BR-10: her contract is open-ended, 2026-09 is within three months of her contract start 2026-09-01 and before her probation end 2026-11-30, and her work is not simple labor. The reduced minimum 10,320 &times; 0.9 = KRW 9,288 applies. Her wage of KRW 10,320 is above it, so there is no warning.</li>
   <li>Rows that include shifts without recorded attendance use scheduled hours and are flagged &ldquo;estimated&rdquo; (BR-11).</li>
-  <li>The owner tries <em>Confirm</em>. The system blocks it until the warning on Doyun's row is acknowledged. The owner acknowledges it and confirms. All rows become CONFIRMED and read-only.</li>
+  <li>The draft total for all workers is KRW 703,584. <em>Confirm September pay</em> stays disabled with the note &ldquo;Acknowledge every minimum-wage warning (1) before confirming.&rdquo; The owner chooses <em>Acknowledge</em> on Doyun's row and then confirms. All rows become CONFIRMED and read-only.</li>
 </ol>
 <p><strong>What can go wrong.</strong> The warning does not change the amount; the system still pays Doyun's contract wage. The owner has to correct the wage in UC-01 and regenerate the draft before confirming if the error is to be fixed in this payroll.</p>
 <p><strong>End state.</strong> Confirmed payroll for September 2026.</p>
 
 <h3>S7. Policy variant ABSENT: a handed-over shift breaks perfect attendance (UC-10, UC-06)</h3>
-<p><strong>Starting situation.</strong> The owner changes the substitution-attendance policy in <em>Settings</em> from EXCUSED to ABSENT. Choi Minho asks for a substitute for his Saturday 2026-10-03 12:00&ndash;18:00 shift.</p>
+<p><strong>Starting situation.</strong> The owner changes the policy for handed-over shifts in <em>Settings</em> from &ldquo;Do not count as absence&rdquo; (EXCUSED) to &ldquo;Count as absence&rdquo; (ABSENT) (Figure 22). Choi Minho asks for a substitute for his Saturday 2026-10-03 12:00&ndash;18:00 shift.</p>
 <p><strong>Normal flow.</strong></p>
 <ol>
   <li>BR-01 selects Lee Seoyeon (available Saturday 10:00&ndash;22:00, no Saturday shift) and Jung Hana (available Saturday 10:00&ndash;18:00, no Saturday shift). Kang Doyun is not eligible because his own Saturday 10:00&ndash;16:00 shift overlaps.</li>
   <li>Hana accepts.</li>
-  <li>The owner opens the approval panel. Minho's contractual hours stay 16 and his scheduled hours fall from 16 to 10. Under the ABSENT policy the given-away shift breaks his perfect attendance, so his eligibility changes from <em>eligible</em> to <em>not eligible</em>. The panel highlights this line. Hana's scheduled hours rise from 12 to 18; her contract is 12 h, so she is not eligible before or after.</li>
+  <li>The owner opens the approval card on <em>Home</em>. Minho's contractual hours stay 16 and his scheduled hours fall from 16 to 10. Under the ABSENT policy the given-away shift breaks his perfect attendance, so his eligibility changes from <em>eligible</em> to <em>not eligible</em>. The card states this change. Hana's scheduled hours rise from 12 to 18; her contract is 12 h, so she is not eligible before or after.</li>
   <li>The owner can now decide with this information. Under the default EXCUSED policy the same swap would leave Minho eligible, with 3.2 holiday hours.</li>
 </ol>
 <p><strong>End state.</strong> Depends on the owner's decision. The scenario shows why BR-06 is a setting and not a fixed rule (risk R1 of the proposal).</p>
@@ -738,7 +739,7 @@
 </table>
 
 <h2>9.2 Prototyping</h2>
-<p>The screens of Section 8 form a working prototype on the demo data. The prototype is used in two ways. The team walks through scenarios S1 to S7 on it and records each step where the screen does not match the use-case description. The owner and the two co-workers are each asked to perform one task: the owner approves the request of scenario S3, one co-worker creates the request of S1, and the other accepts it from the inbox as in S2. We observe whether each task can be completed without help and whether the approval panel is understood. The results will be reported in the final report together with any requirement changed because of them.</p>
+<p>The screens of Section 8 form a working prototype on the demo data. The prototype is used in two ways. The team walks through scenarios S1 to S7 on it and records each step where the screen does not match the use-case description. The owner and the two co-workers are each asked to perform one task: the owner approves the request of scenario S3, one co-worker creates the request of S1, and the other accepts it from <em>Home</em> as in S2. We observe whether each task can be completed without help and whether the approval card is understood. The results will be reported in the final report together with any requirement changed because of them.</p>
 
 <h2>9.3 Test-case generation</h2>
 <p>Chapter 8 recommends writing tests for requirements as a way to find requirements that are ambiguous or cannot be tested. We derived one test group per business rule before implementation. The test groups make three boundaries of the requirements explicit: the 15-hour boundary is inclusive (tested at 14.99 h and 15 h), the holiday hours are capped at 40 contractual hours, and shifts ending after midnight are counted with the end on the next day.</p>

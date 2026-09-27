@@ -1,69 +1,89 @@
-// UC-04 Request substitute (form) and UC-12 My requests (list with Cancel).
+// UC-04 / UC-05 / UC-12: the Swaps tab (requests for me, my requests, history) and the three-step
+// request flow (choose shift → reason and deadline → review and send → result), prompt §2.4.
 import * as svc from '../core/services.js';
-import { t, esc, fmtShift, fmtDateTime, showFormError, pageHead, emptyState } from './i18n.js';
+import { addMinutes } from '../core/clock.js';
+import { t, esc, fmtShift, fmtDate, fmtWhen, dday, given, joinPeople, dayLong, showFormError } from './i18n.js';
+import { icon, button, pageHead, sectionHead, emptyState, tracker } from './components.js';
+import { effectLines } from './approvals.js';
 
-let lastResult = null;
+// ---- Cards shared with Home -----------------------------------------------------
 
-export function render(view, ctx) {
-  const { user, args } = ctx;
-  const shifts = svc.listRequestableShifts(user.id);
-  const chosenId = args[0] === 'new' ? Number(args[1]) : null;
-  const chosen = shifts.find((s) => s.id === chosenId) || shifts[0];
-  const mine = svc.listMyRequests(user.id);
-  const result = lastResult;
-  lastResult = null;
-
-  view.innerHTML = `
-    ${pageHead(t('requests.title'), t('purpose.requests'))}
-    ${result ? resultPanel(result) : ''}
-    <form class="card form" id="request-form">
-      <h2>${esc(t('requests.newTitle'))}</h2>
-      ${shifts.length ? `
-      <div class="fields">
-        <label class="wide">${esc(t('requests.shift'))}
-          <select name="shiftId" id="shift-select">
-            ${shifts.map((s) => `<option value="${s.id}" ${s.id === chosen.id ? 'selected' : ''}>${esc(fmtShift(s))}</option>`).join('')}
-          </select>
-        </label>
-        <label class="wide">${esc(t('requests.reason'))}
-          <input type="text" name="reason" maxlength="200" autocomplete="off">
-        </label>
-        <label>${esc(t('requests.deadline'))}
-          <input type="datetime-local" name="deadline" id="deadline" class="num" value="${esc(svc.defaultDeadline(chosen))}" required aria-describedby="deadline-hint">
-        </label>
+/** A request sent to me: who asks, the shift, reason, deadline, the effect of accepting, Accept / Decline. */
+export function incomingCard(r, { now, primary }) {
+  return `
+    <article class="card req-card" aria-labelledby="in-${r.id}">
+      <div class="card-row">
+        <h3 class="card-title" id="in-${r.id}">${esc(t('home.asks', { name: given(r.requesterName) }))}</h3>
+        <span class="chip chip-handover">${esc(dday(r.workDate, now))}</span>
       </div>
-      <p class="hint" id="deadline-hint">${esc(t('requests.deadlineHint'))}</p>
-      <div class="actions"><button type="submit" class="btn btn-primary">${esc(t('requests.submit'))}</button></div>`
-      : emptyState(t('requests.noShiftsText'), `<a class="btn btn-primary" href="#/schedule">${esc(t('requests.toSchedule'))}</a>`)}
-    </form>
-    <section class="group stack" aria-labelledby="mine-title">
-      <h2 id="mine-title">${esc(t('requests.title'))}</h2>
-      ${mine.length ? mine.map(requestCard).join('') : emptyState(t('requests.noneText'), shifts.length ? '' : `<a class="btn" href="#/schedule">${esc(t('requests.toSchedule'))}</a>`)}
-    </section>`;
+      <p class="shift-line num">${esc(fmtShift(r))}</p>
+      ${r.reason ? `<p class="muted">${esc(t('home.reason', { text: r.reason }))}</p>` : ''}
+      <p class="deadline">${icon('clock')}<span>${esc(t('home.replyBy', { when: fmtWhen(r.deadline, now) }))}</span></p>
+      ${effectLines(r.effect, 'accept')}
+      <div class="actions">
+        ${button({ label: t('home.accept'), kind: primary ? 'primary' : 'secondary', attrs: `data-accept="${r.id}" data-day="${esc(dayLong(r.workDate))}"`, block: true })}
+        ${button({ label: t('home.decline'), kind: 'text', attrs: `data-decline="${r.id}" data-name="${esc(given(r.requesterName))}"` })}
+      </div>
+    </article>`;
+}
 
-  const form = view.querySelector('#request-form');
-  const select = view.querySelector('#shift-select');
-  if (select) {
-    select.addEventListener('change', () => {
-      const s = shifts.find((x) => x.id === Number(select.value));
-      view.querySelector('#deadline').value = svc.defaultDeadline(s);
-    });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(form));
-      try {
-        const res = svc.createSubRequest({ shiftId: Number(data.shiftId), requesterId: user.id, reason: data.reason, deadline: data.deadline.slice(0, 16) });
-        lastResult = res;
-        ctx.go('#/requests');
-      } catch (err) {
-        showFormError(form, err);
-      }
-    });
-  }
+/** A request I was asked for but someone else accepted first. */
+export function takenCard(r) {
+  return `
+    <article class="card req-card req-closed">
+      <div class="card-row"><h3 class="card-title">${esc(t('home.taken', { name: given(r.acceptorName) }))}</h3>${icon('check', 'muted-icon')}</div>
+      <p class="muted">${esc(t('home.takenSub', { shift: fmtShift(r) }))}</p>
+    </article>`;
+}
+
+function answersLine(r) {
+  if (!r.targets.length) return `<p class="muted">${esc(t('answer.none'))}</p>`;
+  return `<ul class="answers">${r.targets.map((x) => `<li class="answer answer-${x.response.toLowerCase()}">${esc(t('answer.line', { name: given(x.workerName), answer: t(`answer.${x.response}`) }))}</li>`).join('')}</ul>`;
+}
+
+/** One of my requests, as a tracker card; open ones can be cancelled. */
+export function myRequestCard(r, { now }) {
+  const open = r.status === 'REQUESTED' || r.status === 'ACCEPTED';
+  let status = '';
+  if (r.status === 'REQUESTED') status = `<p class="status-line">${esc(t('status.waitingReplies'))} · ${esc(t('common.until', { when: fmtWhen(r.deadline, now) }))}</p>${answersLine(r)}`;
+  if (r.status === 'ACCEPTED') status = `<p class="status-line">${esc(t('status.waitingOwner', { name: given(r.acceptorName) }))}</p>`;
+  if (r.status === 'APPROVED') status = `<p class="status-line">${esc(t('status.approved', { name: given(r.acceptorName) }))}</p>`;
+  return `
+    <article class="card req-card">
+      <div class="card-row"><h3 class="card-title num">${esc(fmtShift(r))}</h3></div>
+      ${tracker(r.status)}
+      ${status}
+      ${open ? `<div class="actions actions-end">${button({ label: t('swaps.cancel'), kind: 'text', attrs: `data-cancel="${r.id}"` })}</div>` : ''}
+    </article>`;
+}
+
+/** Accept / Decline / Cancel handlers for the cards above. */
+export function bindRequestActions(view, ctx) {
+  view.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', () => {
+    try {
+      svc.respondToRequest(Number(b.dataset.accept), ctx.user.id, 'ACCEPTED');
+      ctx.toast(t('home.accepted', { day: b.dataset.day }));
+      ctx.refresh();
+    } catch (err) {
+      if (err.code === 'ALREADY_TAKEN') {
+        ctx.toast(t('home.taken', { name: given(err.params.name) }), 'alert');
+        ctx.refresh();
+      } else ctx.fail(err);
+    }
+  }));
+  view.querySelectorAll('[data-decline]').forEach((b) => b.addEventListener('click', () => {
+    try {
+      svc.respondToRequest(Number(b.dataset.decline), ctx.user.id, 'DECLINED');
+      ctx.toast(t('home.declined', { name: b.dataset.name }));
+      ctx.refresh();
+    } catch (err) {
+      ctx.fail(err);
+    }
+  }));
   view.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', () => {
     try {
-      svc.cancelRequest(Number(b.dataset.cancel), user.id);
-      ctx.flash(t('requests.cancelled'));
+      svc.cancelRequest(Number(b.dataset.cancel), ctx.user.id);
+      ctx.toast(t('swaps.cancelled'));
       ctx.refresh();
     } catch (err) {
       ctx.fail(err);
@@ -71,34 +91,303 @@ export function render(view, ctx) {
   }));
 }
 
-function resultPanel(res) {
-  if (!res.candidates.length) {
-    return `<div class="notice notice-alert" role="status">${esc(t('requests.noCandidate'))}</div>`;
+// ---- Swaps tab ---------------------------------------------------------------------
+
+export function render(view, ctx) {
+  if (ctx.args[0] === 'new') {
+    renderFlow(view, ctx);
+    return;
   }
-  return `<div class="notice notice-ok" role="status">
-    <p>${esc(t('requests.sentTo'))}</p>
-    <ul class="plain">${res.candidates.map((c) => `<li>${esc(c.name)}</li>`).join('')}</ul>
-  </div>`;
+  const home = svc.getWorkerHome(ctx.user.id);
+  const mine = svc.listMyRequests(ctx.user.id);
+  const past = mine.filter((r) => !['REQUESTED', 'ACCEPTED'].includes(r.status));
+  const canRequest = svc.listRequestableShifts(ctx.user.id).length > 0;
+  const cta = button({
+    label: t('swaps.find'), kind: 'primary', block: true, href: '#/swaps/new/1',
+    disabled: !canRequest, reason: t('swaps.findDisabled'),
+  });
+
+  view.innerHTML = `
+    ${pageHead({ title: t('swaps.title'), sub: t('swaps.sub'), cta })}
+    <section class="section">
+      ${sectionHead(t('swaps.received'), home.incoming.length || null)}
+      ${home.incoming.length || home.taken.length
+    ? `<div class="stack">${home.incoming.map((r) => incomingCard(r, { now: ctx.now, primary: false })).join('')}${home.taken.map(takenCard).join('')}</div>`
+    : emptyState(t('swaps.receivedEmpty'))}
+    </section>
+    <section class="section">
+      ${sectionHead(t('swaps.sent'), home.myOpen.length || null)}
+      ${home.myOpen.length ? `<div class="stack">${home.myOpen.map((r) => myRequestCard(r, ctx)).join('')}</div>` : emptyState(t('swaps.sentEmpty'))}
+    </section>
+    ${past.length ? `
+    <section class="section">
+      <details class="history">
+        <summary>${esc(t('swaps.past', { n: past.length }))}${icon('chevronDown', 'chev')}</summary>
+        <div class="stack">${past.map((r) => myRequestCard(r, ctx)).join('')}</div>
+      </details>
+    </section>` : ''}`;
+  bindRequestActions(view, ctx);
 }
 
-export function statusChip(status) {
-  const tone = { REQUESTED: 'chip-handover', ACCEPTED: 'chip-shift', APPROVED: 'chip-ok', REJECTED: 'chip-alert', EXPIRED: '', CANCELLED: '' }[status];
-  return `<span class="chip ${tone}">${esc(t(`request.${status}`))}</span>`;
+// ---- Request flow ------------------------------------------------------------------
+
+const DRAFT_KEY = 'shiftswap.flow';
+const REASONS = ['Exam', 'Hospital', 'Family', 'Personal', 'Other'];
+
+function loadDraft() {
+  try {
+    return JSON.parse(sessionStorage.getItem(DRAFT_KEY)) || {};
+  } catch {
+    return {};
+  }
 }
 
-function requestCard(r) {
-  const open = r.status === 'REQUESTED' || r.status === 'ACCEPTED';
+function saveDraft(d) {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    // Storage blocked: the draft lives only in memory for this step.
+  }
+}
+
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // nothing to clear
+  }
+}
+
+function shiftStart(s) {
+  return `${s.workDate}T${s.startTime}`;
+}
+
+/** The deadline options of step 2 for this shift; an option is unavailable when it is not after now or is after the start. */
+function deadlineOptions(shift, now) {
+  const start = shiftStart(shift);
+  const in24 = addMinutes(now, 24 * 60);
+  const before2 = addMinutes(start, -120);
+  return {
+    d24: { value: in24, ok: in24 > now && in24 <= start },
+    d2h: { value: before2, ok: before2 > now && before2 <= start },
+    custom: { value: null, ok: true },
+  };
+}
+
+function flowHead(step, backHref, ctx) {
   return `
-    <article class="card request">
-      <div class="request-head">
-        <h3 class="num-title">${esc(fmtShift(r))}</h3>
-        ${statusChip(r.status)}
+    <div class="flow-head">
+      ${step <= 3 && backHref ? `<a class="icon-btn" href="${backHref}" aria-label="${esc(t('common.back'))}">${icon('chevronLeft')}</a>` : '<span class="icon-btn-spacer"></span>'}
+      ${step <= 3 ? `<p class="step-indicator"><span aria-hidden="true" class="num">${esc(t('flow.step', { n: step }))}</span><span class="sr-only">${esc(t('flow.stepSr', { n: step }))}</span></p>` : '<span></span>'}
+      <a class="icon-btn" href="#/${ctx.user.role === 'WORKER' ? 'swaps' : 'home'}" aria-label="${esc(t('flow.exit'))}" data-exit>${icon('x')}</a>
+    </div>
+    ${step <= 3 ? `<div class="step-bar" aria-hidden="true"><span style="width:${(step / 3) * 100}%"></span></div>` : ''}`;
+}
+
+function renderFlow(view, ctx) {
+  const step = ctx.args[1] || '1';
+  const draft = loadDraft();
+  if (step === '1' && ctx.args[2]) {
+    draft.shiftId = Number(ctx.args[2]);
+    saveDraft(draft);
+  }
+  if (step === '1') return flowStep1(view, ctx, draft);
+  const shift = draft.shiftId ? svc.listRequestableShifts(ctx.user.id).find((s) => s.id === draft.shiftId) : null;
+  if (step === 'done') return flowDone(view, ctx, draft);
+  if (!shift) {
+    ctx.go('#/swaps/new/1');
+    return undefined;
+  }
+  if (step === '2') return flowStep2(view, ctx, draft, shift);
+  return flowStep3(view, ctx, draft, shift);
+}
+
+function flowStep1(view, ctx, draft) {
+  const t0 = ctx.now;
+  const requestable = svc.listRequestableShifts(ctx.user.id);
+  const busy = svc.listMyRequests(ctx.user.id).filter((r) => ['REQUESTED', 'ACCEPTED'].includes(r.status) && shiftStart(r) > t0);
+  const all = [
+    ...requestable.map((s) => ({ ...s, busy: false })),
+    ...busy.map((r) => ({ id: r.shiftId, workDate: r.workDate, startTime: r.startTime, endTime: r.endTime, busy: true })),
+  ].sort((a, b) => shiftStart(a).localeCompare(shiftStart(b)));
+  if (!requestable.some((s) => s.id === draft.shiftId)) delete draft.shiftId;
+  if (!draft.shiftId && requestable.length === 1) {
+    draft.shiftId = requestable[0].id;
+    saveDraft(draft);
+  }
+
+  const ctaHtml = () => button({
+    label: t('common.next'), kind: 'primary', block: true, id: 'next',
+    disabled: !draft.shiftId, reason: requestable.length ? t('flow.s1Need') : t('flow.s1None'),
+  });
+  view.innerHTML = `
+    ${flowHead(1, null, ctx)}
+    <div class="flow-body">
+      ${pageHead({ title: t('flow.s1Title'), sub: t('flow.s1Sub'), cta: ctaHtml() })}
+      ${all.length ? `<fieldset class="options"><legend class="sr-only">${esc(t('flow.s1Title'))}</legend>
+        ${all.map((s) => `
+          <label class="option-card ${s.busy ? 'is-disabled' : ''}">
+            <input type="radio" name="shift" value="${s.id}" ${s.busy ? 'disabled' : ''} ${s.id === draft.shiftId ? 'checked' : ''}>
+            <span class="option-main">
+              <span class="option-title">${esc(fmtDate(s.workDate))}</span>
+              <span class="option-sub num">${esc(`${s.startTime}–${s.endTime}`)}</span>
+              ${s.busy ? `<span class="chip chip-handover">${esc(t('flow.s1Busy'))}</span>` : ''}
+            </span>
+            <span class="chip">${esc(dday(s.workDate, t0))}</span>
+          </label>`).join('')}
+      </fieldset>` : emptyState(t('flow.s1None'))}
+    </div>`;
+  view.querySelectorAll('input[name="shift"]').forEach((r) => r.addEventListener('change', () => {
+    draft.shiftId = Number(r.value);
+    saveDraft(draft);
+    view.querySelector('.cta-bar').innerHTML = ctaHtml();
+    bindNext();
+  }));
+  const bindNext = () => {
+    const next = view.querySelector('#next');
+    if (next && !next.disabled) next.addEventListener('click', () => { draft.deadlineMode = null; saveDraft(draft); ctx.go('#/swaps/new/2'); });
+  };
+  bindNext();
+}
+
+function flowStep2(view, ctx, draft, shift) {
+  const opts = deadlineOptions(shift, ctx.now);
+  const start = shiftStart(shift);
+  if (!draft.deadlineMode) {
+    const def = svc.defaultDeadline(shift);
+    draft.deadlineMode = opts.d24.ok && def === opts.d24.value ? 'd24' : 'custom';
+    draft.deadline = def;
+  }
+  if (draft.deadlineMode !== 'custom') draft.deadline = opts[draft.deadlineMode].value;
+  if (draft.reasonKey === undefined) draft.reasonKey = null;
+  saveDraft(draft);
+
+  const valid = () => draft.deadline && draft.deadline > ctx.now && draft.deadline <= start;
+  const sentence = () => (valid() ? t('flow.dSentence', { when: fmtWhen(draft.deadline, ctx.now) }) : t('err.DEADLINE_AFTER_START', { start: fmtShift(shift) }));
+  const ctaHtml = () => button({
+    label: t('common.next'), kind: 'primary', block: true, id: 'next',
+    disabled: !valid(), reason: draft.deadline && draft.deadline <= ctx.now ? t('err.DEADLINE_NOT_FUTURE') : t('err.DEADLINE_INVALID'),
+  });
+  const chip = (group, value, label, checked, disabled = false) => `
+    <label class="chip-option ${disabled ? 'is-disabled' : ''}">
+      <input type="radio" name="${group}" value="${value}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+      <span>${esc(label)}</span>
+    </label>`;
+
+  view.innerHTML = `
+    ${flowHead(2, '#/swaps/new/1', ctx)}
+    <div class="flow-body">
+      ${pageHead({ title: t('flow.s2Title'), sub: fmtShift(shift), cta: ctaHtml() })}
+      <form class="form" id="s2" novalidate>
+        <fieldset class="field-group">
+          <legend class="field-label">${esc(t('flow.reason'))}</legend>
+          <div class="chip-row" role="radiogroup">
+            ${REASONS.map((k) => chip('reason', k, t(`flow.reason${k}`), draft.reasonKey === k)).join('')}
+          </div>
+          <label class="field ${draft.reasonKey === 'Other' ? '' : 'is-hidden'}" id="reason-other">
+            <span class="field-label">${esc(t('flow.reasonInput'))}</span>
+            <input type="text" name="reasonText" maxlength="60" autocomplete="off" value="${esc(draft.reasonText || '')}">
+          </label>
+          <p class="hint">${esc(t('flow.reasonOptional'))}</p>
+        </fieldset>
+        <fieldset class="field-group">
+          <legend class="field-label">${esc(t('flow.deadline'))}</legend>
+          <div class="chip-row" role="radiogroup">
+            ${chip('deadline', 'd24', t('flow.d24'), draft.deadlineMode === 'd24', !opts.d24.ok)}
+            ${chip('deadline', 'd2h', t('flow.d2h'), draft.deadlineMode === 'd2h', !opts.d2h.ok)}
+            ${chip('deadline', 'custom', t('flow.dCustom'), draft.deadlineMode === 'custom')}
+          </div>
+          ${!opts.d24.ok || !opts.d2h.ok ? `<p class="hint">${esc(t('flow.dUnavailable'))}</p>` : ''}
+          <label class="field ${draft.deadlineMode === 'custom' ? '' : 'is-hidden'}" id="deadline-custom">
+            <span class="field-label">${esc(t('flow.dCustomLabel'))}</span>
+            <input type="datetime-local" name="deadlineCustom" class="num" value="${esc(draft.deadline || '')}" max="${esc(start)}">
+          </label>
+          <p class="sentence" id="deadline-sentence" aria-live="polite">${icon('clock')}<span>${esc(sentence())}</span></p>
+        </fieldset>
+      </form>
+    </div>`;
+
+  const form = view.querySelector('#s2');
+  const refreshBits = () => {
+    view.querySelector('#reason-other').classList.toggle('is-hidden', draft.reasonKey !== 'Other');
+    view.querySelector('#deadline-custom').classList.toggle('is-hidden', draft.deadlineMode !== 'custom');
+    view.querySelector('#deadline-sentence span').textContent = sentence();
+    view.querySelector('.cta-bar').innerHTML = ctaHtml();
+    bindNext();
+    saveDraft(draft);
+  };
+  form.querySelectorAll('input[name="reason"]').forEach((r) => r.addEventListener('change', () => { draft.reasonKey = r.value; refreshBits(); }));
+  form.reasonText.addEventListener('input', () => { draft.reasonText = form.reasonText.value; saveDraft(draft); });
+  form.querySelectorAll('input[name="deadline"]').forEach((r) => r.addEventListener('change', () => {
+    draft.deadlineMode = r.value;
+    draft.deadline = r.value === 'custom' ? (form.deadlineCustom.value || draft.deadline) : opts[r.value].value;
+    if (r.value === 'custom') form.deadlineCustom.value = draft.deadline;
+    refreshBits();
+  }));
+  form.deadlineCustom.addEventListener('change', () => { draft.deadline = form.deadlineCustom.value.slice(0, 16); refreshBits(); });
+  const bindNext = () => {
+    const next = view.querySelector('#next');
+    if (next && !next.disabled) next.addEventListener('click', () => ctx.go('#/swaps/new/3'));
+  };
+  bindNext();
+}
+
+function reasonOf(draft) {
+  if (!draft.reasonKey) return '';
+  if (draft.reasonKey === 'Other') return (draft.reasonText || '').trim();
+  return t(`flow.reason${draft.reasonKey}`);
+}
+
+function flowStep3(view, ctx, draft, shift) {
+  const candidates = svc.previewCandidates(shift.id, ctx.user.id);
+  const reason = reasonOf(draft);
+  const cta = button({ label: t('flow.send'), kind: 'primary', block: true, id: 'send' });
+  view.innerHTML = `
+    ${flowHead(3, '#/swaps/new/2', ctx)}
+    <div class="flow-body">
+      ${pageHead({ title: t('flow.s3Title'), cta })}
+      <form id="s3">
+        <dl class="card summary-list">
+          <div><dt>${esc(t('flow.shift'))}</dt><dd class="num">${esc(fmtShift(shift))}</dd></div>
+          <div><dt>${esc(t('flow.reason'))}</dt><dd>${esc(reason || t('flow.reasonNone'))}</dd></div>
+          <div><dt>${esc(t('flow.deadline'))}</dt><dd>${esc(t('common.until', { when: fmtWhen(draft.deadline, ctx.now) }))}</dd></div>
+        </dl>
+      </form>
+      <section class="section">
+        ${sectionHead(t('flow.to'), candidates.length || null)}
+        ${candidates.length ? `
+          <ul class="card people">${candidates.map((c) => `<li><span class="avatar" aria-hidden="true">${esc(given(c.name).slice(0, 1))}</span><span>${esc(c.name)}</span></li>`).join('')}</ul>
+          <p class="hint">${esc(t('flow.toCount', { n: candidates.length }))}</p>`
+    : `<p class="notice notice-warn">${icon('alert')}<span>${esc(t('flow.toNone'))}</span></p>`}
+      </section>
+    </div>`;
+  view.querySelector('#send').addEventListener('click', () => {
+    try {
+      const res = svc.createSubRequest({ shiftId: shift.id, requesterId: ctx.user.id, reason, deadline: draft.deadline });
+      saveDraft({ result: { id: res.id, candidates: res.candidates.map((c) => c.name), shift: { workDate: shift.workDate, startTime: shift.startTime, endTime: shift.endTime } } });
+      ctx.go('#/swaps/new/done');
+    } catch (err) {
+      showFormError(view.querySelector('#s3'), err);
+    }
+  });
+}
+
+function flowDone(view, ctx, draft) {
+  const res = draft.result;
+  if (!res) {
+    ctx.go('#/swaps');
+    return;
+  }
+  const cta = button({ label: t('common.goHome'), kind: 'primary', block: true, id: 'home' });
+  view.innerHTML = `
+    ${flowHead(4, null, ctx)}
+    <div class="flow-body flow-done">
+      <div class="done-mark" aria-hidden="true">${icon('check')}</div>
+      ${pageHead({ title: t('flow.doneTitle'), sub: fmtShift(res.shift), cta })}
+      <div class="card">${tracker('REQUESTED')}
+        <p class="status-line">${esc(res.candidates.length ? t('flow.doneSent', { names: joinPeople(res.candidates) }) : t('flow.doneNone'))}</p>
       </div>
-      <p class="muted">${esc(t('requests.deadlineAt', { when: fmtDateTime(r.deadline) }))}${r.reason ? ` · ${esc(t('requests.reasonText', { text: r.reason }))}` : ''}</p>
-      ${r.acceptorName ? `<p>${esc(t('requests.acceptor', { name: r.acceptorName }))}</p>` : ''}
-      <p class="targets"><span class="muted">${esc(t('requests.candidates'))}:</span>
-        ${r.targets.length ? r.targets.map((x) => `${esc(x.workerName)} <span class="chip">${esc(t(`target.${x.response}`))}</span>`).join(' ') : esc(t('requests.noTargets'))}
-      </p>
-      ${open ? `<div class="actions"><button type="button" class="btn btn-danger" data-cancel="${r.id}">${esc(t('requests.cancel'))}</button></div>` : ''}
-    </article>`;
+    </div>`;
+  view.querySelector('#home').addEventListener('click', () => { clearDraft(); ctx.go('#/home'); });
+  view.querySelector('[data-exit]').addEventListener('click', clearDraft);
 }

@@ -1,31 +1,30 @@
-// UC-03 Weekly board for both roles: a time grid (44 px per hour). The owner generates the week (FR-04)
-// and edits single shifts (FR-05); the owner also sees an overview strip above the board.
+// UC-03 Schedule (prompt §2.6): time grid on desktop, day-by-day list on mobile, and a detail sheet per shift
+// with its history and only the actions relevant to the viewer.
 import * as svc from '../core/services.js';
-import { now } from '../core/clock.js';
-import { addDays, weekStartOf, toMinutes, durationHours, round2 } from '../core/rules.js';
-import { t, esc, fmtDay, num, showFormError, pageHead, emptyState } from './i18n.js';
+import { addDays, weekStartOf, toMinutes } from '../core/rules.js';
+import { t, esc, fmtDate, fmtDateShort, fmtShift, given, showFormError, num } from './i18n.js';
+import { icon, button, pageHead, emptyState, shiftChips, shiftClasses, openSheet, timeOptions } from './components.js';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HOUR_PX = 44;
 
-/** The week shown by a screen: the Monday of the date in the route, or of the demo clock. */
-export function weekFromArgs(args) {
-  return weekStartOf(args[0] && DATE.test(args[0]) ? args[0] : now().slice(0, 10));
+/** The week shown: the Monday of the date in the route, or of the demo clock. */
+export function weekFromArgs(args, nowIso) {
+  return weekStartOf(args[0] && DATE.test(args[0]) ? args[0] : nowIso.slice(0, 10));
 }
 
-/** Previous / this / next week navigation used by the board, attendance and weekly summary. */
-export function weekNavHtml(route, week) {
-  const label = t('common.weekOf', { from: fmtDay(week), to: fmtDay(addDays(week, 6)) });
+/** ‹ label › and "This week" for weekly screens. */
+export function weekNav(route, week, nowIso, label) {
+  const thisWeek = weekStartOf(nowIso.slice(0, 10));
   return `
-    <div class="weeknav">
-      <a class="btn" href="#/${route}/${addDays(week, -7)}">${esc(t('common.prevWeek'))}</a>
-      <h2 class="weeknav-label">${esc(label)}</h2>
-      <a class="btn" href="#/${route}/${addDays(week, 7)}">${esc(t('common.nextWeek'))}</a>
-      <a class="btn btn-quiet" href="#/${route}/${weekStartOf(now().slice(0, 10))}">${esc(t('common.thisWeek'))}</a>
-    </div>`;
+    <nav class="period-nav" aria-label="${esc(label)}">
+      <a class="icon-btn" href="#/${route}/${addDays(week, -7)}" aria-label="${esc(t('common.prevWeek'))}">${icon('chevronLeft')}</a>
+      <p class="period-label">${esc(label)}</p>
+      <a class="icon-btn" href="#/${route}/${addDays(week, 7)}" aria-label="${esc(t('common.nextWeek'))}">${icon('chevronRight')}</a>
+      ${week !== thisWeek ? `<a class="btn btn-text btn-small" href="#/${route}/${thisWeek}">${esc(t('common.thisWeek'))}</a>` : ''}
+    </nav>`;
 }
 
-/** Minutes on the work date's axis; an end ≤ start runs into the next day. */
 function span(s) {
   const a = toMinutes(s.startTime);
   let b = toMinutes(s.endTime);
@@ -33,81 +32,20 @@ function span(s) {
   return [a, b];
 }
 
-export function render(view, ctx) {
-  const { user, args } = ctx;
-  const week = weekFromArgs(args);
-  const isOwner = user.role === 'OWNER';
-  const shifts = svc.getWeekShifts(week);
-  const mode = isOwner ? args[1] : null;
-  const editing = mode === 'edit' ? shifts.find((s) => s.id === Number(args[2])) : null;
-  const thisWeek = weekStartOf(now().slice(0, 10));
-
-  const actions = isOwner ? `
-    <button type="button" class="btn btn-primary" data-generate>${esc(t('schedule.generate'))}</button>
-    <a class="btn" href="#/schedule/${week}/add">${esc(t('schedule.addShift'))}</a>` : '';
-
-  let empty = '';
-  if (!shifts.length) {
-    empty = isOwner
-      ? emptyState(t('schedule.emptyOwnerTitle'), `<button type="button" class="btn btn-primary" data-generate>${esc(t('schedule.generateWeek', { date: fmtDay(week) }))}</button>`)
-      : emptyState(t('schedule.emptyWorkerTitle'), week === thisWeek
-        ? `<a class="btn btn-primary" href="#/availability">${esc(t('schedule.setAvailability'))}</a>`
-        : `<a class="btn btn-primary" href="#/schedule/${thisWeek}">${esc(t('schedule.goThisWeek'))}</a>`);
-  }
-
-  view.innerHTML = `
-    ${pageHead(t('schedule.title'), t('purpose.schedule'), actions)}
-    ${isOwner ? overviewStrip(thisWeek) : ''}
-    <section class="group">
-      ${weekNavHtml('schedule', week)}
-      ${mode === 'add' || editing ? editForm(editing, week) : ''}
-      ${shifts.length ? board(week, shifts, user) : empty}
-      ${shifts.length ? `<ul class="legend">
-        ${isOwner ? '' : `<li><span class="swatch swatch-own" aria-hidden="true"></span>${esc(t('schedule.legendOwn'))}</li>`}
-        <li><span class="swatch swatch-handover" aria-hidden="true"></span>${esc(t('schedule.legendHandover'))}</li>
-        <li><span class="swatch swatch-pending" aria-hidden="true"></span>${esc(t('schedule.legendPending'))}</li>
-      </ul>` : ''}
-    </section>`;
-
-  if (isOwner) bindOwner(view, ctx, week, editing);
-}
-
-/** Owner overview: approvals waiting, open requests, and this week's shifts and hours, each linking to its page. */
-function overviewStrip(thisWeek) {
-  const requests = svc.listOwnerRequests();
-  const waiting = requests.filter((r) => r.status === 'ACCEPTED').length;
-  const open = requests.filter((r) => r.status === 'REQUESTED').length;
-  const weekShifts = svc.getWeekShifts(thisWeek);
-  const hours = round2(weekShifts.reduce((sum, s) => sum + durationHours(s.startTime, s.endTime), 0));
-  const stat = (href, label, value, alert) => `
-    <a class="stat ${alert ? 'stat-alert' : ''}" href="${href}">
-      <span class="stat-label">${esc(label)}</span>
-      <span class="stat-value num">${esc(value)}</span>
-    </a>`;
-  return `
-    <nav class="overview" aria-label="${esc(t('overview.label'))}">
-      ${stat('#/approvals', t('overview.approvals'), waiting, waiting > 0)}
-      ${stat('#/approvals', t('overview.open'), open, false)}
-      ${stat(`#/weekly/${thisWeek}`, t('overview.week'), t('overview.weekValue', { n: weekShifts.length, h: hours }), false)}
-    </nav>`;
-}
-
-/** Lane layout: overlapping shifts of one day sit side by side. */
+/** Overlapping shifts of one day share the column width in lanes. */
 function layoutDay(dayShifts) {
   const items = dayShifts.map((s) => ({ s, span: span(s) })).sort((a, b) => a.span[0] - b.span[0]);
   let cluster = [];
   let clusterEnd = -1;
+  let laneEnds = [];
   const flush = () => {
     const lanes = Math.max(1, ...cluster.map((x) => x.lane + 1));
     cluster.forEach((x) => { x.lanes = lanes; });
     cluster = [];
+    laneEnds = [];
   };
-  let laneEnds = [];
   for (const item of items) {
-    if (item.span[0] >= clusterEnd && cluster.length) {
-      flush();
-      laneEnds = [];
-    }
+    if (cluster.length && item.span[0] >= clusterEnd) flush();
     let lane = laneEnds.findIndex((end) => end <= item.span[0]);
     if (lane === -1) lane = laneEnds.length;
     laneEnds[lane] = item.span[1];
@@ -119,33 +57,89 @@ function layoutDay(dayShifts) {
   return items;
 }
 
-function board(week, shifts, user) {
+export function render(view, ctx) {
+  const { user } = ctx;
+  const week = weekFromArgs(ctx.args, ctx.now);
+  const isOwner = user.role === 'OWNER';
+  const shifts = svc.getWeekShifts(week);
+  const label = `${fmtDate(week)} – ${fmtDate(addDays(week, 6))}`;
+
+  let cta;
+  if (isOwner) {
+    cta = shifts.length
+      ? button({ label: t('schedule.add'), kind: 'primary', block: true, id: 'add-shift', iconName: 'plus' })
+      : button({ label: t('schedule.generate'), kind: 'primary', block: true, id: 'generate' });
+  } else {
+    const canRequest = svc.listRequestableShifts(user.id).length > 0;
+    cta = button({ label: t('schedule.findCover'), kind: 'primary', block: true, href: '#/swaps/new/1', disabled: !canRequest, reason: t('schedule.findDisabled') });
+  }
+
+  view.innerHTML = `
+    ${pageHead({ title: t('schedule.title'), cta })}
+    ${weekNav('schedule', week, ctx.now, label)}
+    ${shifts.length ? board(week, shifts, ctx) : emptyState(t(isOwner ? 'schedule.emptyOwner' : 'schedule.emptyWorker'))}
+    ${shifts.length ? `<ul class="legend">
+      ${isOwner ? '' : `<li><span class="swatch swatch-own" aria-hidden="true"></span>${esc(t('schedule.legendOwn'))}</li>`}
+      <li><span class="swatch swatch-handover" aria-hidden="true"></span>${esc(t('schedule.legendHandover'))}</li>
+      <li><span class="swatch swatch-pending" aria-hidden="true"></span>${esc(t('schedule.legendPending'))}</li>
+    </ul>` : ''}`;
+
+  view.querySelectorAll('[data-shift]').forEach((b) => b.addEventListener('click', () => openDetail(ctx, Number(b.dataset.shift), week)));
+  view.querySelectorAll('[data-day-toggle]').forEach((b) => b.addEventListener('click', () => {
+    const day = b.closest('.day');
+    const open = day.classList.toggle('is-collapsed') === false;
+    b.setAttribute('aria-expanded', String(open));
+  }));
+  const gen = view.querySelector('#generate');
+  if (gen) gen.addEventListener('click', () => {
+    try {
+      const { created } = svc.generateWeek(week);
+      ctx.toast(created ? t('schedule.generated', { n: created }) : t('schedule.generatedNone'));
+      ctx.refresh();
+    } catch (err) {
+      ctx.fail(err);
+    }
+  });
+  const add = view.querySelector('#add-shift');
+  if (add) add.addEventListener('click', () => openAdd(ctx, week));
+}
+
+function board(week, shifts, ctx) {
   const spans = shifts.map(span);
   const axisStart = Math.floor(Math.min(...spans.map((x) => x[0])) / 60) * 60;
   const axisEnd = Math.ceil(Math.max(...spans.map((x) => x[1])) / 60) * 60;
   const hours = [];
   for (let m = axisStart; m <= axisEnd; m += 60) hours.push(m);
   const px = (m) => ((m - axisStart) / 60) * HOUR_PX;
-  const label = (m) => `${String((m / 60) % 24).padStart(2, '0')}:00`;
-  const today = now().slice(0, 10);
+  const hourLabel = (m) => `${String((m / 60) % 24).padStart(2, '0')}:00`;
+  const today = ctx.now.slice(0, 10);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
+  const openDay = days.includes(today) ? today : days.find((d) => shifts.some((s) => s.workDate === d));
   const lines = hours.map((m) => `<div class="hour-line" style="--top:${px(m)}px"></div>`).join('');
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
   return `
     <div class="board" style="--grid-h:${px(axisEnd)}px">
       <div class="gutter" aria-hidden="true">
         <div class="day-head"></div>
-        <div class="lane-area">${hours.map((m) => `<span class="hour-label num" style="--top:${px(m)}px">${label(m)}</span>`).join('')}</div>
+        <div class="lane-area">${hours.map((m) => `<span class="hour-label num" style="--top:${px(m)}px">${hourLabel(m)}</span>`).join('')}</div>
       </div>
       ${days.map((d) => {
         const dayShifts = layoutDay(shifts.filter((s) => s.workDate === d));
         const isToday = d === today;
+        const open = d === openDay;
         return `
-        <section class="day ${isToday ? 'today' : ''}" aria-label="${esc(fmtDay(d))}">
-          <h3 class="day-head">${esc(fmtDay(d))}${isToday ? ` <span class="chip chip-shift">${esc(t('schedule.today'))}</span>` : ''}</h3>
+        <section class="day ${isToday ? 'today' : ''} ${open ? '' : 'is-collapsed'}" aria-label="${esc(fmtDate(d))}">
+          <h3 class="day-head">
+            <button type="button" class="day-toggle" data-day-toggle aria-expanded="${open}">
+              <span class="day-name">${esc(fmtDateShort(d))}</span>
+              ${isToday ? `<span class="chip chip-shift">${esc(t('common.today'))}</span>` : ''}
+              <span class="day-count muted">${esc(dayShifts.length ? t(dayShifts.length === 1 ? 'schedule.count1' : 'schedule.count', { n: dayShifts.length }) : t('schedule.noShifts'))}</span>
+              ${icon('chevronDown', 'chev')}
+            </button>
+          </h3>
           <div class="lane-area">
             <div class="hour-lines" aria-hidden="true">${lines}</div>
-            ${dayShifts.length ? dayShifts.map((x) => shiftBlock(x, px, user)).join('') : `<p class="day-empty">${esc(t('schedule.noShiftsDay'))}</p>`}
+            ${dayShifts.map((x) => shiftBlock(x, px, ctx.user)).join('')}
           </div>
         </section>`;
       }).join('')}
@@ -154,79 +148,154 @@ function board(week, shifts, user) {
 
 function shiftBlock({ s, span: [a, b], lane, lanes }, px, user) {
   const handedOver = s.originalWorkerId && s.originalWorkerId !== s.workerId;
-  const own = user.role === 'WORKER' && s.workerId === user.id;
-  const classes = ['shift', own ? 'own' : '', handedOver ? 'handover' : '', s.openRequestId ? 'pending' : ''].filter(Boolean).join(' ');
-  const future = `${s.workDate}T${s.startTime}` > now();
-  const canRequest = own && future && s.status === 'SCHEDULED' && !s.openRequestId;
   const style = `--top:${px(a)}px;--height:${px(b) - px(a)}px;--lane:${lane};--lanes:${lanes}`;
+  const label = `${fmtShift(s)}, ${s.workerName}${handedOver ? `, ${t('schedule.covering', { name: s.originalWorkerName })}` : ''}${s.openRequestId ? `, ${t('schedule.pending')}` : ''}`;
   return `
-    <article class="${classes}" style="${style}" data-shift="${s.id}">
-      <p class="shift-time">${num(`${s.startTime}–${s.endTime}`)}</p>
-      <p class="shift-worker">${handedOver ? `<strong>${esc(s.workerName)}</strong>` : esc(s.workerName)}</p>
-      ${handedOver ? `<p class="shift-original"><span class="sr-only">${esc(t('schedule.handover', { name: s.originalWorkerName }))}: </span><s>${esc(s.originalWorkerName)}</s></p>` : ''}
-      ${s.openRequestId ? `<span class="chip chip-handover">${esc(t('schedule.pending'))}</span>` : ''}
-      ${s.status !== 'SCHEDULED' ? `<span class="chip ${s.status === 'ABSENT' ? 'chip-alert' : 'chip-ok'}">${esc(t(`shift.${s.status}`))}</span>` : ''}
-      ${canRequest ? `<a class="btn btn-small btn-primary" href="#/requests/new/${s.id}">${esc(t('schedule.request'))}</a>` : ''}
-      ${user.role === 'OWNER' ? `<a class="btn btn-small btn-quiet" href="#/schedule/${weekStartOf(s.workDate)}/edit/${s.id}"
-          aria-label="${esc(`${t('schedule.editTitle')}: ${fmtDay(s.workDate)} ${s.startTime}–${s.endTime} ${s.workerName}`)}">${esc(t('workers.edit'))}</a>` : ''}
-    </article>`;
+    <button type="button" class="shift ${shiftClasses(s, user)}" style="${style}" data-shift="${s.id}" aria-label="${esc(label)}">
+      <span class="shift-time num">${esc(`${s.startTime}–${s.endTime}`)}</span>
+      <span class="shift-worker">${handedOver ? `<strong>${esc(s.workerName)}</strong>` : esc(s.workerName)}</span>
+      ${handedOver ? `<s class="shift-original">${esc(s.originalWorkerName)}</s>` : ''}
+      ${shiftChips(s)}
+    </button>`;
 }
 
-function editForm(shift, week) {
-  const workers = svc.listWorkers().filter((w) => w.role === 'WORKER' && (w.active || (shift && w.id === shift.workerId)));
-  const s = shift || { workDate: week, startTime: '', endTime: '', workerId: '' };
-  return `
-    <form class="card form" id="shift-form">
-      <h2>${esc(t(shift ? 'schedule.editTitle' : 'schedule.addTitle'))}</h2>
-      <div class="fields">
-        <label>${esc(t('common.date'))}<input type="date" name="workDate" value="${esc(s.workDate)}" required></label>
-        <label>${esc(t('common.start'))}<input type="time" name="startTime" value="${esc(s.startTime)}" required></label>
-        <label>${esc(t('common.end'))}<input type="time" name="endTime" value="${esc(s.endTime)}" required></label>
-        <label>${esc(t('common.worker'))}
-          <select name="workerId" required>
-            ${workers.map((w) => `<option value="${w.id}" ${w.id === s.workerId ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      <div class="actions">
-        <button type="submit" class="btn btn-primary">${esc(t('common.save'))}</button>
-        ${shift ? `<button type="button" class="btn btn-danger" id="delete-shift">${esc(t('common.delete'))}</button>` : ''}
-        <a class="btn btn-quiet" href="#/schedule/${week}">${esc(t('common.close'))}</a>
-      </div>
-    </form>`;
+function historyLines(detail) {
+  if (!detail.history.length) return `<p class="muted">${esc(t('detail.noHistory'))}</p>`;
+  return `<ul class="history-list">${detail.history.map((r) => {
+    const date = fmtDateShort((r.decidedAt || r.createdAt).slice(0, 10));
+    const from = given(r.requesterName);
+    const to = r.acceptorName ? given(r.acceptorName) : '';
+    let line;
+    if (r.status === 'APPROVED') line = t('detail.hApproved', { from, to, date });
+    else if (r.status === 'ACCEPTED') line = t('detail.hAccepted', { from, to });
+    else if (r.status === 'REQUESTED') line = t('detail.hRequested', { from, date });
+    else line = t('detail.hEnded', { from, date, status: t(`end.${r.status}`) });
+    return `<li>${esc(line)}</li>`;
+  }).join('')}</ul>`;
 }
 
-function bindOwner(view, ctx, week, editing) {
-  view.querySelectorAll('[data-generate]').forEach((b) => b.addEventListener('click', () => {
-    try {
-      const { created } = svc.generateWeek(week);
-      ctx.flash(created ? t('schedule.generated', { n: created }) : t('schedule.generatedNone'));
-      ctx.refresh();
-    } catch (err) {
-      ctx.fail(err);
-    }
-  }));
-  const form = view.querySelector('#shift-form');
-  if (!form) return;
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form));
-    try {
-      svc.editShift(editing ? editing.id : null, { ...data, workerId: Number(data.workerId) });
-      ctx.flash(t('common.saved'));
-      ctx.go(`#/schedule/${weekStartOf(data.workDate)}`);
-    } catch (err) {
-      showFormError(form, err);
-    }
+function openDetail(ctx, shiftId, week) {
+  const d = svc.getShiftDetail(shiftId);
+  const isOwner = ctx.user.role === 'OWNER';
+  const handedOver = d.originalWorkerId && d.originalWorkerId !== d.workerId;
+  const ownFuture = !isOwner && d.workerId === ctx.user.id && d.status === 'SCHEDULED' && `${d.workDate}T${d.startTime}` > ctx.now && !d.openRequestId;
+  let actions = '';
+  if (ownFuture) {
+    actions = `<p class="muted">${esc(t('detail.ownFuture'))}</p>${button({ label: t('schedule.findCover'), kind: 'primary', block: true, href: `#/swaps/new/1/${d.id}` })}`;
+  } else if (isOwner) {
+    actions = `
+      <div class="stack-tight">
+        ${button({ label: t('detail.changeTime'), kind: 'primary', block: true, id: 'act-time', disabled: !!d.openRequestId, reason: t('err.SHIFT_OPEN_REQUEST') })}
+        ${button({ label: t('detail.changeWorker'), kind: 'secondary', block: true, id: 'act-worker', disabled: !!d.openRequestId, reason: t('err.SHIFT_OPEN_REQUEST') })}
+        ${button({ label: t('detail.delete'), kind: 'danger', block: true, id: 'act-delete', disabled: !d.canDelete, reason: t('detail.deleteBlocked') })}
+      </div>`;
+  }
+  openSheet({
+    title: fmtShift(d),
+    body: `
+      <div>
+        <dl class="summary-list detail ${shiftClasses(d, ctx.user)}">
+          <div><dt>${esc(t('detail.worker'))}</dt><dd>${handedOver ? `<strong>${esc(d.workerName)}</strong> <s class="muted">${esc(d.originalWorkerName)}</s>` : esc(d.workerName)}</dd></div>
+          <div><dt>${esc(t('detail.status'))}</dt><dd>${esc(t(`shift.${d.status}`))} ${shiftChips(d)}</dd></div>
+          ${d.clockIn ? `<div><dt>${esc(t('record.title'))}</dt><dd>${num(`${d.clockIn}–${d.clockOut}`)}</dd></div>` : ''}
+        </dl>
+        <h3 class="sub-title">${esc(t('detail.history'))}</h3>
+        ${historyLines(d)}
+      </div>
+      <div class="sheet-actions" id="detail-actions">${actions}</div>`,
+    onMount: (panel, close) => {
+      const area = panel.querySelector('#detail-actions');
+      const time = panel.querySelector('#act-time');
+      if (time && !time.disabled) time.addEventListener('click', () => {
+        area.innerHTML = `
+          <form class="form" id="time-form" novalidate>
+            <label class="field"><span class="field-label">${esc(t('detail.date'))}</span><input type="date" name="workDate" value="${esc(d.workDate)}"></label>
+            <div class="row-2">
+              <label class="field"><span class="field-label">${esc(t('detail.start'))}</span><select name="startTime" class="num">${timeOptions(d.startTime)}</select></label>
+              <label class="field"><span class="field-label">${esc(t('detail.end'))}</span><select name="endTime" class="num">${timeOptions(d.endTime)}</select></label>
+            </div>
+            ${button({ label: t('detail.saveTime'), kind: 'primary', block: true, id: 'save-time' })}
+          </form>`;
+        const form = area.querySelector('#time-form');
+        area.querySelector('#save-time').addEventListener('click', () => {
+          try {
+            svc.editShift(d.id, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value });
+            close();
+            ctx.toast(t('detail.changed'));
+            ctx.go(`#/schedule/${weekStartOf(form.workDate.value)}`);
+          } catch (err) {
+            showFormError(form, err);
+          }
+        });
+        form.workDate.focus();
+      });
+      const who = panel.querySelector('#act-worker');
+      if (who && !who.disabled) who.addEventListener('click', () => {
+        const workers = svc.listWorkers().filter((w) => w.role === 'WORKER' && w.active);
+        area.innerHTML = `
+          <form class="form" id="worker-form" novalidate>
+            <label class="field"><span class="field-label">${esc(t('detail.worker'))}</span>
+              <select name="workerId">${workers.map((w) => `<option value="${w.id}" ${w.id === d.workerId ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></label>
+            ${button({ label: t('detail.saveWorker'), kind: 'primary', block: true, id: 'save-worker' })}
+          </form>`;
+        const form = area.querySelector('#worker-form');
+        area.querySelector('#save-worker').addEventListener('click', () => {
+          try {
+            svc.editShift(d.id, { workerId: Number(form.workerId.value) });
+            close();
+            ctx.toast(t('detail.changed'));
+            ctx.refresh();
+          } catch (err) {
+            showFormError(form, err);
+          }
+        });
+        form.workerId.focus();
+      });
+      const del = panel.querySelector('#act-delete');
+      if (del && !del.disabled) del.addEventListener('click', () => {
+        try {
+          svc.editShift(d.id, { delete: true });
+          close();
+          ctx.toast(t('detail.deleted'));
+          ctx.go(`#/schedule/${week}`);
+        } catch (err) {
+          ctx.fail(err);
+        }
+      });
+    },
   });
-  const del = view.querySelector('#delete-shift');
-  if (del) del.addEventListener('click', () => {
-    try {
-      svc.editShift(editing.id, { delete: true });
-      ctx.flash(t('schedule.deleted'));
-      ctx.go(`#/schedule/${week}`);
-    } catch (err) {
-      showFormError(form, err);
-    }
+}
+
+function openAdd(ctx, week) {
+  const workers = svc.listWorkers().filter((w) => w.role === 'WORKER' && w.active);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
+  const today = ctx.now.slice(0, 10);
+  openSheet({
+    title: t('detail.addTitle'),
+    body: `
+      <form class="form" id="add-form" novalidate>
+        <label class="field"><span class="field-label">${esc(t('detail.date'))}</span>
+          <select name="workDate">${days.map((d) => `<option value="${d}" ${d === today ? 'selected' : ''}>${esc(fmtDate(d))}</option>`).join('')}</select></label>
+        <div class="row-2">
+          <label class="field"><span class="field-label">${esc(t('detail.start'))}</span><select name="startTime" class="num">${timeOptions('10:00')}</select></label>
+          <label class="field"><span class="field-label">${esc(t('detail.end'))}</span><select name="endTime" class="num">${timeOptions('15:00')}</select></label>
+        </div>
+        <label class="field"><span class="field-label">${esc(t('detail.worker'))}</span>
+          <select name="workerId">${workers.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select></label>
+        ${button({ label: t('detail.addSave'), kind: 'primary', block: true, id: 'add-save' })}
+      </form>`,
+    onMount: (panel, close) => {
+      const form = panel.querySelector('#add-form');
+      panel.querySelector('#add-save').addEventListener('click', () => {
+        try {
+          svc.editShift(null, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value, workerId: Number(form.workerId.value) });
+          close();
+          ctx.toast(t('detail.added'));
+          ctx.refresh();
+        } catch (err) {
+          showFormError(form, err);
+        }
+      });
+    },
   });
 }

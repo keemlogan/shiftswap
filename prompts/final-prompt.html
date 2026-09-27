@@ -1,17 +1,26 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>ShiftSwap — Final prompt</title>
-<link rel="stylesheet" href="../docs/web.css"></head><body><main class="doc"><h1 id="shiftswap--final-vibe-coding-prompt-v3">ShiftSwap — Final
-Vibe-Coding Prompt (v3)</h1>
+<link rel="stylesheet" href="../docs/web.css"></head><body><main class="doc"><h1 id="shiftswap--final-vibe-coding-prompt-v5">ShiftSwap — Final
+Vibe-Coding Prompt (v5)</h1>
 <blockquote>
-<p>Version history: v1 → v2 after iteration 1 (build ambiguities and
-document review), v2 → v3 after iteration 2 (UI review of the running
-app). Earlier versions are kept as <code>prompts/prompt-v1.md</code> and
-<code>prompts/prompt-v2.md</code>; the reasons for every change are in
+<p>Version history: v1 was built in iteration 1; v2 (iteration 2)
+resolved the build ambiguities and document-review gaps; v3 (iteration
+3) applied the UI review of the running app; v4 (iteration 4) applied
+the UX redesign review from the point of view of a consumer-app product
+team (task-first home screens, one primary action per screen,
+consequences shown before committing); v5 (iteration 5) makes the
+acceptance test files part of the input after reproduction run 1 showed
+that two correct rebuilds disagree on function signatures (see
+<code>docs/reproducibility.md</code>). Earlier versions are kept as
+<code>prompts/prompt-v1.md</code> … <code>prompts/prompt-v4.md</code>;
+the reasons for every change are in
 <code>prompts/prompt-log.md</code>.</p>
-<p>How to use: paste this whole prompt, followed by the complete
-contents of <code>spec/spec.md</code>, into a coding agent that can
-create files and run shell commands, in an empty folder. The agent must
-produce the same system that is deployed at <a
+<p>How to use: in an empty folder, place
+<code>tests/rules.test.js</code> and <code>tests/services.test.js</code>
+from the repository, then paste this whole prompt, followed by the
+complete contents of <code>spec/spec.md</code>, into a coding agent that
+can create files and run shell commands. The agent must produce the same
+system that is deployed at <a
 href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/shiftswap/app/</a>.</p>
 </blockquote>
 <hr />
@@ -19,10 +28,23 @@ href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/sh
 substitute management web application for a small café with part-time
 workers. The complete specification (actors, use cases UC-01…UC-13,
 functional requirements FR-01…FR-21, non-functional requirements
-NFR-01…NFR-12, business rules BR-01…BR-12, states, SQLite schema, seed
+NFR-01…NFR-13, business rules BR-01…BR-12, states, SQLite schema, seed
 data, test IDs) follows this prompt. Treat the specification as the
 contract: use its identifiers, table and column names, state names and
 seed data exactly. Do not add features that are not in it.</p>
+<h2 id="0-acceptance-tests-supplied--read-them-first">0. Acceptance
+tests (supplied — read them first)</h2>
+<p>The folder already contains <code>tests/rules.test.js</code> and
+<code>tests/services.test.js</code>. They are the executable form of the
+specification and they fix the API: module paths, exported names,
+argument order, return shapes, error codes and the Node-side database
+factory. Read both files completely before writing code. <strong>Do not
+modify, rename, skip or delete any test.</strong> Write the
+implementation so that <code>npm test</code> passes all of them
+unchanged. Where a test and the prose below seem to disagree about an
+API detail, the test wins; where they disagree about behaviour, stop and
+report the conflict instead of guessing. You may add further tests in a
+new file <code>tests/extra.test.js</code>.</p>
 <h2 id="1-technology-constraints">1. Technology constraints</h2>
 <ul>
 <li>Static site only: <code>index.html</code>, CSS, and JavaScript ES
@@ -85,7 +107,13 @@ screens (not wrapped in <code>tx</code>), e.g.
 <code>getPayroll</code>, <code>unreadCount</code>,
 <code>defaultDeadline</code>, and a
 <code>ServiceError(code, message, params)</code> class that the UI
-translates by <code>code</code>.</li>
+translates by <code>code</code>. It also exports the pure function
+<code>menuFor(role)</code> returning the navigation items a role may
+open (the router uses it to hide menus and to redirect routes the role
+may not open, FR-20), and home-screen queries
+<code>getWorkerHome(workerId)</code> and <code>getOwnerHome()</code>
+that return, in one call, every item §2.3 / §2.5 needs (including the
+before/after effect of accepting or approving).</li>
 <li><code>app/ui/</code> — one module per screen: <code>login.js</code>,
 <code>schedule.js</code> (weekly board, both roles),
 <code>requests.js</code> (worker: my requests + new request form),
@@ -109,119 +137,263 @@ directory argument fails on Node 24).</li>
 app start, on every route change, and after the demo clock changes.</li>
 </ul>
 <h2 id="2-screens-and-behaviour">2. Screens and behaviour</h2>
+<h3
+id="20-ux-principles-apply-to-every-screen-they-override-any-screen-description-that-seems-to-conflict">2.0
+UX principles (apply to every screen; they override any screen
+description that seems to conflict)</h3>
+<ol type="1">
+<li><strong>One screen, one job.</strong> Every screen has exactly one
+primary action, drawn as the only filled blue button on that screen. On
+screens narrower than 900 px the primary action is a full-width button
+fixed to the bottom (16 px side inset, above the tab bar,
+<code>env(safe-area-inset-bottom)</code> respected). Other actions are
+grey filled (secondary) or text buttons.</li>
+<li><strong>What needs me comes first.</strong> Each role opens on a
+<strong>Home</strong> screen that lists the things waiting for this
+person right now, most urgent first, and each item carries its own
+action button, so the user never has to find the right menu.</li>
+<li><strong>Show the consequence before the commitment.</strong>
+Whenever an action changes someone's hours or pay (accepting, approving,
+confirming payroll), the screen states the effect in one plain sentence
+plus numbers before the button — e.g. "민호님 이번 주 16시간 → 21시간 ·
+주휴수당 변화 없음 (33,024원 유지)".</li>
+<li><strong>Ask one thing at a time.</strong> Requesting a substitute is
+a three-step flow (choose shift → reason and deadline → review and send)
+with a step indicator ("1/3"), a back button, and a review screen that
+names the people who will receive the request.</li>
+<li><strong>Say what happened and what happens next.</strong> After
+every action show a result screen or a toast that states the outcome and
+the next step — e.g. "민호님, 도윤님에게 요청을 보냈어요. 누군가
+수락하면 알려 드릴게요." — never a silent state change.</li>
+<li><strong>Status as progress.</strong> A substitute request is shown
+everywhere as a three-step tracker 요청 → 수락 → 승인 (Requested →
+Accepted → Approved); REJECTED, EXPIRED and CANCELLED are shown as a
+clearly labelled end state with the reason.</li>
+<li><strong>The user's words.</strong> The default UI language is Korean
+in polite 해요체 ("대타를 구하고 있어요"), with a complete English
+translation selectable in the menu. IDs such as FR/UC/BR, status codes
+and table names never appear in the UI. In the Korean UI the seed people
+and store are shown with their Korean names from spec §10 (박지영,
+이서연, 최민호, 정하나, 강도윤, 달빛카페) and addressed as full name +
+님 ("최민호님") — a display map in <code>i18n.js</code>, the stored
+names stay English; names not in the map are shown as stored. Dates read
+like "9월 30일(수) 18:00–23:00" / "Wed, Sep 30 · 18:00–23:00"; relative
+times where they help ("내일 21:00까지", "D-2").</li>
+<li><strong>Nothing blocks without a reason.</strong> A disabled button
+always has a one-line explanation beneath it (e.g. "최저임금 경고 1건을
+확인해야 확정할 수 있어요").</li>
+</ol>
+<h3 id="21-navigation">2.1 Navigation</h3>
 <ul>
-<li><strong>Sign-in (UC-13)</strong>: list of demo accounts (owner +
-four workers). Each row shows the name, the role, and a one-line summary
-of what that person has in the seed: for the owner "Owner · Dalbit Café
-· 4 workers", for a worker their fixed shifts and weekly contract hours,
-e.g. "Mon, Wed 18:00–23:00 · 10 h/week". Choosing one enters the app.
-Show a note that this is a demo without passwords. The chosen account is
-kept in <code>sessionStorage</code>.</li>
-<li><strong>Header</strong>: store name, signed-in user, unread
-notification count linking to the inbox, the demo clock (date-time input
-+ "+1 hour" and "+1 day" buttons), language switch (English / 한국어),
-menu with "Reset demo data" and "Sign out".</li>
-<li><strong>Every page</strong> starts with a header: the page title and
-one sentence saying what the page is for (e.g. Payroll: "Monthly pay per
-worker, computed from worked hours, holiday allowance and
-premiums.").</li>
-<li><strong>Owner overview strip</strong> above the owner's weekly
-board: three figures that link to their pages — approvals waiting, open
-substitute requests, and this week's total scheduled shifts and hours
-(e.g. "11 shifts · 60 h").</li>
-<li><strong>Weekly board (UC-03)</strong>: a time grid. Seven day
-columns Monday–Sunday; a vertical hour axis from the earliest shift
-start to the latest shift end of the displayed week, rounded to whole
-hours (seed: 10:00–23:00), 44 px per hour, with a thin line every hour
-and the hour label in the left gutter; today's column header is marked.
-Each shift is a block positioned and sized by its start and end time,
-showing time range and worker name; the signed-in worker's shifts are
-emphasised. A shift that was handed over shows the new worker, and the
-original worker struck through, with the handover marker (see design).
-Owner can generate the displayed week (FR-04) and edit/delete a shift
-(FR-05). Week navigation with previous / next.</li>
-<li><strong>Request substitute (UC-04)</strong>: from one of the
-worker's own future shifts, open a form: reason (optional), deadline
-(default: the earlier of now + 24 h and shift start). On submit show the
-list of candidates who were notified, or the "no eligible worker"
-message (FR-08).</li>
-<li><strong>Inbox (UC-05, FR-21)</strong>: notifications newest first; a
-<code>REQUEST_RECEIVED</code> item for a PENDING target has
-<strong>Accept</strong> and <strong>Decline</strong> buttons directly on
-the item (NFR-01: at most 2 clicks). If someone else accepted first,
-show "Already taken by <name>".</li>
-<li><strong>Approvals (UC-06)</strong>: owner list of ACCEPTED requests.
-Each opens a comparison panel with a before/after table for requester
-and acceptor (contract hours, scheduled hours this week,
-holiday-allowance eligibility, holiday hours) and a highlighted line
-when eligibility changes (FR-11); buttons <strong>Approve</strong> /
-<strong>Reject</strong>. Also show open REQUESTED requests read-only
-with their candidates' responses.</li>
-<li><strong>My requests (UC-12)</strong>: worker's requests with status
-chips; Cancel for REQUESTED/ACCEPTED.</li>
-<li><strong>Attendance (UC-07)</strong>: worker records clock-in/out for
-own past shifts; owner confirms or marks absent.</li>
-<li><strong>Weekly summary (UC-08)</strong>: owner picks a week; table
-per worker with the FR-14 columns and a short reason text when not
-eligible ("contract hours below 15", "absent on Tue 09-29").</li>
-<li><strong>Payroll (UC-09)</strong>: owner picks a month; "Generate
-draft", table per worker (base hours, base pay, holiday pay, premium
-pay, total, flags), minimum-wage warning on the row with an
-<strong>Acknowledge</strong> button (<code>acknowledgeMinWage</code>
-sets <code>Payroll.minWageAck = 1</code>, persisted); "Confirm" is
-disabled until every warning row is acknowledged; confirmed rows
-read-only; rows with <code>estimated = 1</code> carry an "Estimated"
-chip.</li>
-<li><strong>Workers &amp; schedules (UC-01)</strong>,
-<strong>Availability (UC-02)</strong>, <strong>Settings
-(UC-10)</strong>: simple forms with validation messages that say what is
-wrong and how to fix it.</li>
-<li><strong>Empty states</strong> say what will appear there and offer
-the next action as a button, e.g. Payroll with no draft: "No payroll for
-September 2026 yet." + primary button "Generate draft for September
-2026"; Approvals with nothing waiting: "No swaps are waiting for
-approval." + link to open requests.</li>
-<li>Role guard: worker never sees other workers' phone numbers or wages
-(NFR-11).</li>
+<li>Worker tabs: <strong>홈</strong> (Home), <strong>근무표</strong>
+(Schedule), <strong>대타</strong> (Swaps), <strong>내 정보</strong> (Me:
+availability and attendance). Owner tabs: <strong>홈</strong>,
+<strong>근무표</strong>, <strong>직원</strong> (Staff: workers and fixed
+schedules), <strong>급여</strong> (Pay: weekly summary and monthly
+payroll). <strong>설정</strong> (Settings), language and sign-out are in
+the header menu.</li>
+<li>≥ 900 px: left navigation (220 px) with the same items and inline
+SVG line icons; &lt; 900 px: bottom tab bar (64 px, icon + label),
+hidden while the request flow is open.</li>
+<li>Header: store name; a bell icon with the unread count opening the
+notification list (FR-21); the compact demo clock chip ("9/28(월)
+09:00") that opens <strong>Demo tools</strong>; the current person's
+name with <strong>다른 사람으로 보기</strong> (switch account) that
+opens the account list without resetting data.</li>
+<li><strong>Demo tools</strong> panel (sheet on mobile, popover on
+desktop): demo clock date-time input, <strong>+1시간</strong>,
+<strong>+1일</strong>, <strong>데모 데이터 초기화</strong> (Reset demo
+data, asks for confirmation in the panel itself). The clock no longer
+sits permanently in the header.</li>
+</ul>
+<h3 id="22-sign-in--demo-guide-uc-13">2.2 Sign-in = demo guide
+(UC-13)</h3>
+<ul>
+<li>Title "달빛카페 데모" and one sentence: "비밀번호 없이 사람을 골라
+체험해요."</li>
+<li>A <strong>3분 체험</strong> (3-minute tour) card listing three
+numbered steps — the order matters, so numbers are used: ① 이서연으로
+대타 요청 보기 ② 최민호로 수락하기 ③ 박지영 사장님으로 승인하기. Each
+step has a button that signs in as that person and opens the screen
+where the step happens (Swaps / Home / Home). The card marks steps
+already done in this browser.</li>
+<li>Below, <strong>모든 계정</strong>: each account with name, role and
+its one-line summary (owner: "사장님 · 달빛카페 · 직원 4명"; worker:
+fixed shifts and weekly contract hours, e.g. "월·수 18:00–23:00 · 주
+10시간").</li>
+<li>The chosen account is kept in <code>sessionStorage</code>.</li>
+</ul>
+<h3 id="23-worker-home">2.3 Worker Home</h3>
+<p>In this order, each section omitted when empty:</p>
+<ol type="1">
+<li>Greeting "서연님, 안녕하세요" and today's date.</li>
+<li><strong>대타 요청이 왔어요</strong> — one card per PENDING target:
+who asks, the shift ("9월 30일(수) 18:00–23:00"), reason, deadline
+countdown ("내일 21:00까지 답해 주세요"), the effect on me ("수락하면
+이번 주 16시간 → 21시간 · 주휴수당 그대로"), and two buttons
+<strong>수락하기</strong> (primary) / <strong>거절</strong> (text).
+Accept is one tap (NFR-01). After accepting: result toast "수요일 근무를
+맡았어요. 사장님 승인을 기다려요." If someone else was faster: "민호님이
+먼저 수락했어요" and the card closes.</li>
+<li><strong>내가 보낸 요청</strong> — tracker cards for the worker's
+open requests with who has answered so far and a text button
+<strong>요청 취소</strong>.</li>
+<li><strong>다음 근무</strong> — a large card with date, time, D-day and
+the button <strong>이 근무 대타 구하기</strong> (starts the flow with
+this shift preselected).</li>
+<li><strong>이번 주</strong> — scheduled hours, contract hours, and
+holiday allowance in words and money: eligible "주휴수당 받아요 · 약
+33,024원" or not "계약이 주 15시간 미만이라 주휴수당이 없어요 (주
+10시간)", with a bar showing contract hours against the 15-hour
+line.</li>
+<li><strong>기록할 근무</strong> — past own shifts without attendance,
+each with <strong>기록하기</strong>.</li>
+</ol>
+<h3 id="24-request-substitute-flow-uc-04-uc-12">2.4 Request substitute
+flow (UC-04, UC-12)</h3>
+<ul>
+<li>Step 1 "어떤 근무를 바꿀까요?": own future SCHEDULED shifts as
+selectable cards; a shift that already has an open request is shown
+disabled with "이미 대타를 구하고 있어요".</li>
+<li>Step 2 "사유와 마감을 정해 주세요": reason chips 시험 / 병원 / 가족
+행사 / 개인 사정 / 직접 입력 (optional); deadline chips "24시간 뒤" /
+"근무 2시간 전" / "직접 선택", default = the earlier of now + 24 h and
+shift start (BR-03); the chosen deadline is shown as a sentence.</li>
+<li>Step 3 "이렇게 보낼게요": summary of shift, reason and deadline, and
+<strong>받는 사람</strong> — the eligible candidates computed now
+(BR-01) with names, or the warning "지금 가능한 사람이 없어요. 보내면
+사장님께 알려 드려요." (FR-08). Primary <strong>대타 요청
+보내기</strong>.</li>
+<li>Result screen: the tracker at step 1, the recipients, and
+<strong>홈으로</strong>.</li>
+<li><strong>대타</strong> tab: sections <strong>받은 요청</strong> (same
+cards as Home), <strong>보낸 요청</strong> (tracker cards with cancel),
+<strong>지난 요청</strong> (collapsed history with end states). Primary
+action of the tab: <strong>대타 구하기</strong>.</li>
+</ul>
+<h3 id="25-owner-home">2.5 Owner Home</h3>
+<ol type="1">
+<li>Heading "오늘 처리할 일 N개" (or "지금 처리할 일이 없어요" with the
+week's summary).</li>
+<li><strong>승인 기다리는 대타</strong> — a decision card per ACCEPTED
+request: the sentence "서연님의 9월 30일(수) 18:00–23:00 근무를 민호님이
+대신해요", then one impact line per person (scheduled hours before →
+after this week, holiday allowance status and amount before → after; a
+changed eligibility is highlighted in amber with the words "주휴수당이
+바뀌어요"), then <strong>승인하기</strong> (primary) /
+<strong>거절</strong> (text). A <strong>자세히</strong> toggle shows the
+full FR-11 before/after table.</li>
+<li><strong>답을 기다리는 요청</strong> — open REQUESTED requests with
+deadline countdown and each candidate's response.</li>
+<li><strong>확인할 출근 기록</strong> — recorded but unconfirmed
+attendance with <strong>확인</strong> / <strong>결근 처리</strong>.</li>
+<li><strong>급여 경고</strong> — unacknowledged minimum-wage warnings of
+the current draft, linking to Pay.</li>
+<li><strong>오늘 근무</strong> — who works today and when; <strong>이번
+주</strong> — shifts, hours and the estimated holiday-allowance
+total.</li>
+</ol>
+<h3 id="26-schedule-uc-03">2.6 Schedule (UC-03)</h3>
+<ul>
+<li>≥ 900 px: the time grid of v3 (day columns Mon–Sun, hour axis from
+earliest start to latest end rounded to whole hours, 44 px per hour,
+hourly lines, today marked, blocks positioned by time, overlapping
+shifts side by side). &lt; 900 px: day-by-day list with today first
+expanded.</li>
+<li>Tapping a shift opens a detail sheet (mobile) or side panel
+(desktop) with its details, its history ("서연 → 민호 · 9/28 승인") and
+only the actions relevant to the viewer: the worker's own future shift →
+<strong>대타 구하기</strong>; owner → <strong>시간 바꾸기</strong>,
+<strong>담당자 바꾸기</strong>, <strong>삭제</strong> (refused with the
+reason when it has a request or attendance, FR-05).</li>
+<li>Owner: when the displayed week has no shifts, the empty state's
+primary button is <strong>이번 주 근무표 만들기</strong> (FR-04);
+otherwise the primary button is <strong>근무 추가</strong>. Week
+navigation: previous / next / 이번 주.</li>
+<li>The handover and pending markers of §3 are used here and on every
+shift card elsewhere.</li>
+</ul>
+<h3 id="27-pay-owner-uc-08-uc-09">2.7 Pay (owner; UC-08, UC-09)</h3>
+<ul>
+<li>Two segments: <strong>주간 집계</strong> and <strong>월
+급여</strong>; period chosen with ‹ › buttons ("2026년 9월").</li>
+<li>Weekly summary: one card per worker: contract hours,
+scheduled/actual hours, eligibility as words with the reason ("계약 주
+10시간 · 15시간 미만"; "9/29(화) 결근") and holiday hours/amount.</li>
+<li>Monthly payroll: primary <strong>9월 급여 초안 만들기</strong> when
+no draft exists; then one card (mobile) / row (desktop) per worker with
+base hours, base pay, holiday pay, premium, total and flags (예상치 =
+estimated, 수습 최저임금 90 %, 최저임금 미만). A below-minimum row shows
+the sentence "도윤님 시급 10,000원이 2026년 최저임금 10,320원보다
+낮아요" and <strong>확인했어요</strong>
+(<code>acknowledgeMinWage</code>). The sticky primary <strong>9월 급여
+확정하기</strong> is disabled with its reason until all warnings are
+acknowledged; confirmed months are read-only and say so.</li>
+</ul>
+<h3 id="28-staff-me-settings">2.8 Staff, Me, Settings</h3>
+<ul>
+<li><strong>직원</strong> (UC-01): worker cards (name, contract hours
+per week, hourly wage, contract period); tapping opens the worker's
+detail with the fixed-schedule editor: weekday chips + start/end time
+selects, one row per weekday, add/remove; save shows the resulting
+weekly contract hours. Primary <strong>직원 추가</strong>.</li>
+<li><strong>내 정보</strong> (UC-02, UC-07): availability editor with
+the same weekday-chip pattern ("대타 가능한 시간") and the list of
+attendance records; the worker's own phone and wage are visible here
+only.</li>
+<li><strong>설정</strong> (UC-10): store name, number of regular
+employees with the sentence of what it changes ("5명 이상이면 연장·야간
+가산수당이 붙어요"), the substitution-attendance policy as two radio
+cards each explaining the effect in one sentence, and the minimum-wage
+table.</li>
+<li>Notifications list: each notification as a sentence with time;
+actionable ones link to the card where the action is.</li>
+<li>Role guard: a worker never sees other workers' phone numbers or
+wages (NFR-11).</li>
 </ul>
 <h2 id="3-visual-design-do-not-deviate">3. Visual design (do not
 deviate)</h2>
 <ul>
-<li>Fonts: Pretendard Variable for all text
-(<code>https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css</code>),
-JetBrains Mono (Google Fonts) for times, hours and money with
-<code>font-variant-numeric: tabular-nums</code>. Korean text:
-<code>word-break: keep-all</code>, line-height 1.6.</li>
-<li>Type scale: base 15 px / line-height 1.6; page title 28 px weight
-800 letter-spacing −0.02em; section title 18 px weight 700; small text
-13 px (never smaller than 12 px); inputs 16 px on mobile.</li>
-<li>Colors (CSS custom properties): <code>--ink #1C2230</code>,
-<code>--ink-2 #4A5163</code>, <code>--line #DDE1E8</code>,
-<code>--surface #F4F6F9</code>, <code>--paper #FFFFFF</code>,
-<code>--shift #2B5BD7</code> (primary, own shifts),
-<code>--handover #E9A23B</code> (substitution),
-<code>--alert #C93A31</code>, <code>--ok #2E7D4F</code>.</li>
-<li>Signature element: on the weekly board, a handed-over shift has a 6
-px amber left edge and a subtle 45° amber stripe pattern, the new
-worker's name in bold and the original worker struck through beneath it.
-Pending requests show a dashed amber outline on the shift. This is the
-only decorative element; everything else is quiet: white cards on the
-surface color, 8 px radius, 1 px borders, no gradients (the stripe may
-use <code>repeating-linear-gradient</code>; no other gradient), no
-emoji, no drop shadows larger than
-<code>0 1px 2px rgba(28,34,48,.06)</code>.</li>
-<li>Layout: left navigation 220 px wide on ≥ 900 px, bottom tab bar on
-&lt; 900 px; the content column starts right after the navigation with
-32 px padding and a max-width of 1200 px (left-aligned, not centred in
-the remaining space); gaps between groups are at least twice the gaps
-inside a group; at 360 px width no horizontal scroll (the weekly board
-becomes a day-by-day list; below 720 px every data table turns each row
-into a stacked card with the column name before each value).</li>
-<li>Copy: sentence case, plain verbs ("Request substitute", "Approve
-swap"), errors explain the cause and the fix.</li>
-<li>Accessibility: visible focus rings, buttons are
-<code>&lt;button&gt;</code>, form labels, status chips have text not
-only color, <code>prefers-reduced-motion</code> respected.</li>
+<li>Font: Pretendard Variable for everything
+(<code>https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css</code>)
+with <code>font-variant-numeric: tabular-nums</code> on times, hours and
+money. No second font. Korean: <code>word-break: keep-all</code>.</li>
+<li>Type scale: body 16 px / 1.6; home heading 26 px / 700 / −0.02em;
+card title 17 px / 700; key number 28 px / 700; caption 13 px (never
+below 12 px).</li>
+<li>Colors: <code>--ink #191F28</code>, <code>--ink-2 #4E5968</code>,
+<code>--ink-3 #8B95A1</code>, <code>--surface #F2F4F6</code> (page
+background), <code>--paper #FFFFFF</code> (cards),
+<code>--line #E5E8EB</code>, <code>--shift #2B5BD7</code> (primary and
+own shifts), <code>--shift-soft #EBF1FD</code>,
+<code>--handover #E9A23B</code>, <code>--handover-soft #FDF3E1</code>,
+<code>--alert #D93A30</code>, <code>--alert-soft #FDECEB</code>,
+<code>--ok #1F8A55</code>.</li>
+<li>Cards: white on the grey page, 16 px radius, 20 px padding (24 px ≥
+900 px), no border, no shadow; 12 px between cards, 32 px between
+sections.</li>
+<li>Buttons: height 52 px on mobile / 44 px on desktop, 12 px radius, 16
+px / 600 label; primary filled <code>--shift</code>; secondary filled
+<code>#E8EBF0</code> with <code>--ink</code>; text buttons
+<code>--ink-2</code>; pressed state <code>scale(0.96)</code>; minimum
+touch target 44 × 44 px.</li>
+<li>Icons: inline SVG line icons (24 px, 1.75 px stroke,
+<code>currentColor</code>) for tabs, bell, clock, chevrons; no icon
+fonts, no emoji.</li>
+<li>Signature element: a handed-over shift has a 6 px amber left edge
+and a subtle 45° amber stripe (<code>repeating-linear-gradient</code>,
+the only gradient), the new worker's name in bold and the original
+worker struck through; a shift with an open request has a dashed amber
+outline and the chip "대타 구하는 중".</li>
+<li>Motion: sheets and step changes slide/fade in 180 ms
+<code>cubic-bezier(0.2, 0, 0, 1)</code>; no motion under
+<code>prefers-reduced-motion</code>.</li>
+<li>Layout: content max-width 720 px for Home, flows and lists (centred
+in the content area), full width up to 1200 px for the schedule grid and
+payroll table; at 360 px no horizontal scroll.</li>
+<li>Accessibility: visible focus rings, real
+<code>&lt;button&gt;</code>s, labelled inputs, status never by colour
+alone, the step indicator announced ("3단계 중 2단계").</li>
 </ul>
 <h2 id="4-done-criteria">4. Done criteria</h2>
 <ol type="1">
@@ -237,9 +409,16 @@ request with two candidates, and the S7 walkthrough of §10 works (a test
 proves it).</li>
 <li>Serving the repository root with any static server and opening
 <code>/app/</code> shows the sign-in screen with no console errors.</li>
-<li>Walking through: sign in as Choi Minho → accept → sign in as Kang
-Doyun → sees "Already taken" → sign in as owner → approval panel shows
-Minho scheduled 16 → 21 h and eligibility unchanged → approve → weekly
-board shows the handover marker.</li>
+<li>Walking through the sign-in tour in the browser: as Lee Seoyeon the
+Swaps tab shows her open request as a tracker; as Choi Minho, Home shows
+the request card with the effect "16시간 → 21시간" and
+<strong>수락하기</strong> accepts it in one tap; as Kang Doyun the card
+says Minho was faster; as the owner, Home shows the decision card for
+Minho (16 → 21 h, holiday allowance unchanged) and
+<strong>승인하기</strong> approves it; the schedule then shows the
+handover marker.</li>
+<li>Every screen has exactly one filled primary button (a headless check
+counts them), every disabled button has a visible reason, and all touch
+targets are at least 44 × 44 px.</li>
 </ol>
 </main></body></html>

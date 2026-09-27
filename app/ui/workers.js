@@ -1,100 +1,108 @@
-// UC-01 Register worker (FR-01) and fixed weekly schedule (FR-02). Owner only.
+// Staff (owner, prompt §2.8; UC-01): worker cards and a worker detail with the fixed-schedule editor.
 import * as svc from '../core/services.js';
 import { contractHours } from '../core/rules.js';
-import { t, esc, fmtHours, fmtWon, showFormError, pageHead } from './i18n.js';
+import { t, esc, fmtHours, fmtWon, fmtYMD, given, showFormError } from './i18n.js';
+import { icon, button, pageHead } from './components.js';
 import { slotEditorHtml, bindSlotEditor, readSlots } from './availability.js';
 
 export function render(view, ctx) {
+  const id = ctx.args[0];
+  if (id) renderDetail(view, ctx, id === 'new' ? null : svc.getWorker(Number(id)));
+  else renderList(view, ctx);
+}
+
+function renderList(view, ctx) {
   const workers = svc.listWorkers(ctx.user).filter((w) => w.role === 'WORKER');
-  const sel = ctx.args[0] === 'new' ? 'new' : workers.find((w) => w.id === Number(ctx.args[0])) || null;
-  const cols = ['workers.phone', 'workers.wage', 'workers.contract', 'workers.contractHours', 'common.status'];
-
+  const cta = button({ label: t('staff.add'), kind: 'primary', block: true, href: '#/staff/new', iconName: 'plus' });
   view.innerHTML = `
-    ${pageHead(t('workers.title'), t('purpose.workers'), `<a class="btn btn-primary" href="#/workers/new">${esc(t('workers.add'))}</a>`)}
-    <table class="rtable">
-      <thead><tr><th scope="col">${esc(t('workers.name'))}</th>${cols.map((c) => `<th scope="col">${esc(t(c))}</th>`).join('')}<th scope="col"><span class="sr-only">${esc(t('workers.edit'))}</span></th></tr></thead>
-      <tbody>${workers.map((w) => `
-        <tr>
-          <th scope="row">${esc(w.name)}</th>
-          <td data-label="${esc(t(cols[0]))}" class="num">${esc(w.phone || '')}</td>
-          <td data-label="${esc(t(cols[1]))}" class="num">${esc(fmtWon(w.hourlyWage))}</td>
-          <td data-label="${esc(t(cols[2]))}" class="num">${esc(w.contractStart)} ~ ${esc(w.contractEnd || t('workers.openEnded'))}</td>
-          <td data-label="${esc(t(cols[3]))}" class="num">${esc(fmtHours(contractHours(svc.getFixedSchedules(w.id))))}</td>
-          <td data-label="${esc(t(cols[4]))}"><span class="chip ${w.active ? 'chip-ok' : ''}">${esc(t(w.active ? 'workers.active' : 'workers.inactive'))}</span></td>
-          <td><a class="btn btn-small" href="#/workers/${w.id}" aria-label="${esc(`${t('workers.edit')}: ${w.name}`)}">${esc(t('workers.edit'))}</a></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-    ${sel ? workerForm(sel === 'new' ? null : sel) : ''}
-    ${sel && sel !== 'new' ? fixedForm(sel) : ''}`;
-
-  const wf = view.querySelector('#worker-form');
-  if (wf) wf.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const d = Object.fromEntries(new FormData(wf));
-    try {
-      const id = svc.registerWorker({
-        id: sel === 'new' ? undefined : sel.id,
-        name: d.name,
-        phone: d.phone,
-        hourlyWage: d.hourlyWage === '' ? NaN : Number(d.hourlyWage),
-        contractStart: d.contractStart,
-        contractEnd: d.contractEnd,
-        probationEnd: d.probationEnd,
-        simpleLabor: d.simpleLabor === 'on',
-        active: d.active === 'on',
-      });
-      ctx.flash(t('workers.savedWorker'));
-      ctx.go(`#/workers/${id}`);
-    } catch (err) {
-      showFormError(wf, err);
-    }
-  });
-  const ff = view.querySelector('#fixed-form');
-  if (ff) {
-    bindSlotEditor(ff);
-    ff.addEventListener('submit', (e) => {
-      e.preventDefault();
-      try {
-        svc.saveFixedSchedule(sel.id, readSlots(ff));
-        ctx.flash(t('workers.savedFixed'));
-        ctx.refresh();
-      } catch (err) {
-        showFormError(ff, err);
-      }
-    });
-  }
+    ${pageHead({ title: t('staff.title'), sub: t('staff.sub'), cta })}
+    <ul class="stack">
+      ${workers.map((w) => `
+        <li>
+          <a class="card link-card" href="#/staff/${w.id}">
+            <span class="avatar avatar-lg" aria-hidden="true">${esc(w.name.split(' ').pop().slice(0, 1))}</span>
+            <span class="link-main">
+              <span class="card-title">${esc(w.name)} ${w.active ? '' : `<span class="chip">${esc(t('staff.inactive'))}</span>`}</span>
+              <span class="muted num">${esc(t('staff.card', { h: fmtHours(contractHours(svc.getFixedSchedules(w.id))), wage: fmtWon(w.hourlyWage) }))}</span>
+              <span class="muted num">${esc(t('staff.period', { from: fmtYMD(w.contractStart), to: w.contractEnd ? fmtYMD(w.contractEnd) : t('staff.openEnded') }))}</span>
+            </span>
+            ${icon('chevronRight', 'chev')}
+          </a>
+        </li>`).join('')}
+    </ul>`;
 }
 
-function workerForm(w) {
+function field(name, label, value, { type = 'text', hint = '', attrs = '' } = {}) {
+  const hid = hint ? `hint-${name}` : '';
+  return `<label class="field"><span class="field-label">${esc(label)}</span>
+    <input type="${type}" name="${name}" value="${esc(value ?? '')}" ${hid ? `aria-describedby="${hid}"` : ''} ${attrs} ${type === 'number' || type === 'tel' ? 'class="num"' : ''}>
+    ${hint ? `<span class="hint" id="${hid}">${esc(hint)}</span>` : ''}</label>`;
+}
+
+function renderDetail(view, ctx, w) {
   const v = w || { name: '', phone: '', hourlyWage: '', contractStart: '', contractEnd: '', probationEnd: '', simpleLabor: 0, active: 1 };
-  return `
-    <form class="card form" id="worker-form" novalidate>
-      <h2>${esc(w ? t('workers.editTitle', { name: w.name }) : t('workers.newTitle'))}</h2>
-      <div class="fields">
-        <label>${esc(t('workers.name'))}<input type="text" name="name" value="${esc(v.name)}" required autocomplete="off"></label>
-        <label>${esc(t('workers.phone'))}<input type="tel" name="phone" class="num" value="${esc(v.phone || '')}" autocomplete="off"></label>
-        <label>${esc(t('workers.wage'))}<input type="number" name="hourlyWage" class="num" min="1" step="1" value="${esc(v.hourlyWage ?? '')}" required></label>
-        <label>${esc(t('workers.contractStart'))}<input type="date" name="contractStart" value="${esc(v.contractStart || '')}" required></label>
-        <label>${esc(t('workers.contractEnd'))}<input type="date" name="contractEnd" value="${esc(v.contractEnd || '')}" aria-describedby="end-hint">
-          <span class="hint" id="end-hint">${esc(t('workers.contractEndHint'))}</span></label>
-        <label>${esc(t('workers.probationEnd'))}<input type="date" name="probationEnd" value="${esc(v.probationEnd || '')}" aria-describedby="prob-hint">
-          <span class="hint" id="prob-hint">${esc(t('workers.probationHint'))}</span></label>
-      </div>
-      <label class="check"><input type="checkbox" name="simpleLabor" ${v.simpleLabor ? 'checked' : ''}> ${esc(t('workers.simpleLabor'))}</label>
-      <label class="check"><input type="checkbox" name="active" ${v.active ? 'checked' : ''}> ${esc(t('workers.active'))}</label>
-      <div class="actions">
-        <button type="submit" class="btn btn-primary">${esc(t('workers.saveWorker'))}</button>
-        <a class="btn btn-quiet" href="#/workers">${esc(t('common.close'))}</a>
-      </div>
+  const cta = button({ label: w ? t('staff.save') : t('staff.create'), kind: 'primary', block: true, id: 'save-worker' });
+  const back = `<a class="back-link" href="#/staff">${icon('chevronLeft')}<span>${esc(t('staff.back'))}</span></a>`;
+  view.innerHTML = `
+    ${pageHead({ title: w ? w.name : t('staff.newTitle'), back, cta })}
+    <form class="stack-sections" id="worker-form" novalidate>
+      <section class="section">
+        <h2 class="section-title">${esc(t('staff.info'))}</h2>
+        <div class="card form">
+          <div class="fields">
+            ${field('name', t('staff.name'), v.name, { attrs: 'autocomplete="off"' })}
+            ${field('phone', t('staff.phone'), v.phone, { type: 'tel', attrs: 'autocomplete="off"' })}
+            ${field('hourlyWage', t('staff.wage'), v.hourlyWage, { type: 'number', attrs: 'min="1" step="1" inputmode="numeric"' })}
+            ${field('contractStart', t('staff.start'), v.contractStart, { type: 'date' })}
+            ${field('contractEnd', t('staff.end'), v.contractEnd, { type: 'date', hint: t('staff.endHint') })}
+            ${field('probationEnd', t('staff.probation'), v.probationEnd, { type: 'date', hint: t('staff.probationHint') })}
+          </div>
+          <label class="switch-row"><span><strong>${esc(t('staff.simpleLabor'))}</strong><span class="hint">${esc(t('staff.simpleLaborHint'))}</span></span>
+            <input type="checkbox" role="switch" name="simpleLabor" ${v.simpleLabor ? 'checked' : ''}></label>
+          <label class="switch-row"><span><strong>${esc(t('staff.active'))}</strong></span>
+            <input type="checkbox" role="switch" name="active" ${v.active ? 'checked' : ''}></label>
+        </div>
+      </section>
+      <section class="section">
+        <h2 class="section-title">${esc(t('staff.fixed'))}</h2>
+        <div class="card" id="fixed-card">
+          <p class="muted">${esc(t('staff.fixedHint'))}</p>
+          ${slotEditorHtml(w ? svc.getFixedSchedules(w.id) : [], { defaults: ['18:00', '23:00'], total: true })}
+        </div>
+      </section>
     </form>`;
-}
-
-function fixedForm(w) {
-  return `
-    <form class="card form" id="fixed-form" novalidate>
-      <h2>${esc(t('workers.fixedTitle', { name: w.name }))}</h2>
-      ${slotEditorHtml(svc.getFixedSchedules(w.id), 'workers.noFixed')}
-      <div class="actions"><button type="submit" class="btn btn-primary">${esc(t('workers.saveFixed'))}</button></div>
-    </form>`;
+  const form = view.querySelector('#worker-form');
+  bindSlotEditor(view.querySelector('#fixed-card'));
+  view.querySelector('#save-worker').addEventListener('click', () => {
+    let id = w ? w.id : null;
+    try {
+      id = svc.registerWorker({
+        id: w ? w.id : undefined,
+        name: form.name.value,
+        phone: form.phone.value,
+        hourlyWage: form.hourlyWage.value === '' ? NaN : Number(form.hourlyWage.value),
+        contractStart: form.contractStart.value,
+        contractEnd: form.contractEnd.value,
+        probationEnd: form.probationEnd.value,
+        simpleLabor: form.simpleLabor.checked,
+        active: form.active.checked,
+      });
+    } catch (err) {
+      showFormError(form, err);
+      return;
+    }
+    const slots = readSlots(view.querySelector('#fixed-card'));
+    try {
+      svc.saveFixedSchedule(id, slots);
+    } catch (err) {
+      if (!w) {
+        // The worker was created; continue on their page so a second save does not create them again.
+        ctx.fail(err);
+        ctx.go(`#/staff/${id}`);
+      } else showFormError(form, err);
+      return;
+    }
+    ctx.toast(t(w ? 'staff.saved' : 'staff.created', { name: given(form.name.value), h: fmtHours(contractHours(slots)) }));
+    ctx.go('#/staff');
+  });
 }

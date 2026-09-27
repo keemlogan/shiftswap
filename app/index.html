@@ -1,22 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ShiftSwap</title>
   <link rel="icon" href="data:,">
   <meta name="description" content="Shift schedule and substitute management for a small café with part-time workers.">
+  <meta name="theme-color" content="#F2F4F6">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="vendor/sql-wasm.js"></script>
   <script type="module" src="main.js"></script>
 </head>
 <body>
   <div id="app" class="app">
-    <p class="boot" role="status">Loading the database</p>
+    <p class="boot" role="status">ShiftSwap</p>
   </div>
+  <div id="sheet-root"></div>
+  <div id="toast-root" class="toast-root" role="status" aria-live="polite"></div>
 </body>
 </html>

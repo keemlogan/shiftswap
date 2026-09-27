@@ -3,7 +3,7 @@
 import { tx, all, get, run } from './db.js';
 import { now, addMinutes } from './clock.js';
 import {
-  addDays, isoWeekday, weekStartOf, durationHours, overlaps,
+  addDays, isoWeekday, weekStartOf, durationHours, overlaps, round2,
   isEligibleCandidate, validateRequest, contractHours, computeWeeklySummary,
   minimumWageFor, probationApplies, computePayrollRow,
 } from './rules.js';
@@ -54,16 +54,43 @@ function checkTimes(start, end) {
   }
 }
 
+/** BR-12: an open request is overdue when its deadline or its shift start has passed. */
+function isOverdue(r, t) {
+  return r.deadline <= t || `${r.workDate}T${r.startTime}` <= t;
+}
+
+/** BR-02: the acceptor's other shift on the request's date that overlaps the requested shift, if any. */
+function acceptorClash(r, workerId) {
+  return all('SELECT * FROM Shift WHERE workerId = ? AND workDate = ? AND id != ?', [workerId, r.workDate, r.shiftId])
+    .find((s) => overlaps(s.startTime, s.endTime, r.startTime, r.endTime));
+}
+
+function acceptorBusyError(workerId, clash) {
+  const name = workerName(workerId);
+  const range = `${clash.startTime}–${clash.endTime}`;
+  return new ServiceError('ACCEPTOR_BUSY', `${name} already works ${range} that day, so they cannot cover this shift.`, { name, range });
+}
+
 // ---- UC-13 / FR-20 role guard -------------------------------------------------
 
 const MENUS = {
-  WORKER: ['schedule', 'requests', 'inbox', 'attendance', 'availability'],
-  OWNER: ['schedule', 'approvals', 'inbox', 'attendance', 'weekly', 'payroll', 'workers', 'settings'],
+  WORKER: ['home', 'schedule', 'swaps', 'me'],
+  OWNER: ['home', 'schedule', 'staff', 'pay'],
+};
+/** Screens opened from the header (bell, header menu) rather than from the tab bar. */
+const HEADER_ROUTES = {
+  WORKER: ['notifications'],
+  OWNER: ['notifications', 'settings'],
 };
 
-/** FR-20: the screens a role may open, in menu order; any other route is redirected to the schedule. */
+/** FR-20: the navigation items (tabs) of a role, in order. */
 export function menuFor(role) {
   return MENUS[role] ? [...MENUS[role]] : [];
+}
+
+/** FR-20: every route a role may open (its tabs plus the header screens); the router redirects any other route to Home. */
+export function routesFor(role) {
+  return MENUS[role] ? [...MENUS[role], ...HEADER_ROUTES[role]] : [];
 }
 
 // ---- Read queries used by the screens ------------------------------------
@@ -160,30 +187,179 @@ function summaryFor(workerId, weekStart, shifts, policy) {
   });
 }
 
+/** BR-07: holiday pay of a weekly summary in won, rounded down. */
+function holidayPayOf(summary, workerId) {
+  const w = getWorker(workerId);
+  return Math.floor(round2(summary.holidayHours * (w.hourlyWage || 0)));
+}
+
+/**
+ * FR-11 / NFR-13: the effect of handing `shiftId` from its current worker to `acceptorId` on the week of the
+ * shift, for both people: summary before and after, holiday pay before and after, and whether eligibility changes.
+ */
+function swapEffect(shiftId, acceptorId) {
+  const target = get('SELECT s.*, a.clockIn, a.clockOut FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id WHERE s.id = ?', [shiftId]);
+  const weekStart = weekStartOf(target.workDate);
+  const policy = getWorkplace().subAttendancePolicy;
+  const people = [
+    { role: 'requester', id: target.workerId },
+    { role: 'acceptor', id: acceptorId },
+  ];
+  return {
+    weekStart,
+    rows: people.map(({ role, id }) => {
+      const before = weekShiftsFor(id, weekStart);
+      const after = before.filter((s) => s.id !== shiftId);
+      after.push({ ...target, workerId: acceptorId, originalWorkerId: target.originalWorkerId ?? target.workerId });
+      const b = summaryFor(id, weekStart, before, policy);
+      const a = summaryFor(id, weekStart, after, policy);
+      return {
+        role,
+        workerId: id,
+        name: workerName(id),
+        before: { ...b, holidayPay: holidayPayOf(b, id) },
+        after: { ...a, holidayPay: holidayPayOf(a, id) },
+        eligibilityChanged: b.holidayEligible !== a.holidayEligible,
+      };
+    }),
+  };
+}
+
 /**
  * FR-11: before/after comparison for the requester and the acceptor of an ACCEPTED request.
  */
 export function getApprovalPreview(requestId) {
   const r = requestWithShift(requestId);
   if (!r.acceptorId) throw new ServiceError('NOT_ACCEPTED', 'No one has accepted this request yet, so there is nothing to compare.');
-  const weekStart = weekStartOf(r.workDate);
+  return { request: r, ...swapEffect(r.shiftId, r.acceptorId) };
+}
+
+/** BR-01: the workers who are eligible for `shift` right now (used on creation and for the review step of the flow). */
+function eligibleCandidates(shift, requesterId) {
+  return all("SELECT * FROM Worker WHERE role = 'WORKER' ORDER BY id").filter((w) => isEligibleCandidate({
+    worker: w,
+    requesterId,
+    shift,
+    workerShifts: all('SELECT * FROM Shift WHERE workerId = ? AND workDate = ?', [w.id, shift.workDate]),
+    availability: getAvailability(w.id),
+  }));
+}
+
+/** UC-04 review step: who would receive a request for this shift if it were sent now (names only). */
+export function previewCandidates(shiftId, requesterId) {
+  const shift = get('SELECT * FROM Shift WHERE id = ?', [shiftId]);
+  if (!shift) throw new ServiceError('SHIFT_NOT_FOUND', 'This shift no longer exists. Reload the page.');
+  return eligibleCandidates(shift, requesterId).map((w) => ({ id: w.id, name: w.name }));
+}
+
+/** UC-03 detail: one shift with names, attendance, the open request and its substitution history. */
+export function getShiftDetail(shiftId) {
+  const s = get(
+    `SELECT s.*, w.name AS workerName, o.name AS originalWorkerName, a.clockIn, a.clockOut, a.confirmed,
+       (SELECT r.id FROM SubRequest r WHERE r.shiftId = s.id AND r.status IN ('REQUESTED','ACCEPTED')) AS openRequestId
+     FROM Shift s JOIN Worker w ON w.id = s.workerId LEFT JOIN Worker o ON o.id = s.originalWorkerId
+     LEFT JOIN Attendance a ON a.shiftId = s.id WHERE s.id = ?`, [shiftId]);
+  if (!s) throw new ServiceError('SHIFT_NOT_FOUND', 'This shift no longer exists. Reload the page.');
+  const history = all(`${REQUEST_SELECT} WHERE r.shiftId = ? ORDER BY r.createdAt, r.id`, [shiftId]);
+  const inUse = history.length + get('SELECT count(*) AS n FROM Attendance WHERE shiftId = ?', [shiftId]).n > 0;
+  return { ...s, history, canDelete: !inUse };
+}
+
+/** Holiday pay a worker gets for a week, with the summary it is based on (stored summaries are not needed). */
+function weekStatus(workerId, weekStart, policy) {
+  const summary = summaryFor(workerId, weekStart, weekShiftsFor(workerId, weekStart), policy);
+  return { ...summary, holidayPay: holidayPayOf(summary, workerId) };
+}
+
+/**
+ * Worker Home (NFR-13, prompt §2.3): everything waiting for this worker, in one call.
+ * - incoming: PENDING targets of REQUESTED requests, with the effect of accepting on this worker's week;
+ * - taken: requests this worker was asked for that someone else accepted and the owner has not decided yet;
+ * - myOpen: the worker's own REQUESTED / ACCEPTED requests with their candidates' answers;
+ * - nextShift: the next own future SCHEDULED shift; week: this week's hours and holiday allowance;
+ * - toRecord: own shifts that have started but have no attendance record yet.
+ */
+export function getWorkerHome(workerId) {
+  const t = now();
+  const today = t.slice(0, 10);
+  const worker = getWorker(workerId);
   const policy = getWorkplace().subAttendancePolicy;
-  const people = [
-    { role: 'requester', id: r.requesterId },
-    { role: 'acceptor', id: r.acceptorId },
-  ];
+  const targets = all(
+    `SELECT t.response, r.id AS requestId FROM SubRequestTarget t JOIN SubRequest r ON r.id = t.subRequestId
+     WHERE t.workerId = ? ORDER BY r.deadline, r.id`, [workerId]);
+  const incoming = [];
+  const taken = [];
+  for (const tg of targets) {
+    const r = get(`${REQUEST_SELECT} WHERE r.id = ?`, [tg.requestId]);
+    if (r.status === 'REQUESTED' && tg.response === 'PENDING') {
+      const effect = swapEffect(r.shiftId, workerId).rows.find((x) => x.role === 'acceptor');
+      incoming.push({ ...r, effect });
+    } else if (r.status === 'ACCEPTED' && r.acceptorId !== workerId && tg.response === 'CLOSED') {
+      taken.push(r);
+    }
+  }
+  const myOpen = all(`${REQUEST_SELECT} WHERE r.requesterId = ? AND r.status IN ('REQUESTED','ACCEPTED') ORDER BY s.workDate, s.startTime`, [workerId])
+    .map((r) => ({ ...r, targets: targetsOf(r.id) }));
+  const own = all(
+    `SELECT s.*, a.clockIn, a.clockOut,
+       (SELECT r.id FROM SubRequest r WHERE r.shiftId = s.id AND r.status IN ('REQUESTED','ACCEPTED')) AS openRequestId
+     FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id
+     WHERE s.workerId = ? ORDER BY s.workDate, s.startTime`, [workerId]);
+  const nextShift = own.find((s) => s.status === 'SCHEDULED' && `${s.workDate}T${s.startTime}` > t) || null;
+  const toRecord = own.filter((s) => s.status === 'SCHEDULED' && !s.clockIn && `${s.workDate}T${s.startTime}` <= t);
+  const weekStart = weekStartOf(today);
   return {
-    request: r,
-    weekStart,
-    rows: people.map(({ role, id }) => {
-      const before = weekShiftsFor(id, weekStart);
-      const after = before.filter((s) => s.id !== r.shiftId);
-      const target = get('SELECT s.*, a.clockIn, a.clockOut FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id WHERE s.id = ?', [r.shiftId]);
-      after.push({ ...target, workerId: r.acceptorId, originalWorkerId: target.originalWorkerId ?? target.workerId });
-      const b = summaryFor(id, weekStart, before, policy);
-      const a = summaryFor(id, weekStart, after, policy);
-      return { role, workerId: id, name: workerName(id), before: b, after: a, eligibilityChanged: b.holidayEligible !== a.holidayEligible };
-    }),
+    worker: { id: worker.id, name: worker.name },
+    today,
+    incoming,
+    taken,
+    myOpen,
+    nextShift,
+    week: { weekStart, ...weekStatus(workerId, weekStart, policy) },
+    toRecord,
+  };
+}
+
+/**
+ * Owner Home (NFR-13, prompt §2.5): decisions and checks waiting for the owner, in one call.
+ * - decisions: ACCEPTED requests with the before/after effect for requester and acceptor;
+ * - open: REQUESTED requests with their candidates' answers;
+ * - toConfirm: recorded, unconfirmed attendance; payWarnings: unacknowledged minimum-wage warnings of DRAFT payrolls;
+ * - today: today's shifts; week: this week's shifts, hours and the estimated holiday-allowance total.
+ * `taskCount` counts the items only the owner can act on (decisions, attendance, pay warnings).
+ */
+export function getOwnerHome() {
+  const t = now();
+  const today = t.slice(0, 10);
+  const policy = getWorkplace().subAttendancePolicy;
+  const requests = listOwnerRequests();
+  const decisions = requests.filter((r) => r.status === 'ACCEPTED')
+    .map((r) => ({ ...r, ...swapEffect(r.shiftId, r.acceptorId) }));
+  const open = requests.filter((r) => r.status === 'REQUESTED');
+  const toConfirm = all(
+    `SELECT s.*, w.name AS workerName, a.clockIn, a.clockOut FROM Shift s JOIN Worker w ON w.id = s.workerId
+     JOIN Attendance a ON a.shiftId = s.id WHERE a.confirmed = 0 AND s.status = 'SCHEDULED' ORDER BY s.workDate, s.startTime`);
+  const payWarnings = all(
+    `SELECT p.*, w.name AS workerName, w.hourlyWage FROM Payroll p JOIN Worker w ON w.id = p.workerId
+     WHERE p.status = 'DRAFT' AND p.minWageWarning = 1 AND p.minWageAck = 0 ORDER BY p.yearMonth, w.id`);
+  const weekStart = weekStartOf(today);
+  const weekShifts = getWeekShifts(weekStart);
+  const people = [...new Set(weekShifts.flatMap((s) => [s.workerId, s.originalWorkerId]).filter(Boolean))];
+  const holidayTotal = people.reduce((sum, id) => sum + weekStatus(id, weekStart, policy).holidayPay, 0);
+  return {
+    today,
+    decisions,
+    open,
+    toConfirm,
+    payWarnings,
+    taskCount: decisions.length + toConfirm.length + payWarnings.length,
+    todayShifts: weekShifts.filter((s) => s.workDate === today),
+    week: {
+      weekStart,
+      shifts: weekShifts.length,
+      hours: round2(weekShifts.reduce((sum, s) => sum + durationHours(s.startTime, s.endTime), 0)),
+      holidayTotal,
+    },
   };
 }
 
@@ -294,10 +470,16 @@ export function generateWeek(weekStart) {
     const schedules = all(
       `SELECT f.* FROM FixedSchedule f JOIN Worker w ON w.id = f.workerId
        WHERE w.active = 1 AND w.role = 'WORKER' ORDER BY f.id`);
+    const sunday = addDays(monday, 6);
     let created = 0;
     for (const f of schedules) {
       const date = addDays(monday, f.weekday - 1);
-      if (get('SELECT id FROM Shift WHERE fixedScheduleId = ? AND workDate = ?', [f.id, date])) continue;
+      // Skip a slot that already produced a shift this week (possibly moved to another day) or that
+      // would overlap a shift the worker already has that day (a moved or re-created fixed slot).
+      if (get('SELECT id FROM Shift WHERE fixedScheduleId = ? AND workDate BETWEEN ? AND ?', [f.id, monday, sunday])) continue;
+      const clash = all('SELECT * FROM Shift WHERE workerId = ? AND workDate = ?', [f.workerId, date])
+        .some((s) => overlaps(s.startTime, s.endTime, f.startTime, f.endTime));
+      if (clash) continue;
       run('INSERT INTO Shift (workDate, startTime, endTime, workerId, fixedScheduleId) VALUES (?, ?, ?, ?, ?)',
         [date, f.startTime, f.endTime, f.workerId, f.id]);
       created++;
@@ -322,6 +504,11 @@ export function editShift(shiftId, changes) {
       return null;
     }
     const next = { ...(existing || {}), ...changes };
+    if (existing && (next.workDate !== existing.workDate || next.startTime !== existing.startTime
+      || next.endTime !== existing.endTime || Number(next.workerId) !== existing.workerId)
+      && get("SELECT id FROM SubRequest WHERE shiftId = ? AND status IN ('REQUESTED','ACCEPTED')", [shiftId])) {
+      throw new ServiceError('SHIFT_OPEN_REQUEST', 'This shift has an open substitute request. Wait until it is decided, or ask the worker to cancel it, before changing the worker, date or time.');
+    }
     if (!DATE.test(next.workDate || '')) throw new ServiceError('DATE_INVALID', 'Choose the date of the shift.');
     checkTimes(next.startTime, next.endTime);
     if (next.startTime === next.endTime) throw new ServiceError('TIME_EMPTY', 'Start and end time are the same. Enter a later end time.');
@@ -369,13 +556,7 @@ export function createSubRequest({ shiftId, requesterId, reason = '', deadline }
     const id = run("INSERT INTO SubRequest (shiftId, requesterId, reason, deadline, status, createdAt) VALUES (?, ?, ?, ?, 'REQUESTED', ?)",
       [shiftId, requesterId, (reason || '').trim() || null, deadline, t]).id;
     const requester = workerName(requesterId);
-    const candidates = all("SELECT * FROM Worker WHERE role = 'WORKER' ORDER BY id").filter((w) => isEligibleCandidate({
-      worker: w,
-      requesterId,
-      shift,
-      workerShifts: all('SELECT * FROM Shift WHERE workerId = ? AND workDate = ?', [w.id, shift.workDate]),
-      availability: getAvailability(w.id),
-    }));
+    const candidates = eligibleCandidates(shift, requesterId);
     const label = shiftLabel(shift);
     for (const c of candidates) {
       run("INSERT INTO SubRequestTarget (subRequestId, workerId, response) VALUES (?, ?, 'PENDING')", [id, c.id]);
@@ -410,10 +591,11 @@ function requestError(code, shift) {
  * @param {'ACCEPTED'|'DECLINED'} response
  */
 export function respondToRequest(requestId, workerId, response) {
-  return tx(() => {
+  return throwIfExpired(tx(() => {
     const r = requestWithShift(requestId);
     const target = get('SELECT * FROM SubRequestTarget WHERE subRequestId = ? AND workerId = ?', [requestId, workerId]);
     if (!target) throw new ServiceError('NOT_A_CANDIDATE', 'You were not asked to cover this shift.');
+    if (['REQUESTED', 'ACCEPTED'].includes(r.status) && isOverdue(r, now())) return expireRequest(r, now());
     if (r.status !== 'REQUESTED' || target.response !== 'PENDING') {
       if (r.acceptorId && r.acceptorId !== workerId) {
         const name = workerName(r.acceptorId);
@@ -427,6 +609,8 @@ export function respondToRequest(requestId, workerId, response) {
       return { status: r.status };
     }
     if (response !== 'ACCEPTED') throw new ServiceError('RESPONSE_INVALID', 'Choose accept or decline.');
+    const clash = acceptorClash(r, workerId);
+    if (clash) throw acceptorBusyError(workerId, clash);
     const updated = run("UPDATE SubRequest SET status = 'ACCEPTED', acceptorId = ? WHERE id = ? AND status = 'REQUESTED'", [workerId, requestId]);
     if (updated.changes !== 1) throw new ServiceError('ALREADY_TAKEN', 'Someone else accepted first.', { name: '' });
     run("UPDATE SubRequestTarget SET response = 'ACCEPTED', respondedAt = ? WHERE id = ?", [t, target.id]);
@@ -440,7 +624,7 @@ export function respondToRequest(requestId, workerId, response) {
     notify(r.requesterId, requestId, 'REQUEST_ACCEPTED', msg);
     notify(ownerId(), requestId, 'REQUEST_ACCEPTED', msg);
     return { status: 'ACCEPTED' };
-  });
+  }));
 }
 
 // ---- UC-06 Approve or reject substitution --------------------------------
@@ -451,8 +635,9 @@ export function respondToRequest(requestId, workerId, response) {
  * @param {'APPROVED'|'REJECTED'} decision
  */
 export function decideRequest(requestId, decision) {
-  return tx(() => {
+  return throwIfExpired(tx(() => {
     const r = requestWithShift(requestId);
+    if (['REQUESTED', 'ACCEPTED'].includes(r.status) && isOverdue(r, now())) return expireRequest(r, now());
     if (r.status !== 'ACCEPTED') {
       throw new ServiceError('NOT_ACCEPTED', `Only an accepted request can be approved or rejected; this one is ${r.status.toLowerCase()}.`, { status: r.status });
     }
@@ -461,6 +646,8 @@ export function decideRequest(requestId, decision) {
     const acceptor = workerName(r.acceptorId);
     const requester = workerName(r.requesterId);
     if (decision === 'APPROVED') {
+      const clash = acceptorClash(r, r.acceptorId);
+      if (clash) throw acceptorBusyError(r.acceptorId, clash);
       run('UPDATE Shift SET workerId = ?, originalWorkerId = COALESCE(originalWorkerId, ?) WHERE id = ?', [r.acceptorId, r.shiftWorkerId, r.shiftId]);
       run("UPDATE SubRequest SET status = 'APPROVED', decidedAt = ? WHERE id = ?", [t, requestId]);
       recomputeWeek(weekStartOf(r.workDate), [r.requesterId, r.acceptorId]);
@@ -476,7 +663,7 @@ export function decideRequest(requestId, decision) {
       throw new ServiceError('DECISION_INVALID', 'Choose approve or reject.');
     }
     return { status: decision };
-  });
+  }));
 }
 
 // ---- UC-12 Cancel own substitute request ----------------------------------
@@ -511,16 +698,33 @@ export function expireOverdue() {
     const open = all(
       `SELECT r.*, s.workDate, s.startTime, s.endTime FROM SubRequest r JOIN Shift s ON s.id = r.shiftId
        WHERE r.status IN ('REQUESTED','ACCEPTED')`);
-    const overdue = open.filter((r) => r.deadline <= t || `${r.workDate}T${r.startTime}` <= t);
-    for (const r of overdue) {
-      run("UPDATE SubRequest SET status = 'EXPIRED', decidedAt = ? WHERE id = ?", [t, r.id]);
-      run("UPDATE SubRequestTarget SET response = 'CLOSED', respondedAt = ? WHERE subRequestId = ? AND response = 'PENDING'", [t, r.id]);
-      const msg = `The substitute request for ${shiftLabel(r)} expired without an approved swap. ${workerName(r.requesterId)} keeps the shift.`;
-      notify(r.requesterId, r.id, 'REQUEST_EXPIRED', msg);
-      notify(ownerId(), r.id, 'REQUEST_EXPIRED', msg);
-    }
+    const overdue = open.filter((r) => isOverdue(r, t));
+    for (const r of overdue) expireRequest(r, t);
     return overdue.length;
   });
+}
+
+const EXPIRED = Symbol('expired');
+
+/** BR-12 / UC-11: mark one open request EXPIRED, close its pending targets silently, notify requester and owner. */
+function expireRequest(r, t) {
+  run("UPDATE SubRequest SET status = 'EXPIRED', decidedAt = ? WHERE id = ?", [t, r.id]);
+  run("UPDATE SubRequestTarget SET response = 'CLOSED', respondedAt = ? WHERE subRequestId = ? AND response = 'PENDING'", [t, r.id]);
+  const msg = `The substitute request for ${shiftLabel(r)} expired without an approved swap. ${workerName(r.requesterId)} keeps the shift.`;
+  notify(r.requesterId, r.id, 'REQUEST_EXPIRED', msg);
+  notify(ownerId(), r.id, 'REQUEST_EXPIRED', msg);
+  return EXPIRED;
+}
+
+/**
+ * BR-12: accept and approve expire an overdue request themselves. The expiry is committed first and the
+ * REQUEST_CLOSED error is thrown afterwards, so throwing does not roll the expiry back.
+ */
+function throwIfExpired(result) {
+  if (result === EXPIRED) {
+    throw new ServiceError('REQUEST_CLOSED', 'This request expired at its deadline or when the shift started, so it can no longer be answered or decided.', { status: 'EXPIRED' });
+  }
+  return result;
 }
 
 // ---- UC-07 Record and confirm attendance ----------------------------------
@@ -548,6 +752,7 @@ export function confirmAttendance(shiftId) {
     const s = get('SELECT * FROM Shift WHERE id = ?', [shiftId]);
     const a = get('SELECT * FROM Attendance WHERE shiftId = ?', [shiftId]);
     if (!s) throw new ServiceError('SHIFT_NOT_FOUND', 'This shift no longer exists. Reload the page.');
+    if (s.status !== 'SCHEDULED') throw new ServiceError('ATTENDANCE_CLOSED', `This shift is already ${s.status.toLowerCase()}, so its status cannot change again.`, { status: s.status });
     if (!a) throw new ServiceError('NO_ATTENDANCE', 'The worker has not recorded this shift yet. Ask them to record it, or mark the shift absent.');
     run('UPDATE Attendance SET confirmed = 1 WHERE id = ?', [a.id]);
     run("UPDATE Shift SET status = 'WORKED' WHERE id = ?", [shiftId]);
@@ -561,6 +766,7 @@ export function markAbsent(shiftId) {
   return tx(() => {
     const s = get('SELECT * FROM Shift WHERE id = ?', [shiftId]);
     if (!s) throw new ServiceError('SHIFT_NOT_FOUND', 'This shift no longer exists. Reload the page.');
+    if (s.status !== 'SCHEDULED') throw new ServiceError('ATTENDANCE_CLOSED', `This shift is already ${s.status.toLowerCase()}, so its status cannot change again.`, { status: s.status });
     if (`${s.workDate}T${s.startTime}` > now()) throw new ServiceError('SHIFT_NOT_STARTED', 'This shift has not started yet, so it cannot be marked absent.');
     run("UPDATE Shift SET status = 'ABSENT' WHERE id = ?", [shiftId]);
     run('UPDATE Attendance SET confirmed = 1 WHERE shiftId = ?', [shiftId]);
@@ -574,6 +780,7 @@ export function markAbsent(shiftId) {
 /**
  * UC-08 / FR-14: compute and store the WeeklySummary of each worker who has a shift in the week
  * (or only of `workerIds`). Returns the rows with the reasons for non-eligibility.
+ * Spec §8: a worker without a shift (as current or original worker) in the week has no row; stale rows are deleted.
  */
 export function recomputeWeek(weekStart, workerIds = null) {
   return tx(() => {
@@ -582,9 +789,17 @@ export function recomputeWeek(weekStart, workerIds = null) {
     const ids = workerIds || all(
       `SELECT DISTINCT w.id FROM Worker w JOIN Shift s ON (s.workerId = w.id OR s.originalWorkerId = w.id)
        WHERE w.role = 'WORKER' AND s.workDate BETWEEN ? AND ? ORDER BY w.id`, [monday, addDays(monday, 6)]).map((r) => r.id);
+    if (!workerIds) {
+      run(`DELETE FROM WeeklySummary WHERE weekStart = ?${ids.length ? ` AND workerId NOT IN (${ids.map(() => '?').join(',')})` : ''}`, [monday, ...ids]);
+    }
     const rows = [];
     for (const id of ids) {
-      const s = summaryFor(id, monday, weekShiftsFor(id, monday), policy);
+      const shifts = weekShiftsFor(id, monday);
+      if (!shifts.length) {
+        run('DELETE FROM WeeklySummary WHERE workerId = ? AND weekStart = ?', [id, monday]);
+        continue;
+      }
+      const s = summaryFor(id, monday, shifts, policy);
       run(`INSERT INTO WeeklySummary (workerId, weekStart, contractHours, scheduledHours, actualHours, perfectAttendance, holidayEligible, holidayHours)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (workerId, weekStart) DO UPDATE SET contractHours = excluded.contractHours, scheduledHours = excluded.scheduledHours,

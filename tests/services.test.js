@@ -231,6 +231,63 @@ test('TC-063 done-criterion 4 walkthrough: accept, already taken, approval panel
   assert.equal(board.openRequestId, null);
 });
 
+test('TC-064 worker home: Minho sees the request with the effect of accepting (16 -> 21 h, 33,024 won unchanged)', () => {
+  const home = svc.getWorkerHome(3);
+  assert.equal(home.worker.name, 'Choi Minho');
+  assert.equal(home.incoming.length, 1);
+  const card = home.incoming[0];
+  assert.deepEqual([card.id, card.requesterName, card.workDate, card.startTime, card.reason], [1, 'Lee Seoyeon', '2026-09-30', '18:00', 'Midterm exam']);
+  assert.deepEqual([card.effect.before.scheduledHours, card.effect.after.scheduledHours], [16, 21]);
+  assert.deepEqual([card.effect.before.holidayEligible, card.effect.after.holidayEligible, card.effect.eligibilityChanged], [true, true, false]);
+  assert.deepEqual([card.effect.before.holidayPay, card.effect.after.holidayPay], [33024, 33024]);
+  assert.deepEqual([home.week.scheduledHours, home.week.contractHours, home.week.holidayEligible, home.week.holidayPay], [16, 16, true, 33024]);
+  assert.deepEqual([home.nextShift.workDate, home.nextShift.startTime], ['2026-09-29', '18:00']);
+  assert.deepEqual(home.myOpen, []);
+  assert.deepEqual(home.toRecord, []);
+  // After accepting, the card is gone; Doyun's home says Minho was faster; Seoyeon sees her tracker at "accepted".
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+  assert.equal(svc.getWorkerHome(3).incoming.length, 0);
+  const doyun = svc.getWorkerHome(5);
+  assert.deepEqual([doyun.incoming.length, doyun.taken.length, doyun.taken[0].acceptorName], [0, 1, 'Choi Minho']);
+  const seoyeon = svc.getWorkerHome(2);
+  assert.deepEqual([seoyeon.myOpen.length, seoyeon.myOpen[0].status, seoyeon.myOpen[0].acceptorName], [1, 'ACCEPTED', 'Choi Minho']);
+  assert.deepEqual([seoyeon.week.contractHours, seoyeon.week.holidayEligible, seoyeon.week.reasons[0].code], [10, false, 'CONTRACT_BELOW_15']);
+});
+
+test('TC-065 owner home: decision card with the approval effect, then nothing left after approval', () => {
+  let home = svc.getOwnerHome();
+  assert.deepEqual([home.decisions.length, home.open.length, home.taskCount], [0, 1, 0]);
+  assert.deepEqual(home.open[0].targets.map((x) => [x.workerName, x.response]), [['Choi Minho', 'PENDING'], ['Kang Doyun', 'PENDING']]);
+  assert.deepEqual([home.week.shifts, home.week.hours, home.todayShifts.length, home.todayShifts[0].workerName], [9, 50, 1, 'Lee Seoyeon']);
+  assert.equal(home.week.holidayTotal, 33024);
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+  home = svc.getOwnerHome();
+  assert.deepEqual([home.decisions.length, home.open.length, home.taskCount], [1, 0, 1]);
+  const [requester, acceptor] = home.decisions[0].rows;
+  assert.deepEqual([requester.name, requester.before.scheduledHours, requester.after.scheduledHours, requester.after.holidayPay], ['Lee Seoyeon', 10, 5, 0]);
+  assert.deepEqual([acceptor.name, acceptor.before.scheduledHours, acceptor.after.scheduledHours], ['Choi Minho', 16, 21]);
+  assert.deepEqual([acceptor.before.holidayPay, acceptor.after.holidayPay, acceptor.eligibilityChanged], [33024, 33024, false]);
+  svc.decideRequest(1, 'APPROVED');
+  home = svc.getOwnerHome();
+  assert.deepEqual([home.decisions.length, home.taskCount], [0, 0]);
+  // Pay warnings and attendance to confirm are counted as tasks.
+  svc.generatePayroll('2026-09');
+  setNow('2026-09-29T09:00');
+  svc.recordAttendance(get("SELECT id FROM Shift WHERE workerId = 2 AND workDate = '2026-09-28'").id, 2, '18:00', '23:00');
+  home = svc.getOwnerHome();
+  assert.deepEqual([home.payWarnings.map((p) => p.workerName), home.toConfirm.map((s) => s.workerName), home.taskCount], [['Kang Doyun'], ['Lee Seoyeon'], 2]);
+});
+
+test('TC-066 review step previews recipients; shift detail explains why a shift cannot be deleted', () => {
+  const sat = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-10-03'").id;
+  assert.deepEqual(svc.previewCandidates(sat, 3).map((c) => c.name), ['Lee Seoyeon', 'Jung Hana']);
+  const sun = get("SELECT id FROM Shift WHERE workerId = 4 AND workDate = '2026-10-04'").id;
+  assert.deepEqual(svc.previewCandidates(sun, 4), []);
+  const wed = svc.getShiftDetail(wedShiftId());
+  assert.deepEqual([wed.workerName, wed.openRequestId, wed.history.length, wed.canDelete], ['Lee Seoyeon', 1, 1, false]);
+  assert.equal(svc.getShiftDetail(sat).canDelete, true);
+});
+
 // ---- TC-08x weekly summary through the service ----
 
 test('TC-088 worked example: Minho 3.2 h holiday allowance, 33,024 KRW in September payroll', () => {
@@ -245,11 +302,14 @@ test('TC-088 worked example: Minho 3.2 h holiday allowance, 33,024 KRW in Septem
 });
 
 test('TC-089 marking a shift absent removes holiday eligibility for that week', () => {
-  const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-22'").id;
+  // Only a SCHEDULED shift can be marked absent (spec §7), so use Minho's Tue of the current week after it started.
+  setNow('2026-09-29T23:30');
+  const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-29'").id;
+  assert.equal(svc.recomputeWeek('2026-09-28').find((r) => r.workerId === 3).holidayEligible, true);
   svc.markAbsent(tue);
-  const minho = svc.recomputeWeek('2026-09-21').find((r) => r.workerId === 3);
+  const minho = svc.recomputeWeek('2026-09-28').find((r) => r.workerId === 3);
   assert.equal(minho.holidayEligible, false);
-  assert.deepEqual(minho.reasons, [{ code: 'ABSENT', date: '2026-09-22' }]);
+  assert.deepEqual(minho.reasons, [{ code: 'ABSENT', date: '2026-09-29' }]);
 });
 
 test('TC-08A both substitution-attendance policies through approval', () => {
@@ -471,13 +531,16 @@ test('TC-002 a saved database from before spec v2 (no Payroll.minWageAck) is rep
 });
 
 test('TC-134 each role sees only its own menus; other routes are not offered (FR-20)', () => {
-  assert.deepEqual(svc.menuFor('WORKER'), ['schedule', 'requests', 'inbox', 'attendance', 'availability']);
-  assert.deepEqual(svc.menuFor('OWNER'), ['schedule', 'approvals', 'inbox', 'attendance', 'weekly', 'payroll', 'workers', 'settings']);
-  for (const ownerOnly of ['approvals', 'weekly', 'payroll', 'workers', 'settings']) assert.ok(!svc.menuFor('WORKER').includes(ownerOnly), ownerOnly);
-  for (const workerOnly of ['requests', 'availability']) assert.ok(!svc.menuFor('OWNER').includes(workerOnly), workerOnly);
+  assert.deepEqual(svc.menuFor('WORKER'), ['home', 'schedule', 'swaps', 'me']);
+  assert.deepEqual(svc.menuFor('OWNER'), ['home', 'schedule', 'staff', 'pay']);
+  assert.deepEqual(svc.routesFor('WORKER'), ['home', 'schedule', 'swaps', 'me', 'notifications']);
+  assert.deepEqual(svc.routesFor('OWNER'), ['home', 'schedule', 'staff', 'pay', 'notifications', 'settings']);
+  for (const ownerOnly of ['staff', 'pay', 'settings']) assert.ok(!svc.routesFor('WORKER').includes(ownerOnly), ownerOnly);
+  for (const workerOnly of ['swaps', 'me']) assert.ok(!svc.routesFor('OWNER').includes(workerOnly), workerOnly);
   assert.deepEqual(svc.menuFor('GUEST'), []);
-  svc.menuFor('WORKER').push('payroll');
-  assert.ok(!svc.menuFor('WORKER').includes('payroll'), 'callers cannot widen the menu');
+  assert.deepEqual(svc.routesFor('GUEST'), []);
+  svc.menuFor('WORKER').push('pay');
+  assert.ok(!svc.routesFor('WORKER').includes('pay'), 'callers cannot widen the menu');
 });
 
 test('TC-135 a worker sees only their own attendance rows and no one else\'s phone or wage (NFR-11)', () => {
@@ -488,4 +551,121 @@ test('TC-135 a worker sees only their own attendance rows and no one else\'s pho
   const seen = svc.listWorkers(seoyeon);
   assert.deepEqual(seen.filter((w) => w.id !== 2).map((w) => [w.phone, w.hourlyWage]), [[null, null], [null, null], [null, null], [null, null]]);
   assert.deepEqual([seen.find((w) => w.id === 2).phone, seen.find((w) => w.id === 2).hourlyWage], ['010-4172-2083', 10500]);
+});
+
+// ---- Regression tests from the independent code review (reproduction run 1) ----
+
+test('TC-054 acceptance is refused when the candidate already works an overlapping shift that day (BR-02, ACCEPTOR_BUSY)', () => {
+  svc.editShift(null, { workDate: '2026-09-30', startTime: '19:00', endTime: '21:00', workerId: 3 });
+  assert.throws(() => svc.respondToRequest(1, 3, 'ACCEPTED'), { code: 'ACCEPTOR_BUSY' });
+  const r = get('SELECT status, acceptorId FROM SubRequest WHERE id = 1');
+  assert.deepEqual({ ...r }, { status: 'REQUESTED', acceptorId: null });
+  assert.deepEqual(all('SELECT workerId, response FROM SubRequestTarget WHERE subRequestId = 1 ORDER BY workerId').map((t) => [t.workerId, t.response]),
+    [[3, 'PENDING'], [5, 'PENDING']]);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_ACCEPTED'").n, 0);
+  svc.respondToRequest(1, 5, 'ACCEPTED');
+  assert.equal(get('SELECT acceptorId FROM SubRequest WHERE id = 1').acceptorId, 5);
+});
+
+test('TC-055 approval is refused when the acceptor got an overlapping shift after accepting (BR-02, ACCEPTOR_BUSY)', () => {
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+  svc.editShift(null, { workDate: '2026-09-30', startTime: '12:00', endTime: '19:00', workerId: 3 });
+  assert.throws(() => svc.decideRequest(1, 'APPROVED'), { code: 'ACCEPTOR_BUSY' });
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'ACCEPTED');
+  const wed = get('SELECT workerId, originalWorkerId FROM Shift WHERE id = ?', [wedShiftId()]);
+  assert.deepEqual({ ...wed }, { workerId: 2, originalWorkerId: null });
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_APPROVED'").n, 0);
+  svc.decideRequest(1, 'REJECTED');
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'REJECTED');
+});
+
+test('TC-072 an ABSENT shift cannot be confirmed as worked (spec §7, FR-13, ATTENDANCE_CLOSED)', () => {
+  setNow('2026-09-29T23:30');
+  const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-29'").id;
+  svc.recordAttendance(tue, 3, '18:00', '23:00');
+  svc.markAbsent(tue);
+  assert.throws(() => svc.confirmAttendance(tue), { code: 'ATTENDANCE_CLOSED' });
+  assert.throws(() => svc.markAbsent(tue), { code: 'ATTENDANCE_CLOSED' });
+  assert.equal(get('SELECT status FROM Shift WHERE id = ?', [tue]).status, 'ABSENT');
+});
+
+test('TC-073 a WORKED shift cannot be marked absent or confirmed again (spec §7, FR-13, ATTENDANCE_CLOSED)', () => {
+  const worked = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-09-22'").id;
+  assert.equal(get('SELECT status FROM Shift WHERE id = ?', [worked]).status, 'WORKED');
+  assert.throws(() => svc.markAbsent(worked), { code: 'ATTENDANCE_CLOSED' });
+  assert.throws(() => svc.confirmAttendance(worked), { code: 'ATTENDANCE_CLOSED' });
+  assert.equal(get('SELECT status FROM Shift WHERE id = ?', [worked]).status, 'WORKED');
+});
+
+test('TC-01E regenerating a week does not re-create a shift the owner moved to another day (FR-04)', () => {
+  const mon = get("SELECT id FROM Shift WHERE workerId = 2 AND workDate = '2026-09-28'").id;
+  svc.editShift(mon, { workDate: '2026-09-29' });
+  assert.equal(svc.generateWeek('2026-09-28').created, 0);
+  assert.equal(get("SELECT count(*) AS n FROM Shift WHERE workerId = 2 AND workDate = '2026-09-28'").n, 0);
+  assert.equal(get("SELECT count(*) AS n FROM Shift WHERE workerId = 2 AND workDate = '2026-09-29'").n, 1);
+});
+
+test('TC-01F regenerating a week after the fixed rows were deleted and re-added creates no overlapping duplicates (FR-04)', () => {
+  svc.saveFixedSchedule(2, [{ weekday: 1, startTime: '18:00', endTime: '23:00' }, { weekday: 3, startTime: '18:00', endTime: '23:00' }]);
+  assert.equal(svc.generateWeek('2026-09-28').created, 0);
+  assert.equal(get("SELECT count(*) AS n FROM Shift WHERE workerId = 2 AND workDate = '2026-09-28'").n, 1);
+  assert.equal(get("SELECT count(*) AS n FROM Shift WHERE workerId = 2 AND workDate = '2026-09-30'").n, 1);
+  assert.equal(svc.generateWeek('2026-10-05').created, 9);
+});
+
+test('TC-01G changing worker, date or time of a shift with an open request is refused (FR-05, SHIFT_OPEN_REQUEST)', () => {
+  const wed = wedShiftId();
+  assert.throws(() => svc.editShift(wed, { workerId: 4 }), { code: 'SHIFT_OPEN_REQUEST' });
+  assert.throws(() => svc.editShift(wed, { workDate: '2026-10-01' }), { code: 'SHIFT_OPEN_REQUEST' });
+  assert.throws(() => svc.editShift(wed, { startTime: '19:00' }), { code: 'SHIFT_OPEN_REQUEST' });
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+  assert.throws(() => svc.editShift(wed, { endTime: '22:00' }), { code: 'SHIFT_OPEN_REQUEST' });
+  assert.deepEqual({ ...get('SELECT workDate, startTime, endTime, workerId FROM Shift WHERE id = ?', [wed]) },
+    { workDate: '2026-09-30', startTime: '18:00', endTime: '23:00', workerId: 2 });
+  svc.cancelRequest(1, 2);
+  svc.editShift(wed, { startTime: '19:00' });
+  assert.equal(get('SELECT startTime FROM Shift WHERE id = ?', [wed]).startTime, '19:00');
+});
+
+test('TC-08C recomputing a week deletes the summary of a worker who no longer has a shift that week (spec §8)', () => {
+  svc.recomputeWeek('2026-09-28');
+  assert.equal(get("SELECT holidayHours FROM WeeklySummary WHERE workerId = 3 AND weekStart = '2026-09-28'").holidayHours, 3.2);
+  for (const s of all("SELECT id FROM Shift WHERE workerId = 3 AND workDate BETWEEN '2026-09-28' AND '2026-10-04'")) {
+    svc.editShift(s.id, { workerId: 2 });
+  }
+  const rows = svc.recomputeWeek('2026-09-28');
+  assert.equal(rows.find((r) => r.workerId === 3), undefined);
+  assert.equal(get("SELECT id FROM WeeklySummary WHERE workerId = 3 AND weekStart = '2026-09-28'"), null);
+  const minho = svc.generatePayroll('2026-10').find((p) => p.workerId === 3);
+  assert.ok(!minho || minho.holidayPay === 0, 'no stale 33,024 won holiday pay');
+});
+
+test('TC-124 accepting after the deadline expires the request and is refused (BR-12, REQUEST_CLOSED)', () => {
+  setNow('2026-09-29T22:00');
+  assert.throws(() => svc.respondToRequest(1, 3, 'ACCEPTED'), { code: 'REQUEST_CLOSED' });
+  const r = get('SELECT status, acceptorId FROM SubRequest WHERE id = 1');
+  assert.deepEqual({ ...r }, { status: 'EXPIRED', acceptorId: null });
+  assert.deepEqual(all('SELECT DISTINCT response FROM SubRequestTarget WHERE subRequestId = 1'), [{ response: 'CLOSED' }]);
+  assert.deepEqual(all("SELECT workerId FROM Notification WHERE kind = 'REQUEST_EXPIRED' ORDER BY workerId").map((n) => n.workerId), [1, 2]);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_ACCEPTED'").n, 0);
+});
+
+test('TC-125 approving at the deadline or after the shift start expires the request and is refused (BR-12, REQUEST_CLOSED)', () => {
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+  setNow('2026-09-29T21:00');
+  assert.throws(() => svc.decideRequest(1, 'APPROVED'), { code: 'REQUEST_CLOSED' });
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'EXPIRED');
+  assert.equal(get('SELECT workerId FROM Shift WHERE id = ?', [wedShiftId()]).workerId, 2);
+  assert.equal(get("SELECT count(*) AS n FROM Notification WHERE kind = 'REQUEST_APPROVED'").n, 0);
+
+  // Shift start: a request whose deadline equals the shift start, decided once the shift has started.
+  const tue = get("SELECT id FROM Shift WHERE workerId = 3 AND workDate = '2026-10-01'").id;
+  setNow('2026-09-30T09:00');
+  svc.saveAvailability(2, [{ weekday: 4, startTime: '17:00', endTime: '23:00' }]);
+  const { id } = svc.createSubRequest({ shiftId: tue, requesterId: 3, deadline: '2026-10-01T18:00' });
+  svc.respondToRequest(id, 2, 'ACCEPTED');
+  setNow('2026-10-01T18:00');
+  assert.throws(() => svc.decideRequest(id, 'APPROVED'), { code: 'REQUEST_CLOSED' });
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = ?', [id]).status, 'EXPIRED');
+  assert.equal(get('SELECT workerId FROM Shift WHERE id = ?', [tue]).workerId, 3);
 });

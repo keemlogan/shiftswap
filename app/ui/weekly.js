@@ -1,37 +1,35 @@
-// UC-08 Weekly hours and holiday allowance (FR-14), with the reason when a worker is not eligible.
+// UC-08 Weekly hours and holiday allowance (FR-14), shown in Pay → Weekly as one card per worker (prompt §2.7).
 import * as svc from '../core/services.js';
-import { t, esc, fmtDay, fmtHours, pageHead, emptyState } from './i18n.js';
-import { weekFromArgs, weekNavHtml } from './schedule.js';
+import { t, esc, fmtHours, fmtWon, fmtDateShort } from './i18n.js';
+import { emptyState } from './components.js';
 
-export function render(view, ctx) {
-  const week = weekFromArgs(ctx.args);
-  const rows = svc.recomputeWeek(week);
-  const policy = svc.getWorkplace().subAttendancePolicy;
-  const cols = ['weekly.contract', 'weekly.scheduled', 'weekly.actual', 'weekly.perfect', 'weekly.eligible', 'weekly.holidayHours', 'weekly.reason'];
-  view.innerHTML = `
-    ${pageHead(t('weekly.title'), t('purpose.weekly'))}
-    <section class="group">
-    ${weekNavHtml('weekly', week)}
-    <p class="muted">${esc(t('weekly.policy', { policy: t(`policy.${policy}`) }))}</p>
-    ${rows.length ? `
-    <table class="rtable">
-      <thead><tr><th scope="col">${esc(t('common.worker'))}</th>${cols.map((c) => `<th scope="col">${esc(t(c))}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map((r) => `
-        <tr>
-          <th scope="row">${esc(r.name)}</th>
-          <td data-label="${esc(t(cols[0]))}" class="num">${esc(fmtHours(r.contractHours))}</td>
-          <td data-label="${esc(t(cols[1]))}" class="num">${esc(fmtHours(r.scheduledHours))}</td>
-          <td data-label="${esc(t(cols[2]))}" class="num">${esc(fmtHours(r.actualHours))}</td>
-          <td data-label="${esc(t(cols[3]))}"><span class="chip ${r.perfectAttendance ? 'chip-ok' : 'chip-alert'}">${esc(t(r.perfectAttendance ? 'common.yes' : 'common.no'))}</span></td>
-          <td data-label="${esc(t(cols[4]))}"><span class="chip ${r.holidayEligible ? 'chip-ok' : ''}">${esc(t(`eligible.${r.holidayEligible}`))}</span></td>
-          <td data-label="${esc(t(cols[5]))}" class="num">${esc(fmtHours(r.holidayHours))}</td>
-          <td data-label="${esc(t(cols[6]))}">${esc(reasonText(r.reasons))}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>` : emptyState(t('weekly.noneText'), `<a class="btn btn-primary" href="#/schedule/${week}">${esc(t('weekly.toSchedule'))}</a>`)}
-    </section>`;
+function reasonText(r) {
+  const parts = [];
+  for (const x of r.reasons) {
+    if (x.code === 'CONTRACT_BELOW_15') parts.push(t('pay.reasonContract', { h: fmtHours(r.contractHours) }));
+    if (x.code === 'ABSENT') parts.push(t('pay.reasonAbsent', { day: fmtDateShort(x.date) }));
+    if (x.code === 'GAVE_AWAY') parts.push(t('pay.reasonGaveAway', { day: fmtDateShort(x.date) }));
+  }
+  return parts.join(' · ');
 }
 
-export function reasonText(reasons) {
-  return reasons.map((r) => t(`reason.${r.code}`, { day: r.date ? fmtDay(r.date) : '' })).join(', ');
+/** Recompute the week (UC-08) and return one card per worker with a shift in it. */
+export function weeklyCards(week) {
+  const rows = svc.recomputeWeek(week);
+  if (!rows.length) return emptyState(t('pay.weekEmpty'));
+  return `<div class="grid-cards">${rows.map((r) => {
+    const w = svc.getWorker(r.workerId);
+    const pay = Math.floor(Math.round(r.holidayHours * w.hourlyWage * 100) / 100);
+    return `
+      <article class="card pay-card ${r.holidayEligible ? 'is-ok' : ''}">
+        <div class="card-row">
+          <h3 class="card-title">${esc(r.name)}</h3>
+          <span class="chip ${r.holidayEligible ? 'chip-ok' : ''}">${esc(t(r.holidayEligible ? 'pay.eligible' : 'pay.notEligible'))}</span>
+        </div>
+        ${r.holidayEligible
+    ? `<p class="key-number num">${esc(fmtWon(pay))}</p><p class="muted num">${esc(t('pay.holidayLine', { h: fmtHours(r.holidayHours), c: fmtHours(r.contractHours) }))}</p>`
+    : `<p class="reason">${esc(reasonText(r))}</p>`}
+        <p class="muted num">${esc(t('pay.contractLine', { s: fmtHours(r.scheduledHours), a: fmtHours(r.actualHours) }))}</p>
+      </article>`;
+  }).join('')}</div>`;
 }

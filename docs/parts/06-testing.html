@@ -110,7 +110,7 @@
 
 <h2 id="testing-results">6.4 Test Results</h2>
 
-<p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the application built from prompt version 2 (Chapter 5).</p>
+<p>The table below gives the result of running <code>npm test</code> on the environment of Section 6.2 on 2026-09-27, against the final build (prompt v5, Chapter 5).</p>
 
 <table>
   <caption>Table {{tab}}. Test results by group (npm test, 2026-09-27)</caption>
@@ -197,6 +197,7 @@
     <tr><td class="req-id">NFR-10</td><td>Unit tests TC-08x, TC-09x</td><td>All TC-08x, TC-09x and TC-10x tests pass, including the boundary values of Section 6.5.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-11</td><td>Role test</td><td>TC-131: a worker receives <code>null</code> for other people's phone and wage; the worker menus contain no screen with such data.</td><td>Met</td></tr>
     <tr><td class="req-id">NFR-12</td><td>Design review</td><td>A search of the application code finds no use of the geolocation interface; attendance is entered by the worker and confirmed by the owner (TC-071).</td><td>Met</td></tr>
+    <tr><td class="req-id">NFR-13</td><td>Headless check that counts the filled primary buttons on every screen of both roles (exactly one expected), checks that every disabled button has a visible reason and that touch targets are at least 44 × 44 px (done criterion 5 of the final prompt); walkthrough of the sign-in tour (done criterion 4)</td><td><!-- NFR13-RESULT --></td><td><!-- NFR13-STATUS --></td></tr>
   </tbody>
 </table>
 

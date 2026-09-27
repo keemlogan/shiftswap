@@ -180,6 +180,23 @@ test('TC-103 minimum-wage warning uses 90 % only under probation', () => {
   assert.equal(computePayrollRow({ ...base, hourlyWage: 10320, probation: false }).minWageWarning, false);
 });
 
+test('TC-106 BR-10 window: contractStart inclusive to the same date three months later exclusive; no probationEnd, no probation', () => {
+  const long = { ...hana, probationEnd: '2027-03-01' };
+  assert.equal(probationApplies(long, '2026-08-31'), false);
+  assert.equal(probationApplies(long, '2026-09-01'), true);
+  assert.equal(probationApplies(long, '2026-11-30'), true);
+  assert.equal(probationApplies(long, '2026-12-01'), false);
+  assert.equal(probationApplies({ ...hana, probationEnd: null }, '2026-09-01'), false);
+  assert.equal(probationApplies({ ...hana, probationEnd: '' }, '2026-09-01'), false);
+  assert.equal(probationApplies({ ...hana, probationEnd: undefined }, '2026-10-01'), false);
+});
+
+test('TC-107 the 90 % probation floor is exact: 9,288 won at a 10,320 minimum gives no warning', () => {
+  const base = { shifts: [], holidayWeeks: [], regularEmployees: 4, minimumHourly: 10320, probation: true };
+  assert.equal(computePayrollRow({ ...base, hourlyWage: 9288 }).minWageWarning, false);
+  assert.equal(computePayrollRow({ ...base, hourlyWage: 9287 }).minWageWarning, true);
+});
+
 // ---- TC-11x monthly payroll (BR-11) ----
 
 test('TC-111 payroll totals: base + holiday + premium, rounded down', () => {

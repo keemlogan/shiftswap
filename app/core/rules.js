@@ -244,7 +244,7 @@ export function computePayrollRow({ hourlyWage, shifts, holidayWeeks, regularEmp
   const holidayPay = holidayWeeks.reduce((sum, h) => sum + Math.floor(round2(h * hourlyWage)), 0);
   const premium = premiumHours(shifts, regularEmployees);
   const premiumPay = Math.floor(round2(premium.total * hourlyWage * 0.5));
-  const floor = minimumHourly == null ? 0 : minimumHourly * (probation ? 0.9 : 1);
+  const floor = minimumHourly == null ? 0 : (probation ? (minimumHourly * 9) / 10 : minimumHourly); // 9/10, not 0.9: 10,320 × 0.9 is not exactly 9,288 in floating point
   return {
     baseHours,
     basePay,

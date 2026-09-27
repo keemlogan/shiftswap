@@ -1,12 +1,16 @@
-# ShiftSwap — Final Vibe-Coding Prompt (v4)
+# ShiftSwap — Final Vibe-Coding Prompt (v5)
 
-> Version history: v1 → v2 after iteration 1 (build ambiguities and document review), v2 → v3 after iteration 2 (UI review of the running app), v3 → v4 after iteration 3 (UX redesign review from the point of view of a consumer-app product team: task-first home screens, one primary action per screen, consequences shown before committing). Earlier versions are kept as `prompts/prompt-v1.md`, `prompts/prompt-v2.md` and `prompts/prompt-v3.md`; the reasons for every change are in `prompts/prompt-log.md`.
+> Version history: v1 was built in iteration 1; v2 (iteration 2) resolved the build ambiguities and document-review gaps; v3 (iteration 3) applied the UI review of the running app; v4 (iteration 4) applied the UX redesign review from the point of view of a consumer-app product team (task-first home screens, one primary action per screen, consequences shown before committing); v5 (iteration 5) makes the acceptance test files part of the input after reproduction run 1 showed that two correct rebuilds disagree on function signatures (see `docs/reproducibility.md`). Earlier versions are kept as `prompts/prompt-v1.md` … `prompts/prompt-v4.md`; the reasons for every change are in `prompts/prompt-log.md`.
 >
-> How to use: paste this whole prompt, followed by the complete contents of `spec/spec.md`, into a coding agent that can create files and run shell commands, in an empty folder. The agent must produce the same system that is deployed at https://keemlogan.github.io/shiftswap/app/.
+> How to use: in an empty folder, place `tests/rules.test.js` and `tests/services.test.js` from the repository, then paste this whole prompt, followed by the complete contents of `spec/spec.md`, into a coding agent that can create files and run shell commands. The agent must produce the same system that is deployed at https://keemlogan.github.io/shiftswap/app/.
 
 ---
 
-You are building **ShiftSwap**, a shift schedule and substitute management web application for a small café with part-time workers. The complete specification (actors, use cases UC-01…UC-13, functional requirements FR-01…FR-21, non-functional requirements NFR-01…NFR-12, business rules BR-01…BR-12, states, SQLite schema, seed data, test IDs) follows this prompt. Treat the specification as the contract: use its identifiers, table and column names, state names and seed data exactly. Do not add features that are not in it.
+You are building **ShiftSwap**, a shift schedule and substitute management web application for a small café with part-time workers. The complete specification (actors, use cases UC-01…UC-13, functional requirements FR-01…FR-21, non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-12, states, SQLite schema, seed data, test IDs) follows this prompt. Treat the specification as the contract: use its identifiers, table and column names, state names and seed data exactly. Do not add features that are not in it.
+
+## 0. Acceptance tests (supplied — read them first)
+
+The folder already contains `tests/rules.test.js` and `tests/services.test.js`. They are the executable form of the specification and they fix the API: module paths, exported names, argument order, return shapes, error codes and the Node-side database factory. Read both files completely before writing code. **Do not modify, rename, skip or delete any test.** Write the implementation so that `npm test` passes all of them unchanged. Where a test and the prose below seem to disagree about an API detail, the test wins; where they disagree about behaviour, stop and report the conflict instead of guessing. You may add further tests in a new file `tests/extra.test.js`.
 
 ## 1. Technology constraints
 
@@ -34,7 +38,7 @@ You are building **ShiftSwap**, a shift schedule and substitute management web a
 4. **Ask one thing at a time.** Requesting a substitute is a three-step flow (choose shift → reason and deadline → review and send) with a step indicator ("1/3"), a back button, and a review screen that names the people who will receive the request.
 5. **Say what happened and what happens next.** After every action show a result screen or a toast that states the outcome and the next step — e.g. "민호님, 도윤님에게 요청을 보냈어요. 누군가 수락하면 알려 드릴게요." — never a silent state change.
 6. **Status as progress.** A substitute request is shown everywhere as a three-step tracker 요청 → 수락 → 승인 (Requested → Accepted → Approved); REJECTED, EXPIRED and CANCELLED are shown as a clearly labelled end state with the reason.
-7. **The user's words.** The default UI language is Korean in polite 해요체 ("대타를 구하고 있어요"), with a complete English translation selectable in the menu. IDs such as FR/UC/BR, status codes and table names never appear in the UI. Dates read like "9월 30일(수) 18:00–23:00" / "Wed, Sep 30 · 18:00–23:00"; relative times where they help ("내일 21:00까지", "D-2").
+7. **The user's words.** The default UI language is Korean in polite 해요체 ("대타를 구하고 있어요"), with a complete English translation selectable in the menu. IDs such as FR/UC/BR, status codes and table names never appear in the UI. In the Korean UI the seed people and store are shown with their Korean names from spec §10 (박지영, 이서연, 최민호, 정하나, 강도윤, 달빛카페) and addressed as full name + 님 ("최민호님") — a display map in `i18n.js`, the stored names stay English; names not in the map are shown as stored. Dates read like "9월 30일(수) 18:00–23:00" / "Wed, Sep 30 · 18:00–23:00"; relative times where they help ("내일 21:00까지", "D-2").
 8. **Nothing blocks without a reason.** A disabled button always has a one-line explanation beneath it (e.g. "최저임금 경고 1건을 확인해야 확정할 수 있어요").
 
 ### 2.1 Navigation

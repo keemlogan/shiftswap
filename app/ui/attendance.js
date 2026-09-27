@@ -1,79 +1,102 @@
-// UC-07 Record (worker) and confirm or mark absent (owner).
+// UC-07 Record and confirm attendance: the worker's record sheet and attendance list (Home, Me) and the
+// owner's confirm cards (Owner Home).
 import * as svc from '../core/services.js';
-import { now } from '../core/clock.js';
-import { t, esc, fmtDay, num, showFormError, pageHead, emptyState } from './i18n.js';
-import { weekFromArgs, weekNavHtml } from './schedule.js';
+import { addDays, weekStartOf } from '../core/rules.js';
+import { t, esc, fmtShift, fmtDate, given, showFormError } from './i18n.js';
+import { button, openSheet } from './components.js';
 
-export function render(view, ctx) {
-  const { user, args } = ctx;
-  const week = weekFromArgs(args);
-  const isOwner = user.role === 'OWNER';
-  const shifts = svc.listAttendance(week, user);
-  view.innerHTML = `
-    ${pageHead(t('attendance.title'), t(`purpose.attendance.${user.role}`))}
-    <section class="group">
-      ${weekNavHtml('attendance', week)}
-      ${shifts.length ? `<ul class="stack plain">${shifts.map((s) => row(s, isOwner)).join('')}</ul>` : emptyState(t('attendance.noneText'), `<a class="btn btn-primary" href="#/schedule/${week}">${esc(t('weekly.toSchedule'))}</a>`)}
-    </section>`;
+/** Sheet to record actual clock-in / clock-out of one of my shifts (FR-13). */
+export function openRecordSheet(ctx, shift) {
+  openSheet({
+    title: t('record.title'),
+    body: `
+      <form class="form" id="record-form" novalidate>
+        <p class="shift-line num">${esc(fmtShift(shift))}</p>
+        <div class="row-2">
+          <label class="field"><span class="field-label">${esc(t('record.in'))}</span>
+            <input type="time" name="clockIn" class="num" value="${esc(shift.clockIn || shift.startTime)}" required></label>
+          <label class="field"><span class="field-label">${esc(t('record.out'))}</span>
+            <input type="time" name="clockOut" class="num" value="${esc(shift.clockOut || shift.endTime)}" required></label>
+        </div>
+        ${button({ label: t('record.save'), kind: 'primary', block: true, id: 'record-save' })}
+      </form>`,
+    onMount: (panel, close) => {
+      const form = panel.querySelector('#record-form');
+      panel.querySelector('#record-save').addEventListener('click', () => {
+        try {
+          svc.recordAttendance(shift.id, ctx.user.id, form.clockIn.value, form.clockOut.value);
+          close();
+          ctx.toast(t('record.saved'));
+          ctx.refresh();
+        } catch (err) {
+          showFormError(form, err);
+        }
+      });
+    },
+  });
+}
 
-  view.querySelectorAll('form[data-record]').forEach((form) => form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form));
+/** Binds every [data-record] button in `view`; `shifts` are the shifts those buttons refer to. */
+export function bindRecordButtons(view, ctx, shifts) {
+  view.querySelectorAll('[data-record]').forEach((b) => b.addEventListener('click', () => {
+    const shift = shifts.find((s) => s.id === Number(b.dataset.record));
+    if (shift) openRecordSheet(ctx, shift);
+  }));
+}
+
+/** A shift of mine waiting to be recorded (Worker Home). */
+export function toRecordRow(s, { primary }) {
+  return `
+    <li class="list-row">
+      <div class="list-main"><strong>${esc(fmtDate(s.workDate))}</strong><span class="muted num">${esc(`${s.startTime}–${s.endTime}`)}</span></div>
+      ${button({ label: t('home.record'), kind: primary ? 'primary' : 'secondary', small: !primary, attrs: `data-record="${s.id}"` })}
+    </li>`;
+}
+
+/** Recorded, unconfirmed attendance for the owner (Owner Home). */
+export function confirmCard(s, { primary }) {
+  return `
+    <article class="card req-card">
+      <div class="card-row"><h3 class="card-title">${esc(given(s.workerName))} · <span class="num">${esc(fmtShift(s))}</span></h3></div>
+      <p class="muted num">${esc(t('owner.recorded', { range: `${s.clockIn}–${s.clockOut}` }))}</p>
+      <div class="actions">
+        ${button({ label: t('owner.confirm'), kind: primary ? 'primary' : 'secondary', block: true, attrs: `data-confirm="${s.id}"` })}
+        ${button({ label: t('owner.absent'), kind: 'text', attrs: `data-absent="${s.id}"` })}
+      </div>
+    </article>`;
+}
+
+export function bindConfirmActions(view, ctx) {
+  const act = (fn, msg) => {
     try {
-      svc.recordAttendance(Number(form.dataset.record), user.id, data.clockIn, data.clockOut);
-      ctx.flash(t('attendance.recordedMsg'));
+      fn();
+      ctx.toast(msg);
       ctx.refresh();
     } catch (err) {
-      showFormError(form, err);
+      ctx.fail(err);
     }
-  }));
-  view.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => act(ctx, () => svc.confirmAttendance(Number(b.dataset.confirm)), 'attendance.confirmed')));
-  view.querySelectorAll('[data-absent]').forEach((b) => b.addEventListener('click', () => act(ctx, () => svc.markAbsent(Number(b.dataset.absent)), 'attendance.markedAbsent')));
+  };
+  view.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => act(() => svc.confirmAttendance(Number(b.dataset.confirm)), t('owner.confirmed'))));
+  view.querySelectorAll('[data-absent]').forEach((b) => b.addEventListener('click', () => act(() => svc.markAbsent(Number(b.dataset.absent)), t('owner.markedAbsent'))));
 }
 
-function act(ctx, fn, messageKey) {
-  try {
-    fn();
-    ctx.flash(t(messageKey));
-    ctx.refresh();
-  } catch (err) {
-    ctx.fail(err);
-  }
-}
-
-function stateChip(s, started) {
-  if (s.status === 'ABSENT') return `<span class="chip chip-alert">${esc(t('attendance.absent'))}</span>`;
-  const range = s.clockIn ? `${s.clockIn}–${s.clockOut}` : '';
-  if (s.status === 'WORKED') return `<span class="chip chip-ok">${esc(t('attendance.confirmedAt', { range }))}</span>`;
-  if (s.clockIn) return `<span class="chip chip-handover">${esc(t('attendance.recorded', { range }))}</span>`;
-  return `<span class="chip">${esc(t(started ? 'attendance.notRecorded' : 'attendance.notStarted'))}</span>`;
-}
-
-function row(s, isOwner) {
-  const started = `${s.workDate}T${s.startTime}` <= now();
-  const open = s.status === 'SCHEDULED';
-  const head = `
-    <div class="request-head">
-      <h3>${esc(fmtDay(s.workDate))} ${num(`${s.startTime}–${s.endTime}`)}${isOwner ? ` · ${esc(s.workerName)}` : ''}</h3>
-      ${stateChip(s, started)}
-    </div>`;
-  if (isOwner) {
-    return `<li class="card">${head}
-      ${open && started ? `<div class="actions">
-        ${s.clockIn ? `<button type="button" class="btn btn-primary" data-confirm="${s.id}">${esc(t('attendance.confirm'))}</button>` : ''}
-        <button type="button" class="btn btn-danger" data-absent="${s.id}">${esc(t('attendance.markAbsent'))}</button>
-      </div>` : ''}
+/** My attendance for last week and this week (Me), newest first. */
+export function myAttendance(ctx) {
+  const thisWeek = weekStartOf(ctx.now.slice(0, 10));
+  const shifts = [...svc.listAttendance(addDays(thisWeek, -7), ctx.user), ...svc.listAttendance(thisWeek, ctx.user)]
+    .sort((a, b) => `${b.workDate}${b.startTime}`.localeCompare(`${a.workDate}${a.startTime}`));
+  const rows = shifts.map((s) => {
+    const started = `${s.workDate}T${s.startTime}` <= ctx.now;
+    let state;
+    if (s.status === 'ABSENT') state = `<span class="chip chip-alert">${esc(t('me.absent'))}</span>`;
+    else if (s.status === 'WORKED') state = `<span class="chip chip-ok num">${esc(t('me.confirmed', { range: `${s.clockIn}–${s.clockOut}` }))}</span>`;
+    else if (s.clockIn) state = `<span class="chip chip-handover num">${esc(t('me.recorded', { range: `${s.clockIn}–${s.clockOut}` }))}</span>`;
+    else if (started) state = button({ label: t('me.record'), kind: 'secondary', small: true, attrs: `data-record="${s.id}"` });
+    else state = `<span class="chip">${esc(t('me.upcoming'))}</span>`;
+    return `<li class="list-row">
+      <div class="list-main"><strong>${esc(fmtDate(s.workDate))}</strong><span class="muted num">${esc(`${s.startTime}–${s.endTime}`)}</span></div>
+      <div class="list-side">${state}</div>
     </li>`;
-  }
-  if (!open || !started) return `<li class="card">${head}</li>`;
-  return `<li class="card">
-    <form class="form" data-record="${s.id}">
-      ${head}
-      <div class="fields">
-        <label>${esc(t('attendance.clockIn'))}<input type="time" name="clockIn" class="num" value="${esc(s.clockIn || s.startTime)}" required></label>
-        <label>${esc(t('attendance.clockOut'))}<input type="time" name="clockOut" class="num" value="${esc(s.clockOut || s.endTime)}" required></label>
-      </div>
-      <div class="actions"><button type="submit" class="btn btn-primary">${esc(t('attendance.record'))}</button></div>
-    </form>
-  </li>`;
+  });
+  return { html: rows.length ? `<ul class="card list">${rows.join('')}</ul>` : '', shifts };
 }

@@ -329,9 +329,9 @@ and 360 px with no horizontal scroll.</p>
 changes from v2 to v3 and result</h2>
 <p>Source for every row: UI review of the running v2 app (text too
 small, content in a narrow centred column with large empty areas, weekly
-board read as a list of cards rather than a schedule). All changes are
-in prompt §2/§3; spec.md is unchanged, so the service layer and tests
-did not change.</p>
+board read as a list of cards rather than a schedule). All prompt
+changes are in §2/§3 and spec.md is unchanged; the only service-layer
+change is row 9 (from the traceability check), which added tests.</p>
 <table>
 <thead>
 <tr>
@@ -438,15 +438,425 @@ become static cards in day order; the table rule is unchanged</td>
 horizontal scroll; at 360 px blocks are
 <code>position: static</code></td>
 </tr>
+<tr>
+<td>9</td>
+<td>Traceability check (FR-01, FR-20 / NFR-11 had no automated
+test)</td>
+<td>none yet. Suggested for §1: "services.js exports
+<code>menuFor(role)</code>, the screens a role may open (FR-20); the
+router uses it for the menu and the role guard."</td>
+<td>The role-to-menu table moved from <code>main.js</code> into a pure
+exported <code>menuFor(role)</code> in <code>services.js</code> (returns
+a copy); <code>main.js</code> uses it for the navigation and the
+redirect of other routes. NFR-11 visibility was already decided in the
+service layer (<code>listWorkers(viewer)</code>,
+<code>listAttendance(week, viewer)</code>), so no new helper was needed
+for it.</td>
+<td>TC-01C, TC-01D (FR-01 register/edit and every validation error),
+TC-134 (FR-20 menus), TC-135 (NFR-11 attendance rows and
+phone/wage)</td>
+</tr>
 </tbody>
 </table>
 <p>Found and fixed during verification: the 32 px group gap was first
 set on <code>.content</code>, but the screens render inside
 <code>#view</code>, so the header, overview strip and week navigation
 touched; the gap now sits on <code>#view</code>.</p>
-<p>Result: <code>npm test</code> 58 tests, 58 pass, 0 fail (no test
-changes needed). Headless Chrome: 82/82 checks pass, 0 console errors.
-Screenshots of the owner board:
+<p>Found while capturing the report screenshots (docs/img) and
+fixed:</p>
+<ul>
+<li>the "Substitute requested" chip was clipped inside a narrow shift
+block (chips inside blocks now wrap);</li>
+<li>the reply-deadline date-time field was too narrow for its value
+(form columns now have a 240 px minimum);</li>
+<li>the Korean "수정" button broke onto two lines in the narrow
+overlapping Saturday blocks (block buttons no longer wrap);</li>
+<li>on phones the week navigation wrapped awkwardly (the week label now
+takes its own line above the buttons).</li>
+</ul>
+<p>Result: <code>npm test</code> 62 tests, 62 pass, 0 fail (58 + TC-01C,
+TC-01D, TC-134, TC-135 from row 9). Headless Chrome: 82/82 checks pass,
+0 console errors. Screenshots of the owner board:
 <code>/tmp/shiftswap-owner-board-1440.png</code>,
 <code>/tmp/shiftswap-owner-board-360.png</code>.</p>
+<h2
+id="iteration-5--independent-code-review-and-reproduction-run-1">Iteration
+5 — independent code review and reproduction run 1</h2>
+<p>Source of every row: independent code review / reproduction run 1 (a
+reviewer script reproduced each defect against the v3 code). Spec
+clarifications: FR-04, FR-05, FR-13, BR-02, BR-10, BR-12, §8
+WeeklySummary note.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Source</th>
+<th>Change</th>
+<th>Code</th>
+<th>Test IDs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Independent code review / reproduction run 1 (BR-02)</td>
+<td>The acceptor must still have no overlapping shift on the date,
+re-checked at acceptance and again at approval (ACCEPTOR_BUSY)</td>
+<td><code>services.js</code>: <code>acceptorClash()</code> +
+<code>acceptorBusyError()</code>; <code>respondToRequest</code> (accept)
+and <code>decideRequest</code> (approve) throw ACCEPTOR_BUSY inside the
+transaction, so nothing changes</td>
+<td>TC-054, TC-055</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Independent code review / reproduction run 1 (spec §7, FR-13)</td>
+<td>Confirm and mark-absent require a SCHEDULED shift; WORKED/ABSENT are
+final (ATTENDANCE_CLOSED)</td>
+<td><code>services.js</code>: status guard in
+<code>confirmAttendance</code> and <code>markAbsent</code>; TC-089 now
+marks a SCHEDULED shift of the current week absent instead of an already
+WORKED one</td>
+<td>TC-072, TC-073, TC-089 (changed)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Independent code review / reproduction run 1 (FR-04)</td>
+<td>A fixed slot is skipped when that fixed schedule already produced a
+shift anywhere in the week, or when the worker already has an
+overlapping shift that day</td>
+<td><code>services.js</code> <code>generateWeek</code>: week-range
+lookup by <code>fixedScheduleId</code> plus an overlap check on the
+worker's shifts of the date</td>
+<td>TC-01E, TC-01F</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Independent code review / reproduction run 1 (§8 WeeklySummary)</td>
+<td>Recomputing a week deletes the rows of workers who no longer have a
+shift (current or original) that week, so payroll never counts stale
+holiday pay</td>
+<td><code>services.js</code> <code>recomputeWeek</code>: whole-week run
+deletes rows of other workers; a listed worker without shifts has the
+row deleted instead of upserted</td>
+<td>TC-08C</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Independent code review / reproduction run 1 (FR-05)</td>
+<td>Worker, date or time of a shift with an open (REQUESTED/ACCEPTED)
+request cannot change (SHIFT_OPEN_REQUEST)</td>
+<td><code>services.js</code> <code>editShift</code>: guard before
+validation; <code>ui/i18n.js</code> error dictionary:
+<code>err.SHIFT_OPEN_REQUEST</code> (ko, en)</td>
+<td>TC-01G</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Independent code review / reproduction run 1 (BR-12)</td>
+<td>Accept/decline and approve/reject expire an overdue request
+themselves (deadline ≤ now or shift start ≤ now) and refuse with
+REQUEST_CLOSED</td>
+<td><code>services.js</code>: <code>isOverdue()</code>,
+<code>expireRequest()</code> shared with <code>expireOverdue</code>; the
+expiry is committed and REQUEST_CLOSED is thrown after the transaction
+(<code>throwIfExpired</code>) so the throw does not roll it back</td>
+<td>TC-124, TC-125</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Independent code review / reproduction run 1 (BR-10, BR-09)</td>
+<td>Probation window contractStart (inclusive) to +3 months (exclusive),
+only with probationEnd; the 90 % floor must be exact</td>
+<td><code>rules.js</code> <code>probationApplies</code> already matched
+(boundary test added); <code>computePayrollRow</code> uses
+<code>minimumHourly * 9 / 10</code> because <code>10320 * 0.9</code> is
+not exactly 9,288 in floating point</td>
+<td>TC-106, TC-107</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Follows from #1</td>
+<td>New error code shown in the UI</td>
+<td><code>ui/i18n.js</code> error dictionary:
+<code>err.ACCEPTOR_BUSY</code> (ko, en); REQUEST_CLOSED and
+ATTENDANCE_CLOSED already translated</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Result: <code>npm test</code> 77 tests, 77 pass, 0 fail.</p>
+<h2 id="iteration-4--changes-from-v3-to-v4-and-result">Iteration 4 —
+changes from v3 to v4 and result</h2>
+<p>Source for every row: the UX redesign review requested by the product
+owner ("the UI is too thin; redesign it the way a consumer-app product
+team would: intuitive, user-centred, obvious which button to press").
+The prompt's §2 and §3 were rewritten; the spec gained NFR-13 and the
+new FR-20 wording. Business rules, schema and the existing services did
+not change: the only service additions are read-only queries.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Change in prompt / spec</th>
+<th>Change in code</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>§2.0 rule 1 and done criterion 5: one filled primary button per
+screen, fixed to the bottom below 900 px</td>
+<td>Every screen puts its page-level action in
+<code>pageHead({ cta })</code>; <code>.cta-bar</code> is fixed above the
+tab bar below 900 px and inline on desktop. On Home the most urgent
+item's own button is the primary, and every other action is secondary
+(grey) or text</td>
+<td><code>tools/check.mjs</code> DC-5: 26 scenes × 2 languages × 1280 /
+390 px, each with exactly 1 visible <code>.btn-primary</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>§2.0 rule 8: a disabled button always explains why</td>
+<td><code>button({ disabled, reason })</code> renders the reason beneath
+the button and links it with <code>aria-describedby</code></td>
+<td>DC-5: every disabled button has a visible reason</td>
+</tr>
+<tr>
+<td>3</td>
+<td>§3 touch targets ≥ 44 × 44 px</td>
+<td>Buttons 52 px (mobile) / 44 px (desktop); chips, weekday chips, icon
+buttons and the brand link are at least 44 px</td>
+<td>DC-5 touch-target audit (radios, checkboxes and switches inside a
+label are measured by their label row)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>§2.1 navigation: Home / Schedule / Swaps / Me and Home / Schedule /
+Staff / Pay; bell, demo-clock chip → Demo tools, account switcher;
+Settings in the header menu</td>
+<td><code>menuFor(role)</code> returns the four tabs; new
+<code>routesFor(role)</code> adds the header screens (notifications;
+settings for the owner) for the role guard. Left navigation with line
+icons ≥ 900 px, 64 px tab bar below; Demo tools as a popover (desktop) /
+sheet (mobile) with the clock and the reset confirmation inside the
+panel</td>
+<td>TC-134 (updated); DC-3, DC-4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>§2.2 sign-in = 3-step demo tour + all accounts with one-line
+summaries</td>
+<td><code>login.js</code>: numbered tour card; step 1 is remembered in
+this browser (<code>shiftswap.tour.v1</code>), steps 2–3 follow the
+state of the seed request; the next step is the primary button; "Start
+over" once all three are done</td>
+<td>DC-4: the tour drives the walkthrough and marks all 3 steps
+done</td>
+</tr>
+<tr>
+<td>6</td>
+<td>§2.3 Worker Home; spec: <code>getWorkerHome(workerId)</code></td>
+<td>New service <code>getWorkerHome</code>: incoming requests with the
+effect of accepting, "someone else was faster", my open requests, next
+shift, this week's hours and holiday allowance, shifts to record. New
+<code>home.js</code> renders it</td>
+<td>TC-064 (Minho 16 → 21 h, ₩33,024 unchanged; Doyun sees Minho was
+faster; Seoyeon's tracker); DC-4</td>
+</tr>
+<tr>
+<td>7</td>
+<td>§2.5 Owner Home; spec: <code>getOwnerHome()</code></td>
+<td>New service <code>getOwnerHome</code>: decision cards with the
+effect for both people (holiday pay before → after), open requests,
+attendance to confirm, unacknowledged pay warnings, today, this week;
+<code>taskCount</code>. <code>approvals.js</code> renders the decision
+card with a compact before/after comparison behind "Details"</td>
+<td>TC-065; DC-4 (decision card shows 16 → 21 h and "33,024원 유지",
+Approve works)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>§2.0 rule 3: show the consequence before committing</td>
+<td>The shared <code>swapEffect()</code> in services (also behind
+<code>getApprovalPreview</code>) adds <code>holidayPay</code> before and
+after; <code>effectLines()</code> turns it into the sentences on the
+accept and approve cards; a change in eligibility is highlighted in
+amber</td>
+<td>TC-064, TC-065</td>
+</tr>
+<tr>
+<td>9</td>
+<td>§2.4 three-step request flow with step indicator, reason/deadline
+chips, review with recipients, result screen</td>
+<td><code>requests.js</code>: <code>#/swaps/new/1…3/done</code>, draft
+kept in <code>sessionStorage</code>, back / close, tab bar hidden;
+deadline chips that cannot be used are disabled with the reason; new
+service <code>previewCandidates(shiftId, requesterId)</code> lists the
+recipients (BR-01) before sending</td>
+<td>TC-066; scenes flow-1/2/3/done in DC-5</td>
+</tr>
+<tr>
+<td>10</td>
+<td>§2.0 rule 6: request status as the tracker 요청 → 수락 → 승인, end
+states labelled</td>
+<td><code>tracker(status)</code> in <code>components.js</code>, used on
+Home, Swaps, the result screen and history</td>
+<td>DC-4 (Seoyeon's tracker)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>§2.6 schedule: time grid ≥ 900 px, day list &lt; 900 px, detail
+sheet with history and viewer-specific actions</td>
+<td><code>schedule.js</code>: shift blocks are buttons opening a side
+panel / bottom sheet; new service <code>getShiftDetail(shiftId)</code>
+gives the history and whether the shift can be deleted (FR-05, refused
+with its reason); owner primary "근무 추가" or "이번 주 근무표 만들기";
+worker primary "대타 구하기"</td>
+<td>DC-4 handover marker; scene schedule-detail</td>
+</tr>
+<tr>
+<td>12</td>
+<td>§2.7 Pay with Weekly / Monthly segments; acknowledgement; confirm
+disabled with its reason</td>
+<td><code>payroll.js</code> (route) + <code>weekly.js</code> (cards);
+monthly table becomes cards below 720 px; "확인했어요" per warning; "9월
+급여 확정하기" disabled with "최저임금 경고 1건을 확인해야 확정할 수
+있어요"</td>
+<td>scenes pay-week, pay-month, pay-month-empty</td>
+</tr>
+<tr>
+<td>13</td>
+<td>§2.8 Staff (weekday-chip fixed-schedule editor with the resulting
+weekly hours), Me (availability, attendance, own phone/wage only),
+Settings (radio cards)</td>
+<td><code>workers.js</code>, <code>availability.js</code> (shared
+weekday-chip editor), <code>settings.js</code></td>
+<td>TC-135 (NFR-11); scenes staff-detail, me, settings</td>
+</tr>
+<tr>
+<td>14</td>
+<td>§2.0 rule 7: Korean 해요체 by default, complete English, human dates
+("9월 30일(수) 18:00–23:00", "내일 21:00까지", D-2), no IDs in the
+UI</td>
+<td><code>i18n.js</code> rewritten: <code>ko</code> is the default, full
+<code>en</code> table, <code>fmtDate</code> / <code>fmtWhen</code> /
+<code>dday</code> / <code>fmtClock</code> / <code>fmtYMD</code>; English
+plurals handled where a count can be 1</td>
+<td>review screenshots in both languages</td>
+</tr>
+<tr>
+<td>15</td>
+<td>§3 visual tokens (Pretendard only, 16 px body, borderless 16
+px-radius cards on #F2F4F6, 52 px buttons, inline SVG icons, 180 ms
+motion)</td>
+<td><code>styles.css</code> rewritten; JetBrains Mono removed; icons in
+<code>components.js</code>; sheets/steps animate 180 ms and not under
+<code>prefers-reduced-motion</code></td>
+<td>review screenshots; DC-5 no horizontal scroll at 390 px</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Harness moved into the repository</td>
+<td><code>tools/lib.mjs</code> (static server + DevTools client, Chrome
+forced to an en-US system locale so native date inputs read the same
+everywhere), <code>tools/scenes.mjs</code> (26 named states),
+<code>tools/check.mjs</code> (DC-3/4/5), <code>tools/screens.mjs</code>
+(review and report screenshots), <code>tools/nfr03.mjs</code></td>
+<td><code>node tools/check.mjs</code>: 115/115;
+<code>node tools/nfr03.mjs</code> (see docs/nfr03-measurement.md)</td>
+</tr>
+</tbody>
+</table>
+<p>Ambiguities found while building v4 (what was unclear → what the
+implementation does → suggested wording):</p>
+<ul>
+<li><strong>No module for Home, and no place for shared
+components</strong> in the §1 module list → added
+<code>app/ui/home.js</code> (both Homes) and
+<code>app/ui/components.js</code> (icons, buttons, page header with its
+primary action, tracker, sheets, toasts) → add both files to the §1
+list.</li>
+<li><strong>Screens reached from the header</strong> (notifications;
+settings for the owner) are not tabs, but the router must allow them →
+<code>routesFor(role)</code> = tabs + header screens;
+<code>menuFor(role)</code> stays the tabs →
+"<code>routesFor(role)</code> returns every route a role may open (its
+tabs plus the header screens)".</li>
+<li><strong>§1 puts "Reset demo data" in the header menu, §2.1 in Demo
+tools</strong> → it lives in Demo tools, with the confirmation in the
+panel (§2.0 says §2 wins) → change §1 to "in Demo tools".</li>
+<li><strong>The example copy uses Korean given names ("서연님"), but
+spec §10 stores English names</strong> → the Korean UI uses the given
+name from the stored name with 님 ("Seoyeon님"); lists show the full
+stored name → either store Korean display names in the seed or state
+that the given name is used as stored.</li>
+<li><strong>Home can list several actionable items; each has "its own
+action button"</strong> → the first (most urgent) item's button is the
+screen's primary; the others are secondary. On Swaps the primary is
+"대타 구하기" (§2.4), so the accept buttons there are secondary → state
+this in rule 1.</li>
+<li><strong>Primary action on the sticky bar vs. on a card</strong> →
+page-level actions (Swaps, flow steps, Schedule, Pay, Staff, Me,
+Settings, Notifications) go in the sticky bar; on Home the primary stays
+on its card, and a sticky "근무표 보기" appears only when nothing needs
+the person → state it.</li>
+<li><strong>Screens with no natural single action</strong> →
+Notifications: "모두 읽음으로 표시" (disabled with "새 알림이 없어요"
+when there are none); Pay → Weekly: "9월 급여 보기"; Demo tools: "이
+시각으로 맞추기" (the clock changes on the button, not on every input
+change); a confirmed month: "9월 급여 확정 완료", disabled with its
+reason → list these in §2.</li>
+<li><strong>"Day-by-day list with today first expanded"</strong> → days
+stay in calendar order; today is expanded and the other days are
+collapsed with their shift count (for another week, the first day with
+shifts is expanded) → "days in order, today expanded, others
+collapsed".</li>
+<li><strong>Where step 1 of the tour counts as done</strong> → when its
+button is used (remembered in <code>localStorage</code>
+<code>shiftswap.tour.v1</code>, cleared by the demo reset); steps 2 and
+3 are read from the seed request's state → state it.</li>
+<li><strong>Reason chips</strong> → the chosen chip is stored as its
+label in the current language ("시험" / "Exam"); "직접 입력" stores the
+typed text → state it.</li>
+<li><strong>Staff save touches two services</strong> →
+<code>registerWorker</code> then <code>saveFixedSchedule</code> (two
+transactions); if the schedule is invalid after a new worker was
+created, the screen continues on that worker's page, so a second save
+cannot create a duplicate → acceptable; or add a combined service if one
+transaction is required.</li>
+</ul>
+<p>Found and fixed while reviewing the screenshots (both languages, 1280
+and 390 px):</p>
+<ul>
+<li>The flow at desktop width was squeezed into the 220 px navigation
+column (the flow hides the nav, but the grid kept it).</li>
+<li>A toast from the previous person stayed visible after switching
+accounts.</li>
+<li>The FR-11 details table stacked into four tall cards on phones. It
+is now a compact now / after comparison per person.</li>
+<li>The header overflowed by 4 px in English at 390 px, and the brand
+link was 29 px tall.</li>
+<li>Weekday chips were 39 px wide at 390 px.</li>
+<li>Fieldset legends sat on the card edge.</li>
+<li>The payroll warning row painted each cell separately on phones.</li>
+<li>The shift history read "요청 · 요청".</li>
+<li>English copy errors: "1 things", "Seoyeon This week", "1 shifts",
+"warning(s)", "Please reply tomorrow".</li>
+<li>Sheets opened with a focus ring on the first button (they now focus
+their title).</li>
+</ul>
+<p>Result:</p>
+<ul>
+<li><code>npm test</code>: 77 tests, 77 pass, 0 fail. That is v3's 62,
+plus TC-064, TC-065 and TC-066 for the new queries (TC-134 was updated),
+plus 12 tests added by another team member in parallel: TC-01E/F/G, 054,
+055, 072, 073, 08C, 106, 107, 124 and 125.</li>
+<li><code>node tools/check.mjs</code>: 115/115 pass with 0 console
+errors. That covers DC-3, the Korean walkthrough of DC-4 (10 checks),
+and DC-5 for 26 scenes × 2 languages × 2 widths.</li>
+<li>NFR-03 re-measured on v4: the slowest screen renders in 18 ms and
+paints in 43 ms.</li>
+</ul>
 </main></body></html>

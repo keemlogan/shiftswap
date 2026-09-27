@@ -25,11 +25,11 @@
 <p>The most important boundary is the one around <code>rules.js</code>. Every decision that depends on a business rule — whether a worker is eligible, whether a request is valid, whether a holiday allowance is owed, how much premium is paid — is made by a function of this module that receives plain values and returns plain values. The service layer reads the data, calls the rule, and writes the result. This has three consequences. The rules can be unit-tested without a database (the 23 tests of <code>tests/rules.test.js</code>). The rules can be read by someone who knows the labour law but not SQL. And a change of a rule cannot accidentally change how data is stored, because the rule module has no access to storage.</p>
 
 <figure>
-  <img src="../uml/component.svg" alt="UML component diagram of ShiftSwap showing presentation, application services, domain rules, data access, clock and storage">
+  <img style="max-height:6in" src="../uml/component.svg" alt="UML component diagram of ShiftSwap showing presentation, application services, domain rules, data access, clock and storage">
   <figcaption>Figure {{fig}}. Component diagram of ShiftSwap</figcaption>
 </figure>
 
-<p>The component diagram above shows the same structure. The actors reach only the router <code>main.js</code>, which renders one screen module of <code>app/ui/</code>. Screens call the services, and the services depend on the rules, the data-access module and the clock. The diagram also draws a dependency from the rules to the clock for deadline and expiry checks. In the implementation this dependency is resolved by passing the time as an argument: <code>validateRequest</code> receives <code>now</code> from the service, and <code>rules.js</code> imports nothing. The rule functions are therefore deterministic, which is what allows tests such as TC-023 to fix the time in the test itself.</p>
+<p>The component diagram above shows the same structure. The actors reach only the router <code>main.js</code>, which renders one screen module of <code>app/ui/</code>. Screens call the services, and the services depend on the rules, the data-access module and the clock. The diagram lists the twelve functions that <code>services.js</code> imports from <code>rules.js</code>, and it shows no dependency from the rules to the clock: the current time is passed to the rules as an argument (for example, <code>validateRequest</code> receives <code>now</code> from the service), and <code>rules.js</code> imports nothing. The rule functions are therefore deterministic, which is what allows tests such as TC-023 to fix the time in the test itself.</p>
 
 <h3 id="design-transactions">4.1.2 Transactions and persistence</h3>
 
@@ -44,7 +44,7 @@
 <h2 id="design-deployment">4.2 Deployment</h2>
 
 <figure>
-  <img src="../uml/deployment.svg" alt="UML deployment diagram: browser on the client device runs the ShiftSwap single-page application, sql.js and localStorage; GitHub Pages serves static files">
+  <img style="max-height:6in" src="../uml/deployment.svg" alt="UML deployment diagram: browser on the client device runs the ShiftSwap single-page application, sql.js and localStorage; GitHub Pages serves static files">
   <figcaption>Figure {{fig}}. Deployment diagram of ShiftSwap</figcaption>
 </figure>
 
@@ -89,13 +89,13 @@
 <h2 id="design-classes">4.4 Class Design</h2>
 
 <figure>
-  <img src="../uml/class.svg" alt="UML class diagram of ShiftSwap with twelve domain classes, five service classes and the LaborRules class">
+  <img style="max-height:6in" src="../uml/class.svg" alt="UML class diagram of ShiftSwap with twelve domain classes, five service classes and the LaborRules class">
   <figcaption>Figure {{fig}}. Class diagram of ShiftSwap (domain classes, services and rules)</figcaption>
 </figure>
 
 <p>The class diagram above has three groups. The twelve domain classes correspond one to one to the tables of Section 4.5; their attributes are the columns, and the associations and multiplicities are those of the foreign keys. Worker has two associations to Shift: a shift is <i>currently assigned</i> to exactly one worker and <i>originally owned</i> by at most one other worker, which records a handover (BR-04). The enumerations Role, SubAttendancePolicy and ShiftStatus give the permitted values of the corresponding columns.</p>
 
-<p>The five service classes are a logical grouping of the exported functions of <code>services.js</code> by concern; in the code they are functions of one ES module, not JavaScript classes. The class <code>LaborRules</code> stands for the module <code>rules.js</code>, whose functions are static in the sense that they have no state. The diagram shows the operations at analysis level with simplified parameters; the tables below give the implementing functions with their real parameters.</p>
+<p>The five service classes are a logical grouping of the exported functions of <code>services.js</code> by concern; in the code they are functions of one ES module, not JavaScript classes. The class <code>LaborRules</code> stands for the module <code>rules.js</code>, whose functions are static in the sense that they have no state. The tables below list the implementing functions with their parameters.</p>
 
 <table>
   <caption>Table {{tab}}. Service classes and their implementing functions in services.js</caption>
@@ -124,230 +124,41 @@
   </tbody>
 </table>
 
-<p>Two operations shown in the diagram at analysis level differ from the implementation in form but not in meaning: <code>acknowledgeMinWage</code> was added to the payroll service in iteration 2 when the acknowledgement became a stored column, and <code>confirmPayroll</code> confirms all DRAFT rows of a month instead of a single row. In addition to the commands, <code>services.js</code> exports read-only query functions used by the screens, which do not change data: <code>getWorkplace</code>, <code>getSettings</code>, <code>getWorker</code>, <code>listWorkers</code>, <code>getFixedSchedules</code>, <code>getAvailability</code>, <code>getWeekShifts</code>, <code>listRequestableShifts</code>, <code>listMyRequests</code>, <code>listOwnerRequests</code>, <code>getApprovalPreview</code>, <code>listAttendance</code>, <code>getPayroll</code>, <code>unreadCount</code> and <code>defaultDeadline</code>. Among them, <code>listWorkers(viewer)</code> implements the privacy requirement NFR-11: for a worker as viewer, it removes the phone number and wage of every other person before the data reaches the screen.</p>
+<p>The operations in the diagram carry the real parameters of the implementation, including <code>acknowledgeMinWage(yearMonth, workerId)</code>, which was added to the payroll service in iteration 2 when the acknowledgement became a stored column, and <code>confirmPayroll(yearMonth)</code>, which confirms all DRAFT rows of a month at once. In addition to the commands, <code>services.js</code> exports read-only query functions used by the screens, which do not change data: <code>getWorkplace</code>, <code>getSettings</code>, <code>getWorker</code>, <code>listWorkers</code>, <code>getFixedSchedules</code>, <code>getAvailability</code>, <code>getWeekShifts</code>, <code>listRequestableShifts</code>, <code>listMyRequests</code>, <code>listOwnerRequests</code>, <code>getApprovalPreview</code>, <code>listAttendance</code>, <code>getPayroll</code>, <code>unreadCount</code> and <code>defaultDeadline</code>. Among them, <code>listWorkers(viewer)</code> implements the privacy requirement NFR-11: for a worker as viewer, it removes the phone number and wage of every other person before the data reaches the screen.</p>
 
-<table>
-  <caption>Table {{tab}}. Functions of the LaborRules module (rules.js) and the rules they implement</caption>
-  <thead><tr><th style="width:36%">Function</th><th style="width:12%">Rule</th><th>Result</th></tr></thead>
-  <tbody>
-    <tr><td><code>overlaps(aStart, aEnd, bStart, bEnd)</code></td><td>BR-01</td><td>True if two half-open intervals on the same date overlap; an end not later than the start means the next day.</td></tr>
-    <tr><td><code>durationHours(start, end)</code></td><td>BR-06, BR-11</td><td>Hours between two times, rounded to 2 decimals; overnight supported.</td></tr>
-    <tr><td><code>weekStartOf(date)</code></td><td>BR-05</td><td>The ISO Monday of the week containing the date.</td></tr>
-    <tr><td><code>isEligibleCandidate({worker, requesterId, shift, workerShifts, availability})</code></td><td>BR-01</td><td>True if the worker may be asked to cover the shift.</td></tr>
-    <tr><td><code>validateRequest({shift, requesterId, now, deadline, openRequests})</code></td><td>BR-03</td><td>List of error codes; empty if the request is valid.</td></tr>
-    <tr><td><code>contractHours(fixedSchedules)</code></td><td>BR-06</td><td>Weekly contractual hours.</td></tr>
-    <tr><td><code>holidayHours(contractualHours)</code></td><td>BR-07</td><td>min(h, 40) / 40 × 8, rounded to 2 decimals.</td></tr>
-    <tr><td><code>computeWeeklySummary({workerId, contractHours, shifts, policy})</code></td><td>BR-06, BR-07</td><td>Contract, scheduled and actual hours, perfect attendance, eligibility, holiday hours, and the reasons for non-eligibility.</td></tr>
-    <tr><td><code>premiumHours(shifts, regularEmployees)</code></td><td>BR-08</td><td>Daily, weekly and night premium hours and their total.</td></tr>
-    <tr><td><code>minimumWageFor(year, rows)</code></td><td>BR-09</td><td>Minimum hourly wage of the latest year not after the given year.</td></tr>
-    <tr><td><code>probationApplies(worker, date)</code></td><td>BR-10</td><td>True only if every probation condition holds on the date.</td></tr>
-    <tr><td><code>computePayrollRow({hourlyWage, shifts, holidayWeeks, regularEmployees, minimumHourly, probation})</code></td><td>BR-07–BR-09, BR-11</td><td>Base hours and pay, holiday pay, premium pay, total, minimum-wage warning, estimated flag.</td></tr>
-  </tbody>
-</table>
+<p>The class <code>LaborRules</code> corresponds to the twelve functions of <code>rules.js</code> named in the final prompt: <code>overlaps</code>, <code>durationHours</code>, <code>weekStartOf</code>, <code>isEligibleCandidate</code> (BR-01), <code>validateRequest</code> (BR-03), <code>contractHours</code>, <code>holidayHours</code> and <code>computeWeeklySummary</code> (BR-06, BR-07), <code>premiumHours</code> (BR-08), <code>minimumWageFor</code> (BR-09), <code>probationApplies</code> (BR-10) and <code>computePayrollRow</code> (BR-07–BR-11). Each receives plain values and returns plain values; their algorithms are given in Section 4.8.</p>
 
 <h2 id="design-database">4.5 Database Design</h2>
 
 <figure>
-  <img src="../uml/erd.svg" alt="Entity-relationship diagram of the twelve ShiftSwap tables with primary and foreign keys">
+  <img style="max-height:6in" src="../uml/erd.svg" alt="Entity-relationship diagram of the twelve ShiftSwap tables with primary and foreign keys">
   <figcaption>Figure {{fig}}. Entity-relationship diagram of the ShiftSwap database (12 tables)</figcaption>
 </figure>
 
 <p>The database has twelve tables, three times the minimum of four set by the course. The schema is the SQL of spec §8, executed verbatim by <code>db.js</code>. All identifiers are English (NFR-09). SQLite has few column types; the schema uses <code>INTEGER</code> for keys, counts, flags (0/1) and amounts in won, <code>REAL</code> for hours, and <code>TEXT</code> for dates (<code>YYYY-MM-DD</code>), times (<code>HH:MM</code>), datetimes (<code>YYYY-MM-DDTHH:MM</code>) and enumerations, which are restricted by <code>CHECK</code> constraints. Storing dates and times as ISO text has a practical advantage: they sort and compare correctly as strings, so the services can compare a deadline with <code>now()</code> directly. Money is never stored as a floating-point number.</p>
 
-<p>The tables fall into four groups: master data (Workplace, Worker, FixedSchedule, Availability, MinimumWage), transactions (Shift, SubRequest, SubRequestTarget, Attendance), derived results (WeeklySummary, Payroll) and communication (Notification). The following tables give every column of every table with its type and constraints, and the requirements and rules that use the table.</p>
+<p>The tables fall into four groups: master data (Workplace, Worker, FixedSchedule, Availability, MinimumWage), transactions (Shift, SubRequest, SubRequestTarget, Attendance), derived results (WeeklySummary, Payroll) and communication (Notification). The table below summarises each table with its key columns and the requirements and rules that use it; every table has an <code>INTEGER PRIMARY KEY</code> column <code>id</code> except MinimumWage, whose key is the year. The complete schema with every column, type and constraint is the SQL of spec §8 in the specification file <code>spec/spec.md</code> in the repository (<a href="https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md">https://github.com/keemlogan/shiftswap/blob/main/spec/spec.md</a>).</p>
 
-<h3 id="design-db-workplace">4.5.1 Workplace</h3>
-<p>The store and its settings. Used by FR-17; BR-06 (policy), BR-08 (regular employees).</p>
 <table>
-  <caption>Table {{tab}}. Table Workplace</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
+  <caption>Table {{tab}}. Database tables: purpose, key columns and the requirements that use them</caption>
+  <thead><tr><th style="width:15%">Table</th><th style="width:19%">Purpose</th><th>Key columns and constraints</th><th style="width:19%">Used by</th></tr></thead>
   <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>name</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>regularEmployees</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 4</code></td><td></td></tr>
-    <tr><td><code>subAttendancePolicy</code></td><td>TEXT</td><td><code>NOT NULL DEFAULT 'EXCUSED' CHECK (subAttendancePolicy IN ('EXCUSED','ABSENT'))</code></td><td>EXCUSED or ABSENT</td></tr>
+    <tr><td>Workplace</td><td>The store and its settings</td><td><code>name</code>; <code>regularEmployees</code> (default 4); <code>subAttendancePolicy</code> ∈ {EXCUSED, ABSENT}</td><td>FR-17; BR-06, BR-08</td></tr>
+    <tr><td>Worker</td><td>Owner and workers with contract and wage data</td><td><code>role</code> ∈ {OWNER, WORKER}; <code>name</code>; <code>phone</code>; <code>hourlyWage</code> (KRW); <code>contractStart</code>, <code>contractEnd</code> (null = open-ended), <code>probationEnd</code>; <code>simpleLabor</code>; <code>active</code></td><td>FR-01, FR-20; BR-01, BR-09, BR-10; NFR-11</td></tr>
+    <tr><td>FixedSchedule</td><td>Fixed weekly shifts of a worker</td><td><code>workerId</code> → Worker; <code>weekday</code> 1–7 (CHECK); <code>startTime</code>, <code>endTime</code></td><td>FR-02, FR-04; BR-06</td></tr>
+    <tr><td>Availability</td><td>Times a worker can take substitute shifts</td><td><code>workerId</code> → Worker; <code>weekday</code> 1–7; <code>startTime</code>, <code>endTime</code></td><td>FR-03; BR-01</td></tr>
+    <tr><td>Shift</td><td>One shift on a date</td><td><code>workDate</code>, <code>startTime</code>, <code>endTime</code>; <code>workerId</code> (current) and <code>originalWorkerId</code> (first owner after a swap) → Worker; <code>fixedScheduleId</code> (null for added shifts); <code>status</code> ∈ {SCHEDULED, WORKED, ABSENT}</td><td>FR-04, FR-05, FR-12, FR-13; BR-01, BR-03, BR-04, BR-06, BR-11</td></tr>
+    <tr><td>SubRequest</td><td>A substitute request and its state</td><td><code>shiftId</code> → Shift; <code>requesterId</code>, <code>acceptorId</code> → Worker; <code>reason</code>; <code>deadline</code>; <code>status</code> ∈ six states (CHECK); <code>createdAt</code>, <code>decidedAt</code></td><td>FR-06–FR-12, FR-18, FR-19; BR-02–BR-04, BR-12</td></tr>
+    <tr><td>SubRequestTarget</td><td>One eligible candidate of a request</td><td><code>subRequestId</code> → SubRequest; <code>workerId</code> → Worker; <code>response</code> ∈ {PENDING, ACCEPTED, DECLINED, CLOSED}; <code>respondedAt</code></td><td>FR-07, FR-09, FR-10, FR-19; BR-01, BR-02</td></tr>
+    <tr><td>Attendance</td><td>Recorded clock-in and clock-out of a shift</td><td><code>shiftId</code> → Shift, UNIQUE; <code>clockIn</code>, <code>clockOut</code> (HH:MM on the shift date); <code>confirmed</code> 0/1</td><td>FR-13; BR-06, BR-11</td></tr>
+    <tr><td>WeeklySummary</td><td>Derived weekly hours and holiday allowance</td><td><code>workerId</code>, <code>weekStart</code> (Monday), UNIQUE together; <code>contractHours</code>, <code>scheduledHours</code>, <code>actualHours</code>; <code>perfectAttendance</code>, <code>holidayEligible</code>; <code>holidayHours</code></td><td>FR-11, FR-14; BR-05–BR-07</td></tr>
+    <tr><td>Payroll</td><td>Monthly pay per worker</td><td><code>workerId</code>, <code>yearMonth</code>, UNIQUE together; <code>baseHours</code>, <code>basePay</code>, <code>holidayPay</code>, <code>premiumPay</code>, <code>total</code> (KRW integers); <code>minWageWarning</code>, <code>minWageAck</code>, <code>estimated</code>; <code>status</code> ∈ {DRAFT, CONFIRMED}</td><td>FR-15, FR-16; BR-07–BR-11</td></tr>
+    <tr><td>MinimumWage</td><td>Minimum hourly wage per year</td><td><code>year</code> (primary key); <code>hourly</code></td><td>FR-16, FR-17; BR-09</td></tr>
+    <tr><td>Notification</td><td>In-app message to one user</td><td><code>workerId</code> → Worker; <code>subRequestId</code> → SubRequest; <code>kind</code> (eight kinds); <code>message</code>; <code>createdAt</code>; <code>readAt</code> (null = unread)</td><td>FR-07, FR-08, FR-10, FR-12, FR-18, FR-19, FR-21</td></tr>
   </tbody>
 </table>
 
-<h3 id="design-db-worker">4.5.2 Worker</h3>
-<p>Owner and workers; contract and wage data. Used by FR-01, FR-20; BR-01 (active), BR-09, BR-10; NFR-11 (phone, wage).</p>
-<table>
-  <caption>Table {{tab}}. Table Worker</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workplaceId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Workplace(id)</code></td><td></td></tr>
-    <tr><td><code>role</code></td><td>TEXT</td><td><code>NOT NULL CHECK (role IN ('OWNER','WORKER'))</code></td><td>OWNER or WORKER</td></tr>
-    <tr><td><code>name</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>phone</code></td><td>TEXT</td><td></td><td></td></tr>
-    <tr><td><code>hourlyWage</code></td><td>INTEGER</td><td></td><td>KRW; null for the owner</td></tr>
-    <tr><td><code>contractStart</code></td><td>TEXT</td><td></td><td></td></tr>
-    <tr><td><code>contractEnd</code></td><td>TEXT</td><td></td><td>null = open-ended</td></tr>
-    <tr><td><code>probationEnd</code></td><td>TEXT</td><td></td><td>null = no probation</td></tr>
-    <tr><td><code>simpleLabor</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 0</code></td><td>1 = simple labour (BR-10)</td></tr>
-    <tr><td><code>active</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 1</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-fixedschedule">4.5.3 FixedSchedule</h3>
-<p>Fixed weekly shifts of a worker. Used by FR-02, FR-04; BR-06 (contractual hours).</p>
-<table>
-  <caption>Table {{tab}}. Table FixedSchedule</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>weekday</code></td><td>INTEGER</td><td><code>NOT NULL CHECK (weekday BETWEEN 1 AND 7)</code></td><td>1 = Monday … 7 = Sunday</td></tr>
-    <tr><td><code>startTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>endTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-availability">4.5.4 Availability</h3>
-<p>Times a worker can take substitute shifts. Used by FR-03; BR-01.</p>
-<table>
-  <caption>Table {{tab}}. Table Availability</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>weekday</code></td><td>INTEGER</td><td><code>NOT NULL CHECK (weekday BETWEEN 1 AND 7)</code></td><td>1 = Monday … 7 = Sunday</td></tr>
-    <tr><td><code>startTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>endTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-shift">4.5.5 Shift</h3>
-<p>One shift on a date; current and original worker. Used by FR-04, FR-05, FR-06, FR-12, FR-13; BR-01, BR-03, BR-04, BR-06, BR-11.</p>
-<table>
-  <caption>Table {{tab}}. Table Shift</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workDate</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>startTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>endTime</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>originalWorkerId</code></td><td>INTEGER</td><td><code>REFERENCES Worker(id)</code></td><td>set on first approved swap</td></tr>
-    <tr><td><code>fixedScheduleId</code></td><td>INTEGER</td><td><code>REFERENCES FixedSchedule(id)</code></td><td>null for added shifts or deleted schedules</td></tr>
-    <tr><td><code>status</code></td><td>TEXT</td><td><code>NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED','WORKED','ABSENT'))</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-subrequest">4.5.6 SubRequest</h3>
-<p>A substitute request and its state. Used by FR-06–FR-12, FR-18, FR-19; BR-02, BR-03, BR-04, BR-12.</p>
-<table>
-  <caption>Table {{tab}}. Table SubRequest</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>shiftId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Shift(id)</code></td><td></td></tr>
-    <tr><td><code>requesterId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>acceptorId</code></td><td>INTEGER</td><td><code>REFERENCES Worker(id)</code></td><td>set by the first acceptance</td></tr>
-    <tr><td><code>reason</code></td><td>TEXT</td><td></td><td></td></tr>
-    <tr><td><code>deadline</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td>datetime</td></tr>
-    <tr><td><code>status</code></td><td>TEXT</td><td><code>NOT NULL CHECK (status IN ('REQUESTED','ACCEPTED','APPROVED','REJECTED','EXPIRED','CANCELLED'))</code></td><td></td></tr>
-    <tr><td><code>createdAt</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>decidedAt</code></td><td>TEXT</td><td></td><td>approval, rejection, expiry or cancellation time</td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-subrequesttarget">4.5.7 SubRequestTarget</h3>
-<p>One eligible candidate of a request and the response. Used by FR-07, FR-09, FR-10, FR-19; BR-01, BR-02.</p>
-<table>
-  <caption>Table {{tab}}. Table SubRequestTarget</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>subRequestId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES SubRequest(id)</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>response</code></td><td>TEXT</td><td><code>NOT NULL DEFAULT 'PENDING' CHECK (response IN ('PENDING','ACCEPTED','DECLINED','CLOSED'))</code></td><td></td></tr>
-    <tr><td><code>respondedAt</code></td><td>TEXT</td><td></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-attendance">4.5.8 Attendance</h3>
-<p>Recorded clock-in and clock-out of a shift. Used by FR-13; BR-06, BR-11.</p>
-<table>
-  <caption>Table {{tab}}. Table Attendance</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>shiftId</code></td><td>INTEGER</td><td><code>NOT NULL UNIQUE REFERENCES Shift(id)</code></td><td></td></tr>
-    <tr><td><code>clockIn</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td>HH:MM on the shift date</td></tr>
-    <tr><td><code>clockOut</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>confirmed</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 0</code></td><td>0 recorded, 1 confirmed</td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-weeklysummary">4.5.9 WeeklySummary</h3>
-<p>Derived weekly hours and holiday allowance per worker. Used by FR-11, FR-14; BR-05, BR-06, BR-07. Table constraint: <code>UNIQUE (workerId, weekStart)</code>.</p>
-<table>
-  <caption>Table {{tab}}. Table WeeklySummary</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>weekStart</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td>Monday (BR-05)</td></tr>
-    <tr><td><code>contractHours</code></td><td>REAL</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>scheduledHours</code></td><td>REAL</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>actualHours</code></td><td>REAL</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>perfectAttendance</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>holidayEligible</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>holidayHours</code></td><td>REAL</td><td><code>NOT NULL</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-payroll">4.5.10 Payroll</h3>
-<p>Monthly pay per worker (DRAFT or CONFIRMED). Used by FR-15, FR-16; BR-07–BR-11. Table constraint: <code>UNIQUE (workerId, yearMonth)</code>.</p>
-<table>
-  <caption>Table {{tab}}. Table Payroll</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>yearMonth</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td>YYYY-MM</td></tr>
-    <tr><td><code>baseHours</code></td><td>REAL</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>basePay</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>holidayPay</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>premiumPay</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>total</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>minWageWarning</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 0</code></td><td></td></tr>
-    <tr><td><code>minWageAck</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 0</code></td><td>1 = warning acknowledged</td></tr>
-    <tr><td><code>estimated</code></td><td>INTEGER</td><td><code>NOT NULL DEFAULT 0</code></td><td>1 = contains scheduled hours</td></tr>
-    <tr><td><code>status</code></td><td>TEXT</td><td><code>NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','CONFIRMED'))</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-minimumwage">4.5.11 MinimumWage</h3>
-<p>Minimum hourly wage per year. Used by FR-16, FR-17; BR-09.</p>
-<table>
-  <caption>Table {{tab}}. Table MinimumWage</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>year</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>hourly</code></td><td>INTEGER</td><td><code>NOT NULL</code></td><td></td></tr>
-  </tbody>
-</table>
-
-<h3 id="design-db-notification">4.5.12 Notification</h3>
-<p>In-app message to one user. Used by FR-07, FR-08, FR-10, FR-12, FR-18, FR-19, FR-21.</p>
-<table>
-  <caption>Table {{tab}}. Table Notification</caption>
-  <thead><tr><th style="width:22%">Column</th><th style="width:10%">Type</th><th style="width:40%">Constraints</th><th>Note</th></tr></thead>
-  <tbody>
-    <tr><td><code>id</code></td><td>INTEGER</td><td><code>PRIMARY KEY</code></td><td></td></tr>
-    <tr><td><code>workerId</code></td><td>INTEGER</td><td><code>NOT NULL REFERENCES Worker(id)</code></td><td></td></tr>
-    <tr><td><code>subRequestId</code></td><td>INTEGER</td><td><code>REFERENCES SubRequest(id)</code></td><td></td></tr>
-    <tr><td><code>kind</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td>one of eight kinds</td></tr>
-    <tr><td><code>message</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>createdAt</code></td><td>TEXT</td><td><code>NOT NULL</code></td><td></td></tr>
-    <tr><td><code>readAt</code></td><td>TEXT</td><td></td><td>null = unread</td></tr>
-  </tbody>
-</table>
-
-
-<h3 id="design-normalisation">4.5.13 Normalisation and integrity</h3>
+<h3 id="design-normalisation">4.5.1 Normalisation and integrity</h3>
 
 <p>The master and transaction tables are in third normal form: every non-key column depends on the whole primary key and on nothing else. There are no repeating groups — a worker's several fixed shifts and availability slots are rows of their own tables rather than columns of Worker — and names of workers are stored only in Worker and joined where needed. Two tables deliberately hold derived data. WeeklySummary is a cache of values that can be recomputed from Shift, Attendance, FixedSchedule and Workplace; it is kept consistent by recomputing the affected rows inside the transaction that changes their inputs (approval, attendance confirmation, marking absent, payroll generation, and opening the weekly summary screen). Payroll is a snapshot: once CONFIRMED, it must keep the amounts that were paid even if shifts change afterwards (TC-115), which is why it cannot be a view.</p>
 
@@ -355,23 +166,19 @@
 
 <h2 id="design-dynamic">4.6 Dynamic Design: Sequence Diagrams</h2>
 
-<p>The lecture describes a sequence diagram as the interactions that take place during a particular use case, with the objects along the top and function calls as horizontal arrows [6]. Four sequence diagrams, SD-1 to SD-4, cover the use cases with the most interaction. The use-case diagram below isolates the substitution part of the use-case model to which SD-1 to SD-3 belong. For each sequence diagram, the numbered steps name the functions of the implementation.</p>
+<p>The lecture describes a sequence diagram as the interactions that take place during a particular use case, with the objects along the top and function calls as horizontal arrows [6]. Five sequence diagrams — SD-1, SD-2, SD-3a, SD-3b and SD-4 — cover the use cases with the most interaction. For each sequence diagram, the numbered steps name the functions of the implementation.</p>
 
-<figure>
-  <img src="../uml/usecase-substitute.svg" alt="UML use-case diagram detail for the substitution workflow: UC-04, find eligible candidates, UC-05, UC-06, UC-08, UC-11 and UC-12">
-  <figcaption>Figure {{fig}}. Use-case diagram detail of the substitution workflow</figcaption>
-</figure>
 
 <h3 id="design-sd1">4.6.1 SD-1 Request substitute (UC-04)</h3>
 
 <figure>
-  <img src="../uml/seq-1-request.svg" alt="UML sequence diagram SD-1 request substitute">
+  <img style="max-height:6in" src="../uml/seq-1-request.svg" alt="UML sequence diagram SD-1 request substitute">
   <figcaption>Figure {{fig}}. SD-1 — request substitute (UC-04; FR-06–FR-08, BR-01, BR-03)</figcaption>
 </figure>
 
 <ol>
-  <li>The worker opens the request form in the <i>My requests</i> screen (<code>ui/requests.js</code>). The screen lists the worker's requestable shifts with <code>listRequestableShifts(workerId)</code> and fills the deadline with <code>defaultDeadline(shift)</code>, the earlier of now + 24 h and the shift start.</li>
-  <li>On submit, the screen calls <code>createSubRequest({shiftId, requesterId, reason, deadline})</code>, which opens a transaction with <code>tx()</code>.</li>
+  <li>The worker starts the request flow. Its first step lists the worker's requestable shifts with <code>listRequestableShifts(workerId)</code>, and its second step fills the deadline with <code>defaultDeadline(shift)</code>, the earlier of now + 24 h and the shift start.</li>
+  <li>When the worker sends the request from the review step, the screen calls <code>createSubRequest({shiftId, requesterId, reason, deadline})</code>, which opens a transaction with <code>tx()</code>.</li>
   <li>The service reads the shift and counts the open requests on it, then calls <code>validateRequest</code> with the current time from <code>now()</code>. If the result contains an error code, it throws a <code>ServiceError</code> with that code; the transaction rolls back and the screen shows the translated message (the "request invalid" branch).</li>
   <li>Otherwise the service inserts the SubRequest with status REQUESTED.</li>
   <li>For every worker, the service reads that worker's shifts on the date and availability slots and calls <code>isEligibleCandidate</code> (the loop of the diagram; the included use case <i>Find eligible candidates</i>).</li>
@@ -382,65 +189,77 @@
 <h3 id="design-sd2">4.6.2 SD-2 Accept request with concurrent second acceptance (UC-05)</h3>
 
 <figure>
-  <img src="../uml/seq-2-accept.svg" alt="UML sequence diagram SD-2 first acceptance wins with a concurrent second acceptance">
+  <img style="max-height:6in" src="../uml/seq-2-accept.svg" alt="UML sequence diagram SD-2 first acceptance wins with a concurrent second acceptance">
   <figcaption>Figure {{fig}}. SD-2 — respond to a request; first acceptance wins (UC-05; FR-09, FR-10, BR-02, NFR-04)</figcaption>
 </figure>
 
 <ol>
-  <li>Both candidates see the REQUEST_RECEIVED item in the inbox (<code>ui/inbox.js</code>), built by <code>listNotifications(workerId)</code>. For a pending target the item has the state OPEN and shows <i>Accept</i> and <i>Decline</i>.</li>
+  <li>Both candidates see the same pending request, built for their screens by the service queries (<code>listNotifications</code>, and on the Home screen <code>getWorkerHome</code>), with <i>Accept</i> and <i>Decline</i>.</li>
   <li>Candidate 1 selects <i>Accept</i>; the screen calls <code>respondToRequest(requestId, workerId, 'ACCEPTED')</code>, which opens a transaction.</li>
-  <li>Inside the transaction the service reads the request and the candidate's target again. Both are REQUESTED and PENDING, so the service executes the conditional update <code>UPDATE SubRequest SET status = 'ACCEPTED', acceptorId = ? WHERE id = ? AND status = 'REQUESTED'</code> and checks that exactly one row changed.</li>
-  <li>It sets the candidate's target to ACCEPTED, sets every other PENDING target to CLOSED with a TARGET_CLOSED notification, and sends REQUEST_ACCEPTED to the requester and the owner. The transaction commits.</li>
-  <li>Candidate 2 selects <i>Accept</i> a moment later. The service reads the request again and finds it ACCEPTED with another acceptor. It throws <code>ServiceError('ALREADY_TAKEN', …, {name})</code>; the transaction rolls back without any change, and the inbox shows "Already taken by Choi Minho".</li>
-  <li>If the state check in step 5 were ever passed by mistake, the conditional update of step 3 would change zero rows, and the service throws the same error. Two independent guards therefore protect BR-02.</li>
+  <li>Inside the transaction the service reads the request and the candidate's target. Both are REQUESTED and PENDING, so the service executes the conditional update <code>UPDATE SubRequest SET status = 'ACCEPTED', acceptorId = ? WHERE id = ? AND status = 'REQUESTED'</code>. The database reports one changed row.</li>
+  <li>The service sets the candidate's target to ACCEPTED, sets every other PENDING target to CLOSED with a TARGET_CLOSED notification, and sends REQUEST_ACCEPTED to the requester and the owner. The transaction commits.</li>
+  <li>Candidate 2 selects <i>Accept</i> at nearly the same moment. The diagram shows the critical case, in which candidate 2's first read still sees REQUESTED. The same conditional update then changes zero rows, because the row no longer has the status REQUESTED. The service checks the number of changed rows and throws <code>ServiceError('ALREADY_TAKEN')</code>; the transaction rolls back without any change.</li>
+  <li>If candidate 2 acts later, after candidate 1's transaction has committed, the first read already finds the request ACCEPTED with another acceptor, and the service refuses at once with ALREADY_TAKEN and the acceptor's name, which the screen shows as "already taken by Choi Minho".</li>
 </ol>
 
-<p>The diagram draws the two acceptances in a <i>par</i> fragment. In the deployed system both accounts use the same database in one browser, and JavaScript executes one transaction at a time, so the two acceptances are in fact serialised; the second always sees the committed result of the first. The design does not rely on this: the check and the update are inside one SQL transaction, which is the property that would also hold with a shared database server (Section 8.4).</p>
+<p>SQLite has no <code>SELECT … FOR UPDATE</code>, so the design does not lock the row before reading it. Instead, the condition <code>status = 'REQUESTED'</code> is part of the update itself, and the check of the changed-row count happens in the same transaction. Only one of two competing updates can affect the row. In the deployed system both accounts use the same database in one browser, and JavaScript executes one transaction at a time, so the two acceptances are in fact serialised; the design does not rely on this, and the same property would hold with a shared database server (Section 8.4).</p>
 
 <h3 id="design-sd3">4.6.3 SD-3 Approve substitution with weekly recomputation (UC-06)</h3>
 
+<p>The approval use case is shown in two diagrams: the comparison that the owner sees before deciding (SD-3a), and the decision itself (SD-3b).</p>
+
 <figure>
-  <img src="../uml/seq-3-approve.svg" alt="UML sequence diagram SD-3 approve substitution with weekly recomputation">
-  <figcaption>Figure {{fig}}. SD-3 — approve or reject a substitution (UC-06; FR-11, FR-12, BR-04; includes UC-08)</figcaption>
+  <img style="max-height:6in" src="../uml/seq-3-approve-preview.svg" alt="UML sequence diagram SD-3a approval preview computing before and after weekly summaries">
+  <figcaption>Figure {{fig}}. SD-3a — approval preview: before/after comparison for requester and acceptor (UC-06; FR-11; uses UC-08)</figcaption>
 </figure>
 
 <ol>
-  <li>The owner opens <i>Approvals</i> (<code>ui/approvals.js</code>), which lists ACCEPTED and REQUESTED requests with <code>listOwnerRequests()</code>.</li>
-  <li>Opening an ACCEPTED request calls <code>getApprovalPreview(requestId)</code> (the "loadComparison" message of the diagram). For the requester and the acceptor, the function reads the shifts of the week in which each is current or original worker, builds a second list in which the requested shift is reassigned to the acceptor, and calls <code>computeWeeklySummary</code> for both lists. It returns the before and after values and a flag <code>eligibilityChanged</code> per person, which the screen uses to highlight the row (FR-11).</li>
-  <li>The owner selects <i>Approve swap</i>; the screen calls <code>decideRequest(requestId, 'APPROVED')</code>, which opens a transaction and checks that the request is still ACCEPTED (BR-04). If not, it throws NOT_ACCEPTED and nothing changes.</li>
-  <li>The service executes <code>UPDATE Shift SET workerId = acceptor, originalWorkerId = COALESCE(originalWorkerId, requester)</code>, so the first owner of the shift is kept even after several swaps, and sets the request to APPROVED with the decision time.</li>
-  <li>It calls <code>recomputeWeek(weekStart, [requesterId, acceptorId])</code>. This nested call joins the same transaction, computes the summaries with <code>computeWeeklySummary</code> and writes them with an upsert (<code>INSERT … ON CONFLICT (workerId, weekStart) DO UPDATE</code>).</li>
-  <li>It sends REQUEST_APPROVED to the requester and the acceptor and commits. The weekly board, read with <code>getWeekShifts(weekStart)</code>, now shows the handover marker because the shift has an original worker.</li>
-  <li>If the owner selects <i>Reject</i>, <code>decideRequest(requestId, 'REJECTED')</code> sets the request to REJECTED, leaves the shift unchanged and sends REQUEST_REJECTED to both workers.</li>
+  <li>The owner opens an accepted request; the screen calls <code>getApprovalPreview(requestId)</code>. The service reads the request with its shift (<code>requestWithShift</code>) and the workplace's substitution-attendance policy.</li>
+  <li>For the requester and then the acceptor, the service reads the shifts of the week in which the person is current or original worker (<code>weekShiftsFor</code>) and calls <code>computeWeeklySummary</code> for this "before" list.</li>
+  <li>It builds the "after" list by removing the requested shift and adding it back reassigned to the acceptor, and calls <code>computeWeeklySummary</code> again.</li>
+  <li>It sets <code>eligibilityChanged</code> when the eligibility before and after differ, and returns one row per person with both summaries. The screen shows the impact lines and highlights a changed eligibility (FR-11). The preview writes nothing to the database.</li>
+</ol>
+
+<figure>
+  <img style="max-height:6in" src="../uml/seq-3-approve-decide.svg" alt="UML sequence diagram SD-3b decide request with shift reassignment and weekly recomputation">
+  <figcaption>Figure {{fig}}. SD-3b — approve or reject: shift reassignment and weekly recomputation (UC-06; FR-12, BR-04; includes UC-08)</figcaption>
+</figure>
+
+<ol>
+  <li>The owner selects <i>Approve</i>; the screen calls <code>decideRequest(requestId, 'APPROVED')</code>, which opens a transaction and reads the request with its shift. If the request is not ACCEPTED (BR-04), the service throws NOT_ACCEPTED and the transaction rolls back.</li>
+  <li>Otherwise it executes <code>UPDATE Shift SET workerId = acceptor, originalWorkerId = COALESCE(originalWorkerId, shiftWorkerId)</code>, so the first owner of the shift is kept even after several swaps, and sets the request to APPROVED with the decision time.</li>
+  <li>It calls <code>recomputeWeek(weekStart, [requesterId, acceptorId])</code> in the same module. The nested call joins the same transaction; for each of the two workers it reads the week's shifts and fixed schedule, calls <code>computeWeeklySummary</code> and writes the result with an upsert (<code>INSERT … ON CONFLICT (workerId, weekStart) DO UPDATE</code>).</li>
+  <li>It sends REQUEST_APPROVED to the requester and the acceptor and commits. The schedule, read with <code>getWeekShifts(weekStart)</code>, now shows the handover marker because the shift has an original worker.</li>
+  <li>If the owner rejects instead, <code>decideRequest(requestId, 'REJECTED')</code> sets the request to REJECTED, leaves the shift unchanged and sends REQUEST_REJECTED to both workers.</li>
 </ol>
 
 <h3 id="design-sd4">4.6.4 SD-4 Generate monthly payroll (UC-09)</h3>
 
 <figure>
-  <img src="../uml/seq-4-payroll.svg" alt="UML sequence diagram SD-4 generate and confirm monthly payroll">
+  <img style="max-height:6in" src="../uml/seq-4-payroll.svg" alt="UML sequence diagram SD-4 generate and confirm monthly payroll">
   <figcaption>Figure {{fig}}. SD-4 — generate and confirm monthly payroll (UC-09; FR-15, FR-16, BR-08–BR-11; includes UC-08)</figcaption>
 </figure>
 
 <ol>
-  <li>The owner selects a month in <i>Payroll</i> (<code>ui/payroll.js</code>) and <i>Generate draft</i>; the screen calls <code>generatePayroll(yearMonth)</code>.</li>
+  <li>The owner selects a month in the monthly payroll of the <i>Pay</i> tab and creates the draft; the screen calls <code>generatePayroll(yearMonth)</code>.</li>
   <li>The service looks up the minimum wage of the year with <code>minimumWageFor</code> and determines the weeks whose Sunday falls in the month. For each of these weeks it calls <code>recomputeWeek</code> (the included UC-08).</li>
   <li>It deletes the DRAFT rows of the month; CONFIRMED rows are kept and their workers are skipped.</li>
   <li>For each worker it reads the month's shifts that are not ABSENT. A WORKED shift with recorded times contributes its clock-in and clock-out; any other shift contributes its scheduled times and is marked estimated (BR-11). It reads the holiday hours of the month's weeks from WeeklySummary.</li>
   <li>It evaluates <code>probationApplies(worker, date)</code> on the first day of the month or the contract start, if later (BR-10), and calls <code>computePayrollRow</code>, which computes base pay, holiday pay, premium pay through <code>premiumHours</code>, the total and the minimum-wage warning. The row is inserted as DRAFT.</li>
-  <li>The screen shows the rows. A row with a warning has an <i>Acknowledge</i> button, which calls <code>acknowledgeMinWage(yearMonth, workerId)</code> and sets <code>minWageAck = 1</code>.</li>
-  <li><i>Confirm</i> calls <code>confirmPayroll(yearMonth)</code>. If any DRAFT row has a warning without acknowledgement, the service throws MIN_WAGE_UNACKNOWLEDGED; otherwise all DRAFT rows of the month become CONFIRMED.</li>
+  <li>The screen shows the rows. A row with a warning has a button to acknowledge it, which calls <code>acknowledgeMinWage(yearMonth, workerId)</code> and sets <code>minWageAck = 1</code>.</li>
+  <li>Confirming the month calls <code>confirmPayroll(yearMonth)</code>. If any DRAFT row has a warning without acknowledgement, the service throws MIN_WAGE_UNACKNOWLEDGED; otherwise all DRAFT rows of the month become CONFIRMED.</li>
 </ol>
 
-<p>The diagram places the calls to <code>premiumHours</code>, <code>probationApplies</code> and <code>minimumWageFor</code> inside <code>computePayrollRow</code> for readability. In the code, the service calls <code>probationApplies</code> and <code>minimumWageFor</code> and passes their results to <code>computePayrollRow</code>, which calls <code>premiumHours</code> itself; the division keeps <code>computePayrollRow</code> independent of dates.</p>
+<p>The division of work between the service and the rules is visible in the diagram: the service calls <code>minimumWageFor</code> and <code>probationApplies</code> and passes their results to <code>computePayrollRow</code>, which calls <code>premiumHours</code> itself. This keeps <code>computePayrollRow</code> independent of dates and of the database.</p>
 
 <h2 id="design-states">4.7 State Design</h2>
 
-<p>Three entities have a life cycle that the business rules constrain: the substitute request, the shift and the payroll row. The lecture's rules for state diagrams — one initial state, every state reachable, a path to a final state from every state, and every transition labelled with an event [6] — hold for all three. The tables below list every transition with the function that performs it, which is how the design was checked against the code.</p>
+<p>Three entities have a life cycle that the business rules constrain: the substitute request, the shift and the payroll row. The lecture's rules for state diagrams — one initial state, every state reachable, a path to a final state from every state, and every transition labelled with an event [6] — hold for all three. For each transition the text names the function that performs it, which is how the design was checked against the code.</p>
 
 <h3 id="design-st-request">4.7.1 SubRequest</h3>
 
 <figure>
-  <img src="../uml/state-subrequest.svg" alt="UML state machine diagram of SubRequest.status">
+  <img style="max-height:6in" src="../uml/state-subrequest.svg" alt="UML state machine diagram of SubRequest.status">
   <figcaption>Figure {{fig}}. State machine of SubRequest.status</figcaption>
 </figure>
 
@@ -463,40 +282,22 @@
 <h3 id="design-st-shift">4.7.2 Shift</h3>
 
 <figure>
-  <img src="../uml/state-shift.svg" alt="UML state machine diagram of Shift.status">
+  <img style="max-height:6in" src="../uml/state-shift.svg" alt="UML state machine diagram of Shift.status">
   <figcaption>Figure {{fig}}. State machine of Shift.status</figcaption>
 </figure>
 
-<table>
-  <caption>Table {{tab}}. State transitions of Shift.status</caption>
-  <thead><tr><th style="width:13%">From</th><th style="width:32%">Event [guard]</th><th style="width:13%">To</th><th>Function</th></tr></thead>
-  <tbody>
-    <tr><td>(initial)</td><td>week generated, or owner adds a shift</td><td>SCHEDULED</td><td><code>generateWeek</code>, <code>editShift(null, …)</code></td></tr>
-    <tr><td>SCHEDULED</td><td>substitution approved [request ACCEPTED]</td><td>SCHEDULED</td><td><code>decideRequest</code> (worker changes, original worker kept)</td></tr>
-    <tr><td>SCHEDULED</td><td>owner confirms attendance [record exists]</td><td>WORKED</td><td><code>confirmAttendance</code></td></tr>
-    <tr><td>SCHEDULED</td><td>owner marks absent [shift has started]</td><td>ABSENT</td><td><code>markAbsent</code></td></tr>
-  </tbody>
-</table>
 
-<p>WORKED and ABSENT are final with respect to requests and attendance recording: <code>validateRequest</code> refuses a request on a shift that is not SCHEDULED, and <code>recordAttendance</code> refuses to change a shift that the owner has closed. The attendance record itself has two states, recorded (<code>confirmed = 0</code>) and confirmed (<code>confirmed = 1</code>).</p>
+<p>A shift is created as SCHEDULED by <code>generateWeek</code> or <code>editShift</code>. An approved substitution (<code>decideRequest</code>) changes its worker but not its status. The owner moves it to WORKED with <code>confirmAttendance</code>, which requires a recorded attendance, or to ABSENT with <code>markAbsent</code>, which requires that the shift has started. WORKED and ABSENT are final with respect to requests and attendance recording: <code>validateRequest</code> refuses a request on a shift that is not SCHEDULED, and <code>recordAttendance</code> refuses to change a shift that the owner has closed. The attendance record itself has two states, recorded (<code>confirmed = 0</code>) and confirmed (<code>confirmed = 1</code>).</p>
 
 <h3 id="design-st-payroll">4.7.3 Payroll</h3>
 
 <figure>
-  <img src="../uml/state-payroll.svg" alt="UML state machine diagram of Payroll.status">
+  <img style="max-height:6in" src="../uml/state-payroll.svg" alt="UML state machine diagram of Payroll.status">
   <figcaption>Figure {{fig}}. State machine of Payroll.status</figcaption>
 </figure>
 
-<table>
-  <caption>Table {{tab}}. State transitions of Payroll.status</caption>
-  <thead><tr><th style="width:13%">From</th><th style="width:34%">Event [guard]</th><th style="width:13%">To</th><th>Function</th></tr></thead>
-  <tbody>
-    <tr><td>(initial)</td><td>owner generates the month's draft</td><td>DRAFT</td><td><code>generatePayroll</code></td></tr>
-    <tr><td>DRAFT</td><td>owner regenerates the month</td><td>DRAFT (new row, <code>minWageAck = 0</code>)</td><td><code>generatePayroll</code></td></tr>
-    <tr><td>DRAFT</td><td>owner acknowledges the warning [minWageWarning = 1]</td><td>DRAFT (<code>minWageAck = 1</code>)</td><td><code>acknowledgeMinWage</code></td></tr>
-    <tr><td>DRAFT</td><td>owner confirms [every warned row acknowledged]</td><td>CONFIRMED</td><td><code>confirmPayroll</code></td></tr>
-  </tbody>
-</table>
+<p>A payroll row is created as DRAFT by <code>generatePayroll</code>. Regenerating the month replaces the DRAFT row with a new one whose <code>minWageAck</code> is 0. <code>acknowledgeMinWage</code> sets <code>minWageAck = 1</code> on a warned DRAFT row, and <code>confirmPayroll</code> moves all DRAFT rows of the month to CONFIRMED, but only if every warned row is acknowledged. CONFIRMED rows are never replaced or changed.</p>
+
 
 <h2 id="design-algorithms">4.8 Algorithm Design</h2>
 
@@ -613,59 +414,86 @@ function computePayrollRow(...):                       -- rules.js
 
 <h2 id="design-ui">4.9 User-Interface Design</h2>
 
-<h3 id="design-ui-nav">4.9.1 Screens and navigation</h3>
+<p>The user interface was redesigned in iteration 4 (Chapter 5) after a usability review of the running application. The earlier design followed the use cases: one screen per function (inbox, approvals, weekly summary, payroll and so on), each reached from a menu. The review found that this made the user find the right screen before acting, and that the most important information — what an action does to someone's hours and pay — was on a separate screen from the action. The final design, fixed in section 2 of the final prompt and in NFR-13, is organised around the user's tasks instead. This section describes its principles, its navigation, its main screens and its visual tokens; Chapter 7 shows the screens.</p>
 
-<p>The interface has one sign-in screen and ten working screens, each implemented by one module of <code>app/ui/</code>. After sign-in the router shows only the menu of the chosen role (FR-20); a route that is not in the role's menu is redirected to the schedule. The table below is the navigation map. Chapter 7 shows the screens.</p>
+<h3 id="design-ui-principles">4.9.1 Design principles</h3>
+
+<p>Eight principles apply to every screen and take precedence over the description of an individual screen.</p>
 
 <table>
-  <caption>Table {{tab}}. Navigation map: screens, routes, roles and use cases</caption>
-  <thead><tr><th style="width:18%">Screen</th><th style="width:15%">Route</th><th style="width:17%">Module</th><th style="width:10%">Worker</th><th style="width:10%">Owner</th><th>Use cases</th></tr></thead>
+  <caption>Table {{tab}}. User-interface principles of the final design</caption>
+  <thead><tr><th style="width:4%">#</th><th style="width:28%">Principle</th><th>Meaning in ShiftSwap</th></tr></thead>
   <tbody>
-    <tr><td>Sign-in</td><td><code>#/login</code></td><td><code>login.js</code></td><td>●</td><td>●</td><td>UC-13</td></tr>
-    <tr><td>Schedule (weekly board)</td><td><code>#/schedule</code></td><td><code>schedule.js</code></td><td>●</td><td>●</td><td>UC-03 (owner edits), view for all</td></tr>
-    <tr><td>My requests</td><td><code>#/requests</code></td><td><code>requests.js</code></td><td>●</td><td></td><td>UC-04, UC-12</td></tr>
-    <tr><td>Inbox</td><td><code>#/inbox</code></td><td><code>inbox.js</code></td><td>●</td><td>●</td><td>UC-05, FR-21</td></tr>
-    <tr><td>Approvals</td><td><code>#/approvals</code></td><td><code>approvals.js</code></td><td></td><td>●</td><td>UC-06</td></tr>
-    <tr><td>Attendance</td><td><code>#/attendance</code></td><td><code>attendance.js</code></td><td>●</td><td>●</td><td>UC-07</td></tr>
-    <tr><td>Availability</td><td><code>#/availability</code></td><td><code>availability.js</code></td><td>●</td><td></td><td>UC-02</td></tr>
-    <tr><td>Weekly summary</td><td><code>#/weekly</code></td><td><code>weekly.js</code></td><td></td><td>●</td><td>UC-08</td></tr>
-    <tr><td>Payroll</td><td><code>#/payroll</code></td><td><code>payroll.js</code></td><td></td><td>●</td><td>UC-09</td></tr>
-    <tr><td>Workers</td><td><code>#/workers</code></td><td><code>workers.js</code></td><td></td><td>●</td><td>UC-01</td></tr>
-    <tr><td>Settings</td><td><code>#/settings</code></td><td><code>settings.js</code></td><td></td><td>●</td><td>UC-10</td></tr>
+    <tr><td>1</td><td>One screen, one job</td><td>Every screen has exactly one primary action, drawn as the only filled blue button; on phones it is a full-width button fixed above the tab bar. Other actions are grey or text buttons.</td></tr>
+    <tr><td>2</td><td>What needs me comes first</td><td>Each role opens on a <i>Home</i> screen that lists what is waiting for this person, most urgent first, each item with its own action button.</td></tr>
+    <tr><td>3</td><td>Show the consequence before the commitment</td><td>Accepting, approving and confirming payroll show their effect in one sentence with numbers before the button, for example "Minho: this week 16 h → 21 h · holiday allowance unchanged (33,024 won)".</td></tr>
+    <tr><td>4</td><td>Ask one thing at a time</td><td>Requesting a substitute is a three-step flow (choose shift → reason and deadline → review and send) with a step indicator and a review that names the recipients.</td></tr>
+    <tr><td>5</td><td>Say what happened and what happens next</td><td>Every action ends with a result screen or message that states the outcome and the next step; no state changes silently.</td></tr>
+    <tr><td>6</td><td>Status as progress</td><td>A request is shown as a three-step tracker Requested → Accepted → Approved; rejected, expired and cancelled requests show a labelled end state with the reason.</td></tr>
+    <tr><td>7</td><td>The user's words</td><td>Korean is the default language, in the polite everyday style; English is available in the menu. Identifiers such as FR, UC, BR and status codes never appear. Dates read like "9월 30일(수) 18:00–23:00" or "Wed, Sep 30 · 18:00–23:00", with relative times where they help ("by 21:00 tomorrow", "D-2").</td></tr>
+    <tr><td>8</td><td>Nothing blocks without a reason</td><td>A disabled button always has a one-line explanation under it, for example that one minimum-wage warning must be acknowledged before the payroll can be confirmed.</td></tr>
   </tbody>
 </table>
 
-<p>The header is common to all screens. It shows the store name, the signed-in user with the role, the inbox link with the unread count, the demo clock with <i>+1 hour</i> and <i>+1 day</i>, the language switch and a menu with <i>Reset demo data</i> and <i>Sign out</i>. Screens that show a week (schedule, attendance, weekly summary) share one week navigation with previous and next buttons, carried in the route (for example <code>#/weekly/2026-09-21</code>).</p>
+<p>Principles 2 and 3 carry the core idea of ShiftSwap into the interface. The system already knew, at the moment of each decision, what the decision would do to both workers' hours and holiday allowance (FR-11); the redesign moves that knowledge onto the decision itself, so a candidate sees the effect of accepting and the owner sees the effect of approving without opening another screen.</p>
 
-<h3 id="design-ui-principles">4.9.2 Visual design</h3>
+<h3 id="design-ui-nav">4.9.2 Navigation</h3>
 
-<p>The visual design is fixed in section 3 of the final prompt, so that a regenerated system looks the same (Chapter 5). It is organised around design tokens, listed in the table below, and a small number of rules. The interface is deliberately quiet: white cards on a light grey surface, an 8-pixel corner radius, 1-pixel borders, no gradients and no shadows larger than <code>0 1px 2px rgba(28,34,48,.06)</code>. Against this background, one element carries meaning through decoration: a handed-over shift on the weekly board has a 6-pixel amber left edge and a faint 45° amber stripe, with the new worker's name in bold and the original worker struck through, and a shift with an open request has a dashed amber outline. The amber colour is used for nothing else, so the owner can find every substitution on the board at a glance.</p>
+<p>Each role has four main destinations, shown as a left navigation column of 220 px on screens of 900 px and wider and as a bottom tab bar of 64 px on narrower screens. The tab bar is hidden while the request flow is open. The table below maps the destinations to the use cases.</p>
 
 <table>
-  <caption>Table {{tab}}. Design tokens of the user interface</caption>
-  <thead><tr><th style="width:22%">Token</th><th style="width:16%">Value</th><th>Use</th></tr></thead>
+  <caption>Table {{tab}}. Navigation of the final design: destinations per role and the use cases they serve</caption>
+  <thead><tr><th style="width:11%">Role</th><th style="width:22%">Destination</th><th>Content</th><th style="width:19%">Use cases</th></tr></thead>
   <tbody>
-    <tr><td><code>--ink</code></td><td>#1C2230</td><td>Main text</td></tr>
-    <tr><td><code>--ink-2</code></td><td>#4A5163</td><td>Secondary text, labels</td></tr>
-    <tr><td><code>--line</code></td><td>#DDE1E8</td><td>Borders and grid lines</td></tr>
-    <tr><td><code>--surface</code></td><td>#F4F6F9</td><td>Page background</td></tr>
-    <tr><td><code>--paper</code></td><td>#FFFFFF</td><td>Cards and tables</td></tr>
-    <tr><td><code>--shift</code></td><td>#2B5BD7</td><td>Primary actions; the signed-in worker's own shifts</td></tr>
-    <tr><td><code>--handover</code></td><td>#E9A23B</td><td>Substitution: handover edge and stripe, pending outline</td></tr>
-    <tr><td><code>--alert</code></td><td>#C93A31</td><td>Errors, minimum-wage warning, absence</td></tr>
-    <tr><td><code>--ok</code></td><td>#2E7D4F</td><td>Confirmed, eligible, success messages</td></tr>
-    <tr><td>Type</td><td>Pretendard Variable; JetBrains Mono</td><td>All text; times, hours and money with tabular figures. Base 15 px / line height 1.6; page title 28 px, weight 800; section title 18 px; small text 13 px, never below 12 px.</td></tr>
+    <tr><td rowspan="4">Worker</td><td>Home (홈)</td><td>Requests received with Accept / Decline; own open requests as trackers; next shift with <i>Find a substitute</i>; this week's hours and holiday allowance; shifts to record</td><td>UC-04, UC-05, UC-07, UC-12, FR-21</td></tr>
+    <tr><td>Schedule (근무표)</td><td>Week as time grid (desktop) or day list (phone); shift detail with the actions the viewer may take</td><td>UC-03 (view), UC-04</td></tr>
+    <tr><td>Swaps (대타)</td><td>Received, sent and past requests; primary action <i>Find a substitute</i> starts the three-step flow</td><td>UC-04, UC-05, UC-12</td></tr>
+    <tr><td>Me (내 정보)</td><td>Availability editor, attendance records, own phone and wage</td><td>UC-02, UC-07</td></tr>
+    <tr><td rowspan="4">Owner</td><td>Home (홈)</td><td>"N things to handle today": decision cards for accepted swaps with impact lines and <i>Approve</i>; requests waiting for replies; attendance to confirm; payroll warnings; today's and this week's staffing</td><td>UC-06, UC-07, UC-09, FR-21</td></tr>
+    <tr><td>Schedule (근무표)</td><td>Time grid; <i>Create this week's schedule</i> for an empty week, otherwise <i>Add shift</i>; shift detail with change time, change worker, delete</td><td>UC-03</td></tr>
+    <tr><td>Staff (직원)</td><td>Worker cards; worker detail with the fixed-schedule editor; primary <i>Add worker</i></td><td>UC-01</td></tr>
+    <tr><td>Pay (급여)</td><td>Segments <i>Weekly summary</i> and <i>Monthly payroll</i>; month and week chosen with ‹ ›</td><td>UC-08, UC-09</td></tr>
+    <tr><td>Both</td><td>Header</td><td>Store name; bell icon with unread count opening the notification list; compact demo-clock chip opening <i>Demo tools</i>; current person with <i>View as someone else</i>; menu with Settings (owner), language and sign-out</td><td>UC-13, UC-10, UC-11, FR-21</td></tr>
   </tbody>
 </table>
 
-<h3 id="design-ui-rules">4.9.3 Interaction, layout and accessibility rules</h3>
+<p>The menus per role are no longer fixed in the router alone. <code>services.js</code> exports the pure function <code>menuFor(role)</code>, which returns the destinations a role may open; the router uses it both to draw the navigation and to redirect any other route (FR-20). This makes the role restriction testable without a browser. Two further service queries, <code>getWorkerHome(workerId)</code> and <code>getOwnerHome()</code>, return in one call everything a Home screen needs, including the before/after effect of accepting or approving, so the Home screens contain no business logic of their own.</p>
+
+<p>The <i>Demo tools</i> panel (a sheet on phones, a pop-over on desktops) holds what is needed only for demonstration: the demo-clock input, <i>+1 hour</i>, <i>+1 day</i> and <i>Reset demo data</i> with its confirmation. In the earlier design these controls occupied the header permanently.</p>
+
+<h3 id="design-ui-screens">4.9.3 Key screens</h3>
 
 <ul>
-  <li><b>Two clicks to accept (NFR-01).</b> The inbox item of a pending request carries <i>Accept</i> and <i>Decline</i> directly, so a candidate accepts with the click that opens the inbox and the click on <i>Accept</i>. If someone else was faster, the same item shows "Already taken by &lt;name&gt;" instead of the buttons.</li>
-  <li><b>Responsive layout (NFR-02).</b> On screens of 900 px and wider, the navigation is a 220-pixel column on the left; below 900 px it becomes a bottom tab bar. The weekly board is a time grid on wide screens and a day-by-day list at 360 px, and below 720 px every data table turns each row into a stacked card with the column name before each value, so no screen scrolls horizontally.</li>
-  <li><b>Messages that explain.</b> Every validation error names the cause and the correction, for example "The deadline is after the shift starts. Choose a time no later than the shift start." The messages come from the <code>ServiceError</code> codes of the services and are translated in <code>i18n.js</code>.</li>
-  <li><b>Empty states.</b> An empty screen says what will appear there and offers the next action, for example a button to generate the payroll draft of the displayed month.</li>
-  <li><b>Two languages.</b> All interface text exists in English and Korean; Korean text uses <code>word-break: keep-all</code> so that words are not broken across lines. Names in the demonstration data are stored in English and shown unchanged in both languages.</li>
-  <li><b>Accessibility.</b> Buttons are <code>&lt;button&gt;</code> elements, form fields have labels, focus rings are visible, status chips carry text and not only colour, and animations respect <code>prefers-reduced-motion</code>.</li>
-  <li><b>Privacy by role (NFR-11).</b> The worker menus contain no screen with other workers' personal data, and the data layer removes phone numbers and wages of other people for a worker viewer, so the restriction does not depend on the screens alone.</li>
+  <li><b>Sign-in as a demo guide (UC-13).</b> The title "달빛카페 데모" and the sentence that the demo needs no passwords are followed by a <i>3-minute tour</i> card with three numbered steps: view Lee Seoyeon's request, accept it as Choi Minho, approve it as the owner Park Jiyoung. Each step signs in as that person and opens the screen where the step happens, and completed steps are marked. Below, all five accounts are listed with their one-line summaries.</li>
+  <li><b>Worker Home.</b> In order, each section omitted when empty: a greeting with today's date; <i>Requests for you</i>, one card per pending request with the requester, shift, reason, deadline countdown, the effect on the worker's own week, and <i>Accept</i> (one tap, NFR-01) / <i>Decline</i>; the worker's own open requests as trackers; the next shift with <i>Find a substitute</i>; this week's hours with the holiday allowance in words and money and a bar against the 15-hour line; past shifts still to record.</li>
+  <li><b>Request flow (UC-04).</b> Step 1 lists the worker's own future scheduled shifts, with a shift that already has an open request shown disabled and explained. Step 2 offers reason chips (exam, hospital, family event, personal, free text) and deadline chips ("24 hours from now", "2 hours before the shift", custom), with the default of BR-03. Step 3 summarises the request and names the recipients computed at that moment (BR-01), or warns that nobody is available and that the owner will be told (FR-08). The result screen shows the tracker at its first step.</li>
+  <li><b>Owner Home.</b> A heading with the number of things to handle; a decision card per accepted swap with a sentence ("Seoyeon's Wednesday 18:00–23:00 shift is covered by Minho"), one impact line per person (scheduled hours before → after, holiday allowance before → after, a change highlighted in amber) and <i>Approve</i> / <i>Reject</i>, with <i>Details</i> opening the full table of FR-11; then requests waiting for replies, attendance to confirm, payroll warnings, and today's and this week's staffing.</li>
+  <li><b>Schedule (UC-03).</b> The time grid of the previous design on wide screens (hour axis from the earliest start to the latest end of the week, 44 px per hour, overlapping shifts side by side) and a day list with today expanded on phones. Selecting a shift opens a detail panel with its history ("Seoyeon → Minho · approved 9/28") and only the actions the viewer may take.</li>
+  <li><b>Pay (UC-08, UC-09).</b> The weekly summary as one card per worker, with eligibility stated in words and the reason ("contract 10 h per week · below 15 h"). The monthly payroll with <i>Create September payroll draft</i>, rows or cards with flags (estimated, probation minimum 90 %, below minimum wage), the below-minimum sentence with <i>I have checked</i> (<code>acknowledgeMinWage</code>), and <i>Confirm September payroll</i>, disabled with its reason until all warnings are acknowledged.</li>
+  <li><b>Staff, Me and Settings.</b> Worker cards and a fixed-schedule editor with weekday chips; the availability editor with the same pattern; settings in which the number of regular employees and the substitution-attendance policy each carry a sentence explaining their effect.</li>
 </ul>
+
+<h3 id="design-ui-tokens">4.9.4 Visual design</h3>
+
+<p>The visual design is specified in section 3 of the final prompt with exact values, so that a regenerated system looks the same. The table below lists the design tokens.</p>
+
+<table>
+  <caption>Table {{tab}}. Design tokens of the final user interface</caption>
+  <thead><tr><th style="width:24%">Token</th><th style="width:18%">Value</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td><code>--ink</code> / <code>--ink-2</code> / <code>--ink-3</code></td><td>#191F28 / #4E5968 / #8B95A1</td><td>Main text; secondary text; captions</td></tr>
+    <tr><td><code>--surface</code></td><td>#F2F4F6</td><td>Page background</td></tr>
+    <tr><td><code>--paper</code></td><td>#FFFFFF</td><td>Cards</td></tr>
+    <tr><td><code>--line</code></td><td>#E5E8EB</td><td>Dividers and grid lines</td></tr>
+    <tr><td><code>--shift</code> / <code>--shift-soft</code></td><td>#2B5BD7 / #EBF1FD</td><td>Primary buttons and the user's own shifts / their background</td></tr>
+    <tr><td><code>--handover</code> / <code>--handover-soft</code></td><td>#E9A23B / #FDF3E1</td><td>Substitution: handover edge and stripe, pending outline, changed eligibility</td></tr>
+    <tr><td><code>--alert</code> / <code>--alert-soft</code></td><td>#D93A30 / #FDECEB</td><td>Errors and the minimum-wage warning</td></tr>
+    <tr><td><code>--ok</code></td><td>#1F8A55</td><td>Eligible, confirmed, success</td></tr>
+    <tr><td>Type</td><td>Pretendard Variable</td><td>One font for all text, with tabular figures for times, hours and money. Body 16 px / 1.6; Home heading 26 px / 700; card title 17 px / 700; key number 28 px / 700; captions 13 px, never below 12 px.</td></tr>
+    <tr><td>Cards</td><td>16 px radius, 20–24 px padding</td><td>White on the grey page, no border, no shadow; 12 px between cards, 32 px between sections.</td></tr>
+    <tr><td>Buttons</td><td>52 px (phone) / 44 px (desktop) high, 12 px radius</td><td>Primary filled blue; secondary filled grey; text buttons; pressed state scales to 96 %; touch targets at least 44 × 44 px.</td></tr>
+    <tr><td>Icons and motion</td><td>24 px line icons; 180 ms</td><td>Inline SVG icons for tabs, bell, clock and chevrons; sheets and step changes slide and fade in 180 ms; no motion under <code>prefers-reduced-motion</code>.</td></tr>
+  </tbody>
+</table>
+
+<p>As in the earlier design, one element carries meaning through decoration: a handed-over shift has a 6-pixel amber left edge and a faint 45° amber stripe — the only gradient in the style sheet — with the new worker's name in bold and the original worker struck through, and a shift with an open request has a dashed amber outline and the chip "대타 구하는 중" (looking for a substitute). Content is limited to 720 px width for Home, flows and lists, and uses up to 1,200 px for the schedule grid and the payroll table; at 360 px no screen scrolls horizontally (NFR-02). Accessibility rules remain: visible focus rings, real buttons, labelled inputs, status never shown by colour alone, and a step indicator that is announced to screen readers ("step 2 of 3").</p>

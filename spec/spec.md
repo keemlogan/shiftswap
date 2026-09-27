@@ -74,8 +74,8 @@ Relationships for the use case diagram:
 | FR-01 | The owner shall register a worker with name, phone, hourly wage (KRW), contract start date, contract end date, probation end date (optional), simple-labor flag, and active flag. | UC-01 |
 | FR-02 | The owner shall register one or more fixed weekly shifts per worker (weekday, start time, end time); fixed shifts of the same worker must not overlap. Deleting a fixed-schedule row keeps the shifts it already generated (their fixedScheduleId becomes NULL). | UC-01 |
 | FR-03 | A worker shall register availability slots (weekday, start, end) during which they can take substitute shifts. | UC-02 |
-| FR-04 | The system shall generate the shifts of a given week (Mon–Sun) from all active fixed schedules; generating the same week twice shall not create duplicates. | UC-03 |
-| FR-05 | The owner shall be able to add, move or delete a single shift of a generated week. Deleting a shift that has a substitute request or an attendance record is refused with an explanatory message. | UC-03 |
+| FR-04 | The system shall generate the shifts of a given week (Mon–Sun) from all active fixed schedules; generating the same week twice shall not create duplicates: a fixed-schedule slot is skipped when that fixed schedule already produced a shift in the week, or when the worker already has an overlapping shift on that date (e.g. after the owner moved or re-created it). | UC-03 |
+| FR-05 | The owner shall be able to add, move or delete a single shift of a generated week. Deleting a shift that has a substitute request or an attendance record is refused with an explanatory message; changing the worker, date or time of a shift that has an open (REQUESTED/ACCEPTED) request is refused (SHIFT_OPEN_REQUEST). | UC-03 |
 | FR-06 | A worker shall create a substitute request for one of their own future SCHEDULED shifts, with an optional reason and a response deadline. | UC-04 |
 | FR-07 | On creation the system shall compute the eligible candidates (BR-01), create one SubRequestTarget per candidate, and put a notification in each candidate's inbox at once. | UC-04 |
 | FR-08 | If no worker is eligible, the system shall still create the request and notify the owner that no candidate exists. | UC-04 |
@@ -83,7 +83,7 @@ Relationships for the use case diagram:
 | FR-10 | When a request is accepted, the system shall notify the requester and the owner, and close all other pending targets. | UC-05 |
 | FR-11 | The approval screen shall show, for both the requester and the acceptor, the weekly contractual hours, weekly scheduled hours and holiday-allowance eligibility **before and after** the swap, and highlight any eligibility change. | UC-06 |
 | FR-12 | On approval the system shall reassign the shift to the acceptor (keeping the original worker), recompute the weekly summaries of both workers, and notify both. On rejection the shift stays unchanged and both are notified. | UC-06 |
-| FR-13 | A worker shall record actual start and end time of a shift they worked; the owner shall confirm it or mark the shift ABSENT. | UC-07 |
+| FR-13 | A worker shall record actual start and end time of a shift they worked; the owner shall confirm it or mark the shift ABSENT. Both actions require the shift to be SCHEDULED; a WORKED or ABSENT shift cannot change status again (ATTENDANCE_CLOSED). | UC-07 |
 | FR-14 | The system shall compute, per worker and week, contractual hours, scheduled hours, actual hours, perfect-attendance flag, holiday-allowance eligibility and holiday-allowance hours (BR-06, BR-07). | UC-08 |
 | FR-15 | The owner shall generate a monthly payroll draft per worker (base pay, holiday allowance, premium pay, total) and confirm it; a confirmed payroll is read-only. | UC-09 |
 | FR-16 | The payroll screen shall warn when a worker's hourly wage is below the applicable minimum wage (BR-09), and apply the probation reduction only when BR-10 holds. | UC-09 |
@@ -114,7 +114,7 @@ Relationships for the use case diagram:
 ## 6. Business rules
 
 - **BR-01 Eligible candidates.** A worker W is eligible for a request on shift S (date d, start s, end e) iff: W is active; W ≠ requester; W has no shift on date d overlapping [s, e); W has an availability slot on weekday(d) with slotStart ≤ s and slotEnd ≥ e.
-- **BR-02 First acceptance wins.** Acceptance succeeds only if the request is REQUESTED at the moment of the transaction; it sets request.status = ACCEPTED, request.acceptorId = W, target(W).response = ACCEPTED, and all other PENDING targets → CLOSED.
+- **BR-02 First acceptance wins.** Acceptance succeeds only if the request is REQUESTED at the moment of the transaction and the candidate still has no overlapping shift on that date (re-checked at acceptance and again at approval, error ACCEPTOR_BUSY); it sets request.status = ACCEPTED, request.acceptorId = W, target(W).response = ACCEPTED, and all other PENDING targets → CLOSED.
 - **BR-03 Request validity.** Only the shift's current worker can request; shift must be SCHEDULED and start in the future; at most one open (REQUESTED/ACCEPTED) request per shift; deadline must be after now and no later than the shift start.
 - **BR-04 Approval effect.** Approve: shift.workerId = acceptor; shift.originalWorkerId keeps the first worker (set only if null); request → APPROVED. Reject: request → REJECTED, shift unchanged. Owner can approve only an ACCEPTED request.
 - **BR-05 Week.** A week runs Monday 00:00 to Sunday 24:00 (ISO week). Weekly records are keyed by the Monday date.
@@ -122,9 +122,9 @@ Relationships for the use case diagram:
 - **BR-07 Holiday-allowance hours.** hours = min(contractualHours, 40) / 40 × 8, rounded to 2 decimals; pay = hours × Worker.hourlyWage, rounded down to the won per week (monthly holiday pay is the sum of the rounded weekly amounts).
 - **BR-08 Premium pay.** Applies only if Workplace.regularEmployees ≥ 5 (Labor Standards Act Art. 11, 56). Then +50 % of wage for (i) daily hours beyond 8, (ii) weekly hours beyond 40 not already counted in (i), (iii) night hours 22:00–06:00. Night premium adds to overtime premium. If regularEmployees < 5 → premium = 0. In a monthly payroll, weekly overtime uses only the days of that ISO week that fall inside the month. Premium pay = premium hours × wage × 0.5, rounded down.
 - **BR-09 Minimum-wage check.** Warn if worker.hourlyWage < MinimumWage(year).hourly × (0.9 if BR-10 applies else 1). The payroll still computes with the worker's wage; the warning is shown on the payroll row and blocks confirmation until the owner acknowledges it, which sets Payroll.minWageAck = 1. Re-generating a DRAFT month replaces its rows, so acknowledgements must be given again.
-- **BR-10 Probation reduction.** The minimum may be reduced to 90 % only if all hold: contract length ≥ 1 year (contractEnd − contractStart ≥ 365 days, or contractEnd empty = open-ended), the date is within 3 months of contractStart and ≤ probationEnd, and simpleLabor = false (Minimum Wage Act Art. 5 ②, Enforcement Decree Art. 3). In a monthly payroll the conditions are evaluated on the first day of the month, or on contractStart if later.
+- **BR-10 Probation reduction.** The minimum may be reduced to 90 % only if all hold: contract length ≥ 1 year (contractEnd − contractStart ≥ 365 days, or contractEnd empty = open-ended), the date is within 3 months of contractStart and ≤ probationEnd, and simpleLabor = false (Minimum Wage Act Art. 5 ②, Enforcement Decree Art. 3). In a monthly payroll the conditions are evaluated on the first day of the month, or on contractStart if later. "Within 3 months" means from contractStart (inclusive) to the same calendar date three months later (exclusive); a worker without probationEnd is never on probation.
 - **BR-11 Monthly payroll.** Month = calendar month. Base pay = Σ actual hours of WORKED shifts in the month × wage for WORKED shifts (recorded clock-in/out); SCHEDULED shifts in the month count with their scheduled hours and set estimated = 1 on the row; ABSENT shifts count 0. Holiday allowance = Σ holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.
-- **BR-12 Expiry.** A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED.
+- **BR-12 Expiry.** A REQUESTED or ACCEPTED request whose deadline ≤ now, or whose shift start ≤ now, becomes EXPIRED. Accept and approve check this themselves inside their transaction (REQUEST_CLOSED), independent of the periodic expiry run.
 
 ## 7. States
 
@@ -174,7 +174,7 @@ CREATE TABLE Notification (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REF
 
 Dates are ISO `YYYY-MM-DD`, times `HH:MM` (24 h; an end time ≤ start time means the shift ends next day — seed data contains no overnight shift, but the rule functions support it and TC-09x test it). Datetimes are ISO `YYYY-MM-DDTHH:MM`.
 
-Attendance.clockIn/clockOut are `HH:MM` on the shift date (end ≤ start means next day). A WeeklySummary row exists only for workers who have a shift (as current or original worker) in that week; the seed contains no WeeklySummary or Payroll rows — they are derived.
+Attendance.clockIn/clockOut are `HH:MM` on the shift date (end ≤ start means next day). A WeeklySummary row exists only for workers who have a shift (as current or original worker) in that week — recomputing a week deletes the rows of workers who no longer have one; the seed contains no WeeklySummary or Payroll rows — they are derived.
 
 Notification recipients:
 

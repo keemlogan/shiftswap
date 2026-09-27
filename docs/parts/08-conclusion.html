@@ -11,7 +11,7 @@
   <thead><tr><th style="width:6%">ID</th><th style="width:24%">Objective</th><th>Evidence</th><th style="width:14%">Assessment</th></tr></thead>
   <tbody>
     <tr><td class="req-id">G1</td><td>Remove the owner's one-to-one contacts</td><td><code>createSubRequest</code> notifies every eligible worker in the transaction that creates the request (TC-024, TC-016); with no candidate, the owner is told at once (TC-025). The owner's only action in the workflow is one approve or reject decision (TC-061, TC-062).</td><td>Achieved in the system; effect in a store not measured</td></tr>
-    <tr><td class="req-id">G2</td><td>Let a candidate answer quickly</td><td>Accept and Decline are on the inbox item: two clicks from opening the inbox (NFR-01). Only the first acceptance succeeds (TC-051).</td><td>Achieved</td></tr>
+    <tr><td class="req-id">G2</td><td>Let a candidate answer quickly</td><td>A pending request appears as a card on the candidate's Home screen with <i>Accept</i> on the card, so accepting takes one tap after opening the application (NFR-01, NFR-13). Only the first acceptance succeeds (TC-051).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G3</td><td>Keep schedule and weekly hours of both workers correct after a swap</td><td>Approval reassigns the shift, keeps the original worker and recomputes both weekly summaries in one transaction (TC-061). The approval panel shows before and after values for both workers — Choi Minho 16 → 21 scheduled hours, eligibility unchanged (TC-063) — and highlights a change of eligibility (TC-08B).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G4</td><td>Apply the legal pay rules and flag violations before payday</td><td>BR-06 to BR-11 are pure functions tested at their boundary values (Section 6.5), and every business rule BR-01 to BR-12 has at least one test (Section 6.8). The payroll warns for Kang Doyun's wage and blocks confirmation until the owner acknowledges it (TC-104, TC-105).</td><td>Achieved</td></tr>
     <tr><td class="req-id">G5</td><td>Deliver a system of the size the course requires</td><td>13 use cases (9 core) against a minimum of 5; 12 database tables against a minimum of 4.</td><td>Achieved</td></tr>
@@ -30,12 +30,12 @@
     <tr><td>Actors</td><td class="num">3</td><td>Worker, Owner, System Clock</td></tr>
     <tr><td>Use cases</td><td class="num">13</td><td>9 core (UC-01–UC-09), 4 supporting; 9 Must, 4 Should</td></tr>
     <tr><td>Functional requirements</td><td class="num">21</td><td>FR-01–FR-21</td></tr>
-    <tr><td>Non-functional requirements</td><td class="num">12</td><td>6 product, 3 organisational, 3 external</td></tr>
+    <tr><td>Non-functional requirements</td><td class="num">13</td><td>7 product, 3 organisational, 3 external</td></tr>
     <tr><td>Business rules</td><td class="num">12</td><td>5 of them derived from labour law (BR-06–BR-10)</td></tr>
     <tr><td>Database tables</td><td class="num">12</td><td>SQLite schema of spec §8</td></tr>
     <tr><td>State machines / states</td><td class="num">5 / 17</td><td>SubRequest (6), SubRequestTarget (4), Shift (3), Attendance (2), Payroll (2)</td></tr>
     <tr><td>Notification kinds</td><td class="num">8</td><td>With a fixed recipients table (spec §8)</td></tr>
-    <tr><td>UML diagrams of the system</td><td class="num">15</td><td>2 use-case, 1 class, 1 ER, 1 component, 1 deployment, 4 sequence, 3 state, 2 activity</td></tr>
+    <tr><td>UML diagrams of the system</td><td class="num">16</td><td>2 use-case, 1 class, 1 ER, 1 component, 1 deployment, 5 sequence (SD-1, SD-2, SD-3a, SD-3b, SD-4), 3 state, 2 activity</td></tr>
     <tr><td>Screens</td><td class="num">11</td><td>Sign-in and ten working screens (Section 4.9)</td></tr>
     <tr><td>Automated tests</td><td class="num">58</td><td>25 rule tests, 33 service tests; all pass</td></tr>
     <tr><td>Lines of application code</td><td class="num">3,652</td><td>Core modules 1,271 (services 754, rules 257, db 219, clock 41); presentation 2,381 (router, eleven screen modules, translations and style sheet)</td></tr>
