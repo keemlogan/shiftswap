@@ -301,6 +301,17 @@ received ALREADY_TAKEN after its stale change set was re-run on the
 current data (two runs, both PASS; the stores were deleted). The rebuilt
 screens were not driven in two browsers, because the team's two-browser
 script depends on the reference app's element names.</li>
+<li>Later changes, not covered by run 5: run 5 used the files of commit
+f9100cf. The independent review after iteration 8 (commit 5d3c3a0; prompt
+log, “Independent review after iteration 8”) then added a 15-second
+request timeout to the shared-mode transport, length limits for worker
+names, phone numbers and the store name, a key range check and a
+DRAFT-only rule for new payroll rows in <code>db/app-shared.sql</code>. These
+fixes added assertions to two existing tests (TC-01D and TC-16B; still
+113 tests), so the current <code>tests/services.test.js</code>,
+<code>tests/shared.test.js</code> and <code>db/app-shared.sql</code> no longer
+match the shasums above. The prompt and the specification were not
+changed, and run 5 was not repeated after the review.</li>
 </ul>
 <h2 id="ambiguities-reported-in-run-5-17--main-ones">Ambiguities
 reported in run 5 (17) — main ones</h2>
