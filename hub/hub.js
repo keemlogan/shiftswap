@@ -16,7 +16,7 @@ function listView() {
   const deadlines = GROUPS.filter((g) => g.due && g.id !== "talk");
   const rail = deadlines.map((g) => {
     const past = g.due <= TODAY;
-    return `<li class="${past ? "past" : ""}"><a href="#${g.id}"><span class="wk">W${g.week}</span><span class="dt">${md(g.due)}</span><span class="lb">${esc(g.label)}</span></a></li>`;
+    return `<li class="${past ? "past" : ""}"><a href="#${g.id}"><span class="wk">W${g.week}</span><span class="dt">${g.dateHidden ? "&nbsp;" : md(g.due)}</span><span class="lb">${esc(g.label)}</span></a></li>`;
   });
   // "오늘" 표시는 지난 마감과 다음 마감 사이에 끼운다.
   const next = deadlines.findIndex((g) => g.due > TODAY);
@@ -30,7 +30,7 @@ function listView() {
         <span class="rk">${[...new Set(i.evidence.map((e) => KIND[e.kind]))].join(" · ")}</span>
         <span class="st ${i.todo ? "todo" : "ok"}">${i.todo ? "팀 확인 필요" : "완료"}</span>
       </a></li>`).join("");
-    const when = g.due ? `<span class="due">${g.week}주차 · ${g.due}</span>` : "";
+    const when = g.due ? `<span class="due">${g.week}주차${g.dateHidden ? "" : ` · ${g.due}`}</span>` : "";
     return `<section class="group" id="${g.id}"><header><h2>${esc(g.label)}</h2>${when}<p>${esc(g.note)}</p></header><ol class="rows">${rows}</ol></section>`;
   }).join("");
 

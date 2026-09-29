@@ -24,7 +24,7 @@ left side
 ** 1 Project management
 *** 1.1 Scheduling & WBS
 **** 1.1.1 Create WBS and Gantt chart — HD
-**** 1.1.2 Track milestones & check execution link weekly — HD
+**** 1.1.2 Track milestones & check public URL weekly — HD
 *** 1.2 Team coordination
 **** 1.2.1 Weekly team meetings — HD
 **** 1.2.2 Task assignment & tracking — HD
@@ -58,7 +58,7 @@ right side
 ** 5 Implementation by vibe coding
 *** 5.1 Prompt engineering
 **** 5.1.1 Write final vibe-coding prompt — HD
-**** 5.1.2 Iterate prompt against spec.md — HD
+**** 5.1.2 Iterate prompt against the specification — HD
 *** 5.2 Application build
 **** 5.2.1 Build increment 1 (Must) and increment 2 (Should) — HD
 **** 5.2.2 Deploy to GitHub Pages — HD
