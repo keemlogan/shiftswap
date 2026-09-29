@@ -92,16 +92,35 @@ def build_test_report():
 
 # ------------------------------------------------------------------ final report
 APPENDICES = [
-    ("90-appendix-a.html", "appendix-prompt", "Appendix A. Final Vibe-Coding Prompt (v5)", "prompts/final-prompt.md",
-     "The complete prompt, verbatim. To reproduce the system it is given to the coding assistant together with the two test files and followed by the specification file spec/spec.md (all in the repository)."),
-    ("91-appendix-b.html", "appendix-log", "Appendix B. Prompt Log", "prompts/prompt-log.md",
-     "The log of every ambiguity, review finding and change made between prompt versions, verbatim."),
+    ("90-appendix-a.html", "appendix-prompt", "Appendix A. Final Vibe-Coding Prompt (v8)", "prompts/final-prompt.md",
+     "The complete prompt, verbatim. To reproduce the system it is given to the coding assistant together with the three test files and the two supplied server files (db/app-shared.sql, tools/seed-sql.mjs) and followed by the specification file spec/spec.md (all in the repository)."),
+    ("91-appendix-b.html", "appendix-log", "Appendix B. Prompt Log (index)", "prompts/prompt-log.md",
+     "The prompt log records every ambiguity, review finding and change made between prompt versions. To keep the report within 150 pages it is not reproduced here; Section 5.4 summarises each iteration, and the complete log is the file prompts/prompt-log.md in the repository (https://github.com/keemlogan/shiftswap/blob/main/prompts/prompt-log.md). The table lists its sections and the number of entries (ambiguities, findings or changes) in each."),
 ]
+INDEX_ONLY = {"91-appendix-b.html"}
+
+
+def log_index(src: pathlib.Path) -> str:
+    """Sections of the prompt log with the number of numbered table rows, numbered items and bold bullets in each."""
+    rows, title, n = [], None, 0
+    for line in src.read_text().splitlines() + ["## end"]:
+        if line.startswith("## "):
+            if title:
+                rows.append((title, n))
+            title, n = line[3:].strip(), 0
+        elif re.match(r"^(\| *\d+ *\||\d+\. |- \*\*)", line):
+            n += 1
+    body = "".join(f"<tr><td>{html.escape(t)}</td><td class='num'>{k}</td></tr>" for t, k in rows)
+    return ("<table><caption>Table {{tab}}. Sections of the prompt log</caption><thead><tr><th>Section</th>"
+            "<th>Entries</th></tr></thead><tbody>" + body + "</tbody></table>")
 
 
 def build_appendices():
     (DOCS / "parts" / "92-appendix-c.html").unlink(missing_ok=True)
     for fname, hid, title, src, intro in APPENDICES:
+        if fname in INDEX_ONLY:
+            (DOCS / "parts" / fname).write_text(f'<h1 id="{hid}">{title}</h1>\n<p>{intro} Source file: <code>{src}</code>.</p>\n{log_index(ROOT / src)}\n')
+            continue
         body = subprocess.run(["pandoc", "-f", "gfm", "-t", "html", "--shift-heading-level-by=2", f"--id-prefix={hid}-", str(ROOT / src)],
                               capture_output=True, text=True, check=True).stdout
         # Tables inside the appendices use the report's caption numbering too.
@@ -158,7 +177,13 @@ def build_report():
     assert at > 0, "roles heading not found"
     body = body[:at] + toc_html + body[at:]
     out = DOCS / "final-report.html"
-    out.write_text(PAGE_HEAD.format(title="ShiftSwap — Final Report (Team 7)", css="report.css").replace('lang="en"', 'lang="en"') + body + "</body></html>")
+    # Print scale 75 %: the report used to be shrunk by Chrome to about 75 % because one line of code was wider than the
+    # text column; the scale is now explicit (and the overflow fixed in report.css), so that the built PDF and the hub's
+    # PDF 저장 (the same document in a frame with 1-inch padding instead of page margins) lay out alike and the report
+    # stays within 150 pages. The zoom is on the children of body, so page margins and the hub's padding stay 1 inch.
+    head = PAGE_HEAD.format(title="ShiftSwap — Final Report (Team 7)", css="report.css")
+    head = head.replace("</head>", "<style>@media print { body > * { zoom: 0.75; } }</style></head>")
+    out.write_text(head + body + "</body></html>")
     n = pdf(out, DOCS / "final-report.pdf")
     print(f"  figures {fig}, tables {tab}, toc entries {len(toc)}")
     return n

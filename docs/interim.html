@@ -10,7 +10,8 @@
   table.ucd th, table.ucd td { padding: 2.5pt 5pt; }
   table.ucd ol { margin: 0; padding-left: 16pt; }
   table.ucd li { margin-bottom: 1pt; }
-  td.num, th.num { text-align: right; white-space: nowrap; }
+  td.num, th.num { text-align: right; }
+  td.num { white-space: nowrap; }
   .scenario h3 { margin-top: 10pt; }
   figure.shot img { max-height: 3.4in; }
   /* Major sections continue on the same page to keep the report within about 30 pages. */
@@ -88,26 +89,27 @@
 
 <h1 id="s1">1. Introduction</h1>
 <p>This interim report specifies the requirements of ShiftSwap and presents the UML models used to analyse them. ShiftSwap is a web application for a small store with part-time workers. It manages the weekly shift schedule, finds substitutes when a worker cannot work a shift, and computes weekly holiday allowance and monthly pay under Korean labor law.</p>
-<p>The proposal (Week 5) defined the problem, the goals, the nine main functions and the project plan. This report refines them: problem (Section 2), elicitation (3), functional and non-functional requirements (4, 5), scenarios (6), analysis models (7), main screens (8) and validation (9). The team follows the incremental model with prototyping of the user interface (Chapter 1): increment 1 delivers the <em>Must</em> use cases and increment 2 the <em>Should</em> use cases. The screens in Section 8 come from the prototype, which we use to validate requirements with the owner and workers before the design is fixed. All identifiers (UC, FR, NFR, BR, TC) come from one project specification that the team uses as the single source of truth; the same identifiers appear in the models, the code and the tests.</p>
+<p>The proposal (Week 5) defined the problem, the goals, the nine main functions and the project plan. This report refines them: problem (Section 2), elicitation (3), functional and non-functional requirements (4, 5), scenarios (6), analysis models (7), main screens (8) and validation (9). The team follows the incremental model with prototyping of the user interface (Chapter 1): increment 1 delivers the <em>Must</em> use cases and increment 2 the <em>Should</em> use cases. The screens in Section 8 come from the prototype, which we use to validate requirements with the owner and workers before the design is fixed. All identifiers (UC, FR, NFR, BR, TC) come from one project specification that the team uses as the single source of truth; the same identifiers appear in the models, the code and the tests. The proposal was revised on 2026-09-29: it adopts a shared database, adds the rule on work of part-time workers beyond their contractual hours, and restates the related products on the basis of their own published descriptions. This report follows the revised proposal; the requirements that the revision changed are marked &ldquo;iteration 8&rdquo;, the project's name for this change.</p>
 
 <a id="problem"></a>
 <h1 id="s2">2. Problem description</h1>
 <h2 id="s2-1">2.1 Background and current process</h2>
 <p>In small stores (caf&eacute;s, convenience stores, restaurants) with fewer than ten part-time workers, each worker has fixed weekly shifts, for example every Monday 18:00&ndash;23:00. When a worker cannot come, the owner phones or messages other workers one by one to find a substitute. The owner then edits a spreadsheet by hand. At month end the owner must re-check each worker's weekly hours to decide whether the weekly holiday allowance (주휴수당) is owed.</p>
 <p>Our reference store is the workplace of team member Hyewon Kim. The owner also acts as the manager. There, finding a substitute typically takes 3 to 5 contacts per request. The current process has four manual steps: (1) the worker informs the owner; (2) the owner contacts other workers one at a time; (3) the owner edits the spreadsheet and informs both workers; (4) at month end the owner re-counts hours and computes pay. None of these steps is recorded except the final spreadsheet.</p>
-<p>Korean law adds rules that depend on these hours. A worker whose weekly contractual hours are 15 or more and who worked every scheduled day of the week is entitled to a paid weekly holiday (Labor Standards Act Art. 55 &#9312;, Art. 18 &#9314;, Enforcement Decree Art. 30 &#9312;) [3, 5]. The 2026 minimum hourly wage is KRW 10,320 [1, 2]. Overtime and night premiums apply only in workplaces with five or more regular employees (Art. 11, 56) [3]. The minimum wage may be reduced to 90&nbsp;% during probation only if several conditions hold (Minimum Wage Act Art. 5 &#9313;, Enforcement Decree Art. 3) [4].</p>
+<p>Korean law adds rules that depend on these hours. A worker whose weekly contractual hours are 15 or more and who worked every scheduled day of the week is entitled to a paid weekly holiday (Labor Standards Act Art. 55 &#9312;, Art. 18 &#9314;, Enforcement Decree Art. 30 &#9312;) [3, 5]. The 2026 minimum hourly wage is KRW 10,320 [1, 2]. Overtime and night premiums apply only in workplaces with five or more regular employees (Art. 11, 56) [3]. In such workplaces a part-time worker may work beyond the contractual hours only with the worker's consent and for at most 12 hours a week, and these hours earn a premium of at least 50&nbsp;% (Fixed-term and Part-time Employees Act Art. 6) [20]; accepting a substitute shift usually creates such hours. The minimum wage may be reduced to 90&nbsp;% during probation only if several conditions hold (Minimum Wage Act Art. 5 &#9313;, Enforcement Decree Art. 3) [4].</p>
 
 <h2 id="s2-2">2.2 Problems P1&ndash;P3</h2>
 <div class="box">
   <p><span class="req-id">P1</span> Finding a substitute costs the owner repeated one-to-one contacts (reference store: typically 3&ndash;5 contacts per request).</p>
   <p><span class="req-id">P2</span> The schedule, weekly hours and holiday-allowance eligibility of <em>two</em> workers change with every swap, and all recalculation is manual.</p>
-  <p style="margin-bottom:0"><span class="req-id">P3</span> Legal pay rules (minimum wage, holiday allowance, 5-employee threshold for premiums, probation reduction) are applied from memory, so errors are not caught before payday.</p>
+  <p style="margin-bottom:0"><span class="req-id">P3</span> Legal pay rules (minimum wage, holiday allowance, 5-employee threshold for premiums, overtime of part-time workers beyond contractual hours, probation reduction) are applied from memory, so errors are not caught before payday.</p>
 </div>
-<p>Existing shift-scheduling products (Shiftee, the work-management features of Albamon and Alba Cheonguk, When I Work, Homebase, Deputy) manage schedules and shift trades. None of those we examined links substitute approval to Korean holiday-allowance eligibility at the moment of approval [10].</p>
+<p>Scheduling products abroad already support a substitute workflow between co-workers. In Deputy a worker can offer a shift to co-workers who are qualified and available, and swaps can be set to require the manager's approval [10]. When I Work lets a worker offer a shift to all or selected eligible co-workers, subject by default to a manager's approval, and with its Find Replacement function a manager offers a shift to eligible workers, the first of whom to pick it up takes it [11, 12]. In Homebase a worker asks all or selected co-workers to cover a shift, and a manager gives final approval after one of them accepts [13]. Deputy's employee app is available in Korean, but managers who build schedules on its web interface must work in English [14], and in the help centers of all three products we found no mention of the Korean weekly holiday allowance.</p>
+<p>Korean products follow a different workflow, in which the manager edits the schedule or an employee sends a change request to the manager. Shiftee lets an employee request a new or changed shift and computes the weekly holiday allowance automatically [15, 16]; its help center states that the allowance is recognised only when every contractual working day is worked [16]. Shopl lets employees request schedule changes that the manager approves or rejects [17]. Albami and Gig let the owner manage schedules and the holiday allowance [18, 19]. The public feature descriptions of these four products do not include a substitute request between co-workers. We found no product that combines the co-worker substitute request with the Korean holiday-allowance rule, that is, one that shows the owner at the moment of approval how a swap changes the holiday-allowance eligibility of both workers.</p>
 
 <h2 id="s2-3">2.3 Proposed solution and system environment</h2>
 <p>ShiftSwap replaces steps (2) to (4). A worker creates a substitute request for one of their shifts. The system selects every eligible colleague and puts the request in their inbox at once. The first colleague to accept becomes the acceptor. The owner sees what the swap does to both workers' hours and holiday-allowance eligibility, and approves or rejects it. On approval the schedule and weekly summaries are updated. At month end the system produces a payroll draft and flags minimum-wage problems.</p>
-<p>The system runs entirely in a web browser. It is a static web application (HTML, CSS and JavaScript modules) with an embedded SQLite database (sql.js, compiled to WebAssembly) [9]. Data is saved in the browser's local storage after every transaction. There is no server and no installation. The application is published on GitHub Pages. The same device can be used by the owner on a laptop and by workers on phones, because every screen works at 360&nbsp;px and 1440&nbsp;px width. Because the application is a demonstration system without a server, sign-in is done by choosing a demo account, and the passage of time is simulated by an adjustable demo clock. The default demo time is Monday 2026-09-28 09:00.</p>
+<p>The system is a static web application (HTML, CSS and JavaScript modules) published on GitHub Pages, with a shared relational database on Supabase, a hosted PostgreSQL service with a free plan [21]. The owner uses the system on a laptop or a phone and every worker on their own phone; every screen works at 360&nbsp;px and 1440&nbsp;px width. Because all of them use one shared store, a substitute request appears at once in the inbox of every eligible worker. The browser holds a working copy of the store in an embedded SQLite database (sql.js, compiled to WebAssembly) [9]; the unchanged application functions run on this copy, and only the changed rows are sent to the database, which applies them in one transaction. The application reaches the database with the publishable key only, which is public by design: the tables can only be read through row-level-security read policies, and every change passes through a small set of database functions (RPCs) that re-check the state transitions, the deadlines against the server time, and rate and size limits (NFR-14). The application therefore has no application server of its own. Sign-in is done by choosing a demo account without a password, because password authentication is outside the scope of the project, as the proposal states; the database guarantees the integrity of the data but not the identity of a user, and all stored data are fictional. On the free plan a project with low activity over seven days is paused [21], so a scheduled job (GitHub Actions) sends a read query to the database every six hours; GitHub disables scheduled workflows in a public repository after 60 days without repository activity [22], so the team also checks the public URL weekly (risk R6 of the proposal). A local demonstration mode keeps the same tables only in the browser's local storage and simulates the passage of time with an adjustable demo clock. It is the fallback when the shared database cannot be reached, and it is used for the scenarios and screenshots of this report, because they need a fixed time. Its default demo time is Monday 2026-09-28 09:00.</p>
 <p>The demo data describes Dalbit Caf&eacute; (달빛카페), a fictional store with four regular employees and the default substitution-attendance policy EXCUSED. It is used in all scenarios and screenshots of this report.</p>
 <table>
   <caption>Table 2. Demo store: owner and workers</caption>
@@ -120,17 +122,17 @@
     <tr><td>5</td><td>Kang Doyun</td><td class="num">10,000</td><td>2026-08-15 to 2026-11-15; simple labor</td><td>Sat 10:00&ndash;16:00; Sun 16:00&ndash;22:00 (12)</td><td>Wed 18:00&ndash;23:00; Thu 18:00&ndash;23:00; Fri 17:00&ndash;23:00</td></tr>
   </tbody>
 </table>
-<p>The minimum wage table holds 2025: KRW 10,030 and 2026: KRW 10,320. The shifts of the weeks starting 2026-09-21 and 2026-09-28 are generated, and all shifts of the week of 2026-09-21 have confirmed attendance. One open request exists: Lee Seoyeon's request for Wednesday 2026-09-30 18:00&ndash;23:00 (Section 6, S1).</p>
+<p>The minimum wage table holds 2025: KRW 10,030 and 2026: KRW 10,320. The shifts of the weeks starting 2026-09-21 and 2026-09-28 are generated, and all shifts of the week of 2026-09-21 have confirmed attendance. One open request exists: Lee Seoyeon's request for Wednesday 2026-09-30 18:00&ndash;23:00 (Section 6, S1). In the shared database the same data are restored by a reset for everyone, with all dates moved by whole weeks so that this request is still open at the current date.</p>
 
 <h2 id="s2-4">2.4 Actors</h2>
-<p>The system has three actors. <strong>A1 Worker</strong> (primary, human) is a part-time employee who views their own schedule, registers availability, requests substitutes, responds to requests and records attendance. <strong>A2 Owner</strong> (primary, human) is the store owner, who also acts as manager: the owner registers workers and fixed schedules, approves or rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll and edits settings. <strong>A3 System Clock</strong> (secondary, system) is a time-triggered actor. It expires unanswered or unapproved requests at their deadline and closes weeks for the weekly summary; in the demo application it is driven by the adjustable demo clock.</p>
+<p>The system has three actors. <strong>A1 Worker</strong> (primary, human) is a part-time employee who views their own schedule, registers availability, requests substitutes, responds to requests and records attendance. <strong>A2 Owner</strong> (primary, human) is the store owner, who also acts as manager: the owner registers workers and fixed schedules, approves or rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll and edits settings. <strong>A3 System Clock</strong> (secondary, system) is a time-triggered actor. It expires unanswered or unapproved requests at their deadline and closes weeks for the weekly summary. It uses the time of the shared database server (Korea Standard Time), which no user can change; in the local demonstration mode it is driven by the adjustable demo clock.</p>
 
 <h1 id="s3">3. Requirements elicitation</h1>
 <p>Chapter 8 describes requirements elicitation as work with the stakeholders to find out about the application domain, the services the system should provide and its constraints. Our stakeholders are the store owner, the part-time workers and, indirectly, the labor law that fixes the pay rules. We use four sources.</p>
 <ol>
   <li><strong>Domain experience.</strong> Hyewon Kim works part-time in the reference store. Her experience gave the problem statement and the figure of typically 3&ndash;5 contacts per substitute request.</li>
   <li><strong>Interviews.</strong> Semi-structured interviews with the owner of the reference store and two of Hyewon's co-workers. Hyewon Kim leads each interview and a second member takes notes. Each interview is planned for about 30 minutes.</li>
-  <li><strong>Document analysis.</strong> The owner's schedule spreadsheet (structure only; no personal data is copied) and the legal sources on minimum wage, weekly holiday and probation [1&ndash;5].</li>
+  <li><strong>Document analysis.</strong> The owner's schedule spreadsheet (structure only; no personal data is copied) and the legal sources on minimum wage, weekly holiday, probation and the work of part-time workers beyond their contractual hours [1&ndash;5, 20].</li>
   <li><strong>Prototype sessions.</strong> After the first interviews the owner and the co-workers are shown the UI prototype (Section 8) and asked to perform one task each.</li>
 </ol>
 <table class="interview">
@@ -167,7 +169,8 @@
 <a id="functional"></a>
 <h1 id="s4">4. Functional requirements specification</h1>
 <h2 id="s4-1">4.1 Functional requirements</h2>
-<p>Table 4 lists the 21 functional requirements. Each requirement is traced to at least one use case. The priority is that of its use case: <em>Must</em> requirements are delivered in increment 1 and <em>Should</em> requirements in increment 2.</p>
+<p>Table 4 lists the 22 functional requirements. Each requirement is traced to at least one use case. The priority is that of its use case: <em>Must</em> requirements are delivered in increment 1 and <em>Should</em> requirements in increment 2. The one exception is FR-24, the part-time overtime warning, which has <em>Should</em> priority within the Must use case UC-06, as the revised proposal specifies for function F6.</p>
+<p>The requirements in Sections 4 and 5 are those of the interim stage, with the changes of iteration 8 (the proposal revision of 2026-09-29) added, because the revision changed what the proposal itself states: FR-24, BR-15 and NFR-14 to NFR-16 are new, and A3, UC-06, UC-11, UC-13, FR-20, BR-08, BR-12, NFR-04 to NFR-06, NFR-08 and NFR-10 are reworded. The identifiers that do not appear in the numbering (FR-22, FR-23, BR-13, BR-14 and NFR-13) belong to changes made after the interim stage in response to the use of the prototype; they are documented with the change history in the final report. No identifier was renumbered.</p>
 <table>
   <caption>Table 4. Functional requirements</caption>
   <thead><tr><th>ID</th><th>Requirement</th><th>UC</th><th>Priority</th></tr></thead>
@@ -191,8 +194,9 @@
     <tr><td class="req-id">FR-17</td><td>The owner shall edit workplace settings: store name, number of regular employees, substitution-attendance policy (BR-06), and yearly minimum wage rows.</td><td>UC-10</td><td>Should</td></tr>
     <tr><td class="req-id">FR-18</td><td>When a request's deadline passes, or its shift starts, while it is still REQUESTED or ACCEPTED, the system shall mark it EXPIRED, close its targets and notify requester and owner.</td><td>UC-11</td><td>Must</td></tr>
     <tr><td class="req-id">FR-19</td><td>A requester shall cancel their own request while it is REQUESTED or ACCEPTED; all targets are closed and notified.</td><td>UC-12</td><td>Should</td></tr>
-    <tr><td class="req-id">FR-20</td><td>Users shall sign in by choosing a demo account; the UI shows only the menus of that role.</td><td>UC-13</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-20</td><td>Users shall sign in by choosing a demo account without a password (password authentication is out of scope), either from the list of all accounts or from a guided three-step demo tour; the UI shows only the menus of that role. In the shared mode the sign-in screen states that the data are shared with everyone who opens the app and must be fictional; the tour's progress follows the shared data, and restarting the tour there resets the demo data for everyone (the rate-limited reset of NFR-05). <em>(iteration 8)</em></td><td>UC-13</td><td>Must</td></tr>
     <tr><td class="req-id">FR-21</td><td>Every user shall have an in-app notification inbox listing notifications newest first with unread count.</td><td>UC-04&ndash;06, 11, 12</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-24</td><td>In a workplace with five or more regular employees, the approval screen (FR-11) shall warn when the swap would leave a part-time acceptor with more than 12 hours beyond their weekly contractual hours in that week (BR-15), showing the hours beyond contract; the warning does not block the decision. <em>(iteration 8)</em></td><td>UC-06</td><td>Should</td></tr>
   </tbody>
 </table>
 
@@ -209,11 +213,12 @@
     <tr><td class="req-id">BR-05</td><td><strong>Week.</strong> A week runs Monday 00:00 to Sunday 24:00 (ISO week). Weekly records are keyed by the Monday date.</td></tr>
     <tr><td class="req-id">BR-06</td><td><strong>Holiday-allowance eligibility.</strong> Eligible iff (a) weekly contractual hours &ge; 15, and (b) perfect attendance: every shift of the week whose original worker is W and that was not given away was WORKED (not ABSENT). Shifts W gave away by an APPROVED substitution count according to Workplace.subAttendancePolicy: EXCUSED (default; the working day was changed by agreement, so it does not break attendance) or ABSENT (it breaks attendance). Contractual hours = sum of W's fixed-schedule hours per week. Substitute shifts W took do not change contractual hours. (The law averages 15 h over four weeks; the fixed schedule is constant, so the average equals the weekly value.)</td></tr>
     <tr><td class="req-id">BR-07</td><td><strong>Holiday-allowance hours.</strong> hours = min(contractualHours, 40) / 40 &times; 8, rounded to 2 decimals; pay = hours &times; effective hourly wage, rounded down to the won.</td></tr>
-    <tr><td class="req-id">BR-08</td><td><strong>Premium pay.</strong> Applies only if Workplace.regularEmployees &ge; 5. Then +50&nbsp;% of wage for (i) daily hours beyond 8, (ii) weekly hours beyond 40 not already counted in (i), (iii) night hours 22:00&ndash;06:00. The night premium adds to the overtime premium. If regularEmployees &lt; 5, premium = 0.</td></tr>
+    <tr><td class="req-id">BR-08</td><td><strong>Premium pay.</strong> Applies only if Workplace.regularEmployees &ge; 5 (Labor Standards Act Art. 11, 56 [3]; Fixed-term and Part-time Employees Act Art. 3 &#9313;, Art. 6, Enforcement Decree Art. 2 and Annex 1 [20]). Then +50&nbsp;% of wage for (i) daily hours beyond 8, (ii) weekly hours beyond 40 not already counted in (i), (iii) night hours 22:00&ndash;06:00, and (iv) for a part-time worker, hours beyond the weekly contractual hours not already counted in (i) or (ii) (iteration 8). The night premium adds to the overtime premium. If regularEmployees &lt; 5, premium = 0. The legal rule behind (iv) is that a part-time worker in such a workplace may work beyond the contractual hours only with the worker's consent and for at most 12 hours a week, and that these hours earn a premium of at least 50&nbsp;% [20].<br><em>System rules for (iv): design decisions of this system where the law does not fix the method, not statements of law.</em> (a) A worker whose weekly contractual hours C (the sum of the fixed schedule, as in BR-06) satisfy 0 &lt; C &lt; 40 is treated as part-time; a worker without a fixed schedule or with C &ge; 40 is not. (b) The test is weekly against C, not daily. (c) The hours of an ISO week are taken in chronological order, and every hour after the first C hours is beyond contract. (d) An hour that meets more than one of (i), (ii) and (iv) is counted once. (e) The night premium (iii) is added separately. The worker's consent is outside the system; the 12-hour limit is checked before approval (BR-15).</td></tr>
     <tr><td class="req-id">BR-09</td><td><strong>Minimum-wage check.</strong> Warn if worker.hourlyWage &lt; MinimumWage(year).hourly &times; (0.9 if BR-10 applies else 1). The payroll still computes with the worker's wage; the warning is shown on the payroll row and blocks confirmation until acknowledged.</td></tr>
     <tr><td class="req-id">BR-10</td><td><strong>Probation reduction.</strong> The minimum may be reduced to 90&nbsp;% only if all hold: contract length &ge; 1 year (contractEnd &minus; contractStart &ge; 365 days, or contractEnd empty = open-ended); the date is within 3 months of contractStart and &le; probationEnd; simpleLabor = false.</td></tr>
     <tr><td class="req-id">BR-11</td><td><strong>Monthly payroll.</strong> Month = calendar month. Base pay = &Sigma; actual hours of WORKED shifts in the month &times; wage (if no attendance is recorded yet, scheduled hours are used and the row is flagged &ldquo;estimated&rdquo;). Holiday allowance = &Sigma; holiday pay of weeks whose Sunday falls in the month. Total = base + holiday + premium. Amounts are integers in KRW, rounded down.</td></tr>
-    <tr><td class="req-id">BR-12</td><td><strong>Expiry.</strong> A REQUESTED or ACCEPTED request whose deadline &le; now, or whose shift start &le; now, becomes EXPIRED.</td></tr>
+    <tr><td class="req-id">BR-12</td><td><strong>Expiry.</strong> A REQUESTED or ACCEPTED request whose deadline &le; now, or whose shift start &le; now, becomes EXPIRED. Accept and approve check this themselves inside their transaction, independent of the periodic expiry run. In the shared mode &ldquo;now&rdquo; is the server time: the server refuses an acceptance or approval at or after the deadline or the shift start, and an expiry before it (NFR-14; iteration 8).</td></tr>
+    <tr><td class="req-id">BR-15</td><td><strong>Part-time weekly limit warning (iteration 8).</strong> When Workplace.regularEmployees &ge; 5 and the acceptor of an ACCEPTED request is part-time (0 &lt; C &lt; 40, BR-08 (a)), let S be the acceptor's scheduled hours in the ISO week of the requested shift after the swap. If S &minus; C &gt; 12, the approval screen (FR-11, FR-24) shows a warning with S &minus; C (for example &ldquo;13 h beyond contract, limit 12 h&rdquo;). Exactly 12 hours beyond contract gives no warning. The warning does not block approval: the worker's consent and the owner's decision are outside the system. Legal basis: Fixed-term and Part-time Employees Act Art. 6 [20]; the weekly test against the fixed-schedule hours is the system rule of BR-08 (a)&ndash;(c).</td></tr>
   </tbody>
 </table>
 
@@ -319,15 +324,15 @@
     <tr><th>Main flow</th><td><ol>
       <li>The owner opens <em>Home</em>; the section &ldquo;Swaps waiting for approval&rdquo; lists every ACCEPTED request as a card.</li>
       <li>For requester and acceptor the system computes contractual hours, scheduled hours of the week, holiday-allowance eligibility and holiday hours, before and after the swap (FR-11).</li>
-      <li>The card shows one line per worker with the change in weekly hours and the effect on holiday allowance, and states any eligibility change.</li>
+      <li>The card shows one line per worker with the change in weekly hours and the effect on holiday allowance, and states any eligibility change. In a workplace with five or more regular employees, if the acceptor is part-time and would work more than 12 hours beyond their weekly contractual hours in that week after the swap, the card also shows a warning with the hours beyond contract (FR-24, BR-15; iteration 8).</li>
       <li>The owner chooses <em>Approve</em>.</li>
       <li>The system sets shift.workerId to the acceptor, keeps the original worker in shift.originalWorkerId, and sets the request to APPROVED with the decision time.</li>
       <li>The system recomputes the weekly summaries of both workers &laquo;include&raquo; UC-08.</li>
       <li>The system notifies both workers (REQUEST_APPROVED).</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>4a. The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift is unchanged, both workers receive REQUEST_REJECTED.<br>4b. The request expired before the decision (BR-12): the decision is refused and the list is refreshed.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>4a. The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift is unchanged, both workers receive REQUEST_REJECTED.<br>4b. The request expired before the decision (BR-12): the decision is refused and the list is refreshed.<br>4c. The part-time limit warning of step 3 is shown: it does not block the decision, because the worker's consent and the owner's decision are outside the system; the owner approves (step 4) or rejects (4a).</td></tr>
     <tr><th>Postconditions</th><td>Approved: the shift belongs to the acceptor, and both weekly summaries are current. Rejected: no schedule change.</td></tr>
-    <tr><th>Business rules / FR</th><td>BR-04, BR-06, BR-07 &nbsp;|&nbsp; FR-11, FR-12, FR-21</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-04, BR-06, BR-07, BR-15 &nbsp;|&nbsp; FR-11, FR-12, FR-21, FR-24</td></tr>
   </tbody>
 </table>
 
@@ -411,12 +416,14 @@
     <tr><th>Actors</th><td>System Clock</td></tr>
     <tr><th>Preconditions</th><td>A request is REQUESTED or ACCEPTED.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The System Clock runs the expiry check (on application start, on every screen change and after the demo clock is changed).</li>
+      <li>The System Clock runs the expiry check (on application start, on every screen change and, in the local demonstration mode, after the demo clock is changed).</li>
+      <li>The system reads the current time: in the shared mode the server time (Korea Standard Time), in the local demonstration mode the demo clock (iteration 8).</li>
       <li>The system finds open requests whose deadline &le; now or whose shift start &le; now.</li>
       <li>For each, the system sets the request to EXPIRED and all PENDING targets to CLOSED.</li>
       <li>The system notifies the requester and the owner (REQUEST_EXPIRED).</li>
+      <li>In the shared mode the copy of the application that performed steps 1&ndash;5 saves the result to the shared database like any other change.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>2a. No request is overdue: nothing changes.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>3a. No request is overdue: nothing changes.<br>6a. In the shared mode the server accepts EXPIRED only when the deadline or the shift start has passed by server time (BR-12). If it refuses the change, the application reloads the shared data and the request stays open.</td></tr>
     <tr><th>Postconditions</th><td>No open request has a past deadline; the shift stays with the requester.</td></tr>
     <tr><th>Business rules / FR</th><td>BR-12 &nbsp;|&nbsp; FR-18, FR-21</td></tr>
   </tbody>
@@ -440,18 +447,18 @@
 </table>
 
 <table class="ucd">
-  <caption>Table 18. UC-13 Sign in by role (demo account selection)</caption>
+  <caption>Table 18. UC-13 Sign in by role (demo account selection, no password)</caption>
   <tbody>
     <tr><th>Actors</th><td>Worker, Owner</td></tr>
     <tr><th>Preconditions</th><td>The application is open in a browser.</td></tr>
     <tr><th>Main flow</th><td><ol>
-      <li>The system shows the demo page: a three-step tour (see Lee Seoyeon's request, accept as Choi Minho, approve as owner Park Jiyoung) and the list of all accounts (owner and four workers) with role labels. There are no passwords.</li>
+      <li>The system shows the demo page: a three-step tour (see Lee Seoyeon's request, accept as Choi Minho, approve as owner Park Jiyoung) and the list of all accounts (owner and four workers) with role labels. There are no passwords, because password authentication is outside the scope of the project. A notice states the data mode: in the shared mode everyone who opens the page sees and changes the same fictional data, and no personal information may be entered; in the local demonstration mode the data are kept in this browser only (iteration 8).</li>
       <li>The user starts the tour or chooses an account.</li>
       <li>The system keeps the choice for the browser session and shows only the menus of that role: <em>Home, Schedule, Swaps, Me</em> for a worker; <em>Home, Schedule, Staff, Pay</em> for the owner, who also has <em>Settings</em>.</li>
     </ol></td></tr>
-    <tr><th>Alternative / exception flows</th><td>3a. The user signs out: the session choice is cleared and the sign-in screen is shown.</td></tr>
+    <tr><th>Alternative / exception flows</th><td>1a. The shared database cannot be reached when the application starts: the system says so and offers the local demonstration mode with the seed data (NFR-16).<br>3a. The user signs out: the session choice is cleared and the sign-in screen is shown.<br>3b. The user resets the demo data. In the local demonstration mode the seed data and the demo clock are restored. In the shared mode, after confirmation, the server restores the seed data for every user, at most once a minute and 50 times a day (NFR-05, NFR-14); restarting the tour in the shared mode is the same reset.<br>3c. The user switches between the shared mode and the local demonstration mode.</td></tr>
     <tr><th>Postconditions</th><td>A signed-in user with role OWNER or WORKER.</td></tr>
-    <tr><th>Business rules / FR</th><td>&ndash; (NFR-11 role guard) &nbsp;|&nbsp; FR-20</td></tr>
+    <tr><th>Business rules / FR</th><td>&ndash; (NFR-05, NFR-11 role guard, NFR-14, NFR-16) &nbsp;|&nbsp; FR-20</td></tr>
   </tbody>
 </table>
 
@@ -466,24 +473,27 @@
     <tr><td class="req-id">NFR-01</td><td>Usability</td><td>A candidate can accept a request in at most 2 clicks from the inbox.</td><td>UI walkthrough</td></tr>
     <tr><td class="req-id">NFR-02</td><td>Usability</td><td>All screens are usable at 360 px width (mobile) and 1440 px (desktop) without horizontal scrolling.</td><td>Browser check at both widths</td></tr>
     <tr><td class="req-id">NFR-03</td><td>Efficiency / performance</td><td>With 20 workers and 12 weeks of shifts, any screen renders in under 1 second on a mid-range laptop.</td><td>Timed load with seeded data</td></tr>
-    <tr><td class="req-id">NFR-04</td><td>Reliability</td><td>&ldquo;First acceptance wins&rdquo; is enforced inside one database transaction that re-checks the request state; two acceptances can never both succeed.</td><td>Unit test TC-05x</td></tr>
-    <tr><td class="req-id">NFR-05</td><td>Reliability</td><td>Data persists across page reloads (browser storage) and can be reset to seed data.</td><td>Manual test</td></tr>
-    <tr><td class="req-id">NFR-06</td><td>Portability</td><td>Runs in current Chrome, Edge, Safari and Firefox without installation or server.</td><td>Manual test</td></tr>
+    <tr><td class="req-id">NFR-04</td><td>Reliability</td><td>&ldquo;First acceptance wins&rdquo; is enforced inside one database transaction that re-checks the request state; two acceptances can never both succeed. In the shared mode the server applies each change set in one transaction under a row lock on the store and refuses a change set computed on an older revision, which the app then recomputes on the current data. <em>(iteration 8)</em></td><td>Unit tests TC-05x, TC-16x; REST test of the shared database</td></tr>
+    <tr><td class="req-id">NFR-05</td><td>Reliability</td><td>Data persists across page reloads &mdash; in the shared database (shared mode) or in browser storage (local demonstration mode) &mdash; and can be reset to the seed data (in the shared mode by the rate-limited reset for everyone). <em>(iteration 8)</em></td><td>Manual test; REST test</td></tr>
+    <tr><td class="req-id">NFR-06</td><td>Portability</td><td>Runs in current Chrome, Edge, Safari and Firefox without installation and without an application server of its own (the shared mode uses only the hosted database service). <em>(iteration 8)</em></td><td>Manual test</td></tr>
+    <tr><td class="req-id">NFR-14</td><td>Security</td><td>The shared database accepts writes only through SECURITY DEFINER functions with an empty <code>search_path</code>; the API roles may only read the tables (row-level-security read policies, explicit grants, no write grants). The server re-checks what it can decide without knowing the user: the state transitions of a request, acceptance and approval only before the deadline and the shift start, expiry only when overdue (server time), at most one open request per shift, read-only confirmed payroll. It limits every store to 60 change sets per minute and 3,000 per day, a change set to 256 kB and 2,000 rows, a store to 20,000 rows, and resets to one per minute and 50 per day. Identity is not verified (demo accounts without passwords). <em>(iteration 8)</em></td><td>REST test of the shared database</td></tr>
+    <tr><td class="req-id">NFR-15</td><td>Efficiency</td><td>In the shared mode a change saved by one user appears on the open screen of every other user within 10 seconds (revision polling, and at once when the window regains focus). <em>(iteration 8)</em></td><td>Two-browser check</td></tr>
+    <tr><td class="req-id">NFR-16</td><td>Dependability</td><td>The shared database is kept active by a scheduled read query every six hours (GitHub Actions); when it cannot be reached, the app offers the local demonstration mode with the seed data (risk R6). <em>(iteration 8)</em></td><td>Workflow log; manual test</td></tr>
     <tr><td colspan="4"><strong>Organisational requirements</strong></td></tr>
     <tr><td class="req-id">NFR-07</td><td>Delivery</td><td>Working system deployed by Week 14 (2026-12-04).</td><td>Deployed URL</td></tr>
-    <tr><td class="req-id">NFR-08</td><td>Implementation</td><td>Static web application (HTML/CSS/JavaScript ES modules) with an embedded SQLite database (sql.js, WebAssembly); built by vibe coding from the final prompt; hosted on GitHub Pages.</td><td>Repository</td></tr>
+    <tr><td class="req-id">NFR-08</td><td>Implementation</td><td>Static web application (HTML/CSS/JavaScript ES modules) hosted on GitHub Pages; shared data in a Supabase PostgreSQL database reached with the publishable key through its REST and RPC interface; SQLite compiled to WebAssembly (sql.js) as the working copy in the browser (shared mode) and as the only store of the local demonstration mode; built by vibe coding from the final prompt. <em>(iteration 8)</em></td><td>Repository</td></tr>
     <tr><td class="req-id">NFR-09</td><td>Standards</td><td>Models follow UML 2.5 notation; code identifiers are in English.</td><td>Review</td></tr>
     <tr><td colspan="4"><strong>External requirements</strong></td></tr>
-    <tr><td class="req-id">NFR-10</td><td>Legislative</td><td>Pay rules follow the Minimum Wage Act (2026 minimum hourly wage KRW 10,320) and the Labor Standards Act (Art. 18 &#9314;, Art. 55, Enforcement Decree Art. 30; Art. 11 / 56 premium threshold).</td><td>Unit tests TC-08x, TC-09x</td></tr>
+    <tr><td class="req-id">NFR-10</td><td>Legislative</td><td>Pay rules follow the Minimum Wage Act (2026 minimum hourly wage KRW 10,320), the Labor Standards Act (Art. 18 &#9314;, Art. 55, Enforcement Decree Art. 30; Art. 11 / 56 premium threshold) and the Fixed-term and Part-time Employees Act (Art. 6, work of part-time workers beyond contractual hours); where the law leaves the method open, the system's rule is stated as a design decision (BR-08, BR-15). <em>(iteration 8)</em></td><td>Unit tests TC-08x, TC-09x, TC-15x</td></tr>
     <tr><td class="req-id">NFR-11</td><td>Privacy</td><td>A worker's phone number and wage are visible only to the owner and that worker (Personal Information Protection Act principle of minimum disclosure).</td><td>Role test</td></tr>
     <tr><td class="req-id">NFR-12</td><td>Ethical</td><td>The system does not collect location data; attendance is self-reported and owner-confirmed.</td><td>Design review</td></tr>
   </tbody>
 </table>
-<p>Two of these requirements shape the design directly. NFR-04 means that candidate responses cannot be handled by simply reading and then writing the request; the status check and the update must be one transaction. NFR-08 means that there is no server to enforce access rules, so NFR-11 is enforced by the role guard of the user interface, and the application is presented as a single-store demonstration system.</p>
+<p>Two of these requirements shape the design directly. NFR-04 means that candidate responses cannot be handled by simply reading and then writing the request; the status check and the update must be one transaction. NFR-08 means that no application server of its own stands between the browser and the shared data, so the database must protect the data itself: NFR-14 allows the API only to read, lets changes pass only through functions that re-check the rules the server can decide, and limits the rate and size of changes. Because sign-in remains a choice of demo account (FR-20), NFR-14 guarantees integrity but not identity; NFR-11 is enforced by the role guard of the user interface, all shared data are fictional, and the application is presented as a single-store demonstration system. NFR-16 answers risk R6 of the proposal, the pausing of an inactive free-plan database [21].</p>
 
 <a id="scenarios"></a>
 <h1 id="s6">6. Scenarios</h1>
-<p>Chapter 8 defines a scenario as a real-life example of how the system is used, with a starting situation, a normal flow, what can go wrong, other concurrent activities and the state at the end. The scenarios below use the demo store of Section 2.3. Unless stated otherwise, the demo clock starts at Monday 2026-09-28 09:00 and the policy is EXCUSED. Each alternative sequence is written as a separate scenario, as Chapter 8 recommends.</p>
+<p>Chapter 8 defines a scenario as a real-life example of how the system is used, with a starting situation, a normal flow, what can go wrong, other concurrent activities and the state at the end. The scenarios below use the demo store of Section 2.3. They are written for the local demonstration mode, in which the demo clock can be set: unless stated otherwise, the demo clock starts at Monday 2026-09-28 09:00 and the policy is EXCUSED. In the shared mode the same flows apply at the dates of the reset data and with the server time. Each alternative sequence is written as a separate scenario, as Chapter 8 recommends.</p>
 
 <div class="scenario">
 <h3>S1. Lee Seoyeon requests a substitute for her midterm exam (UC-04)</h3>
@@ -512,7 +522,7 @@
   <li>Doyun can no longer accept the request. An acceptance attempt is refused with a message that Choi Minho accepted first (FR-09).</li>
   <li>On Seoyeon's <em>Swaps</em> screen the request moves to the step &ldquo;Accepted&rdquo; with the text &ldquo;Minho accepted. Waiting for the owner's approval.&rdquo; (Figure 13).</li>
 </ol>
-<p><strong>Concurrent activity.</strong> If Doyun had pressed <em>Accept</em> at almost the same moment as Minho, his transaction would read the status after Minho's transaction committed. The status would be ACCEPTED, not REQUESTED, so his acceptance is refused with the same message (BR-02, NFR-04, TC-05x).</p>
+<p><strong>Concurrent activity.</strong> If Doyun had pressed <em>Accept</em> at almost the same moment as Minho, his transaction would read the status after Minho's transaction committed. The status would be ACCEPTED, not REQUESTED, so his acceptance is refused with the same message (BR-02, NFR-04, TC-05x). In the shared mode Minho and Doyun use their own phones: the change set that reaches the shared database first is applied, and Doyun's, computed on the older revision, is refused; his application reloads the current data, runs the acceptance again and shows the same message (NFR-04, NFR-14).</p>
 <p><strong>End state.</strong> Request ACCEPTED, acceptor Choi Minho. The shift still belongs to Seoyeon until the owner decides.</p>
 
 <h3>S3. The owner approves the swap and sees Minho's hours change from 16 to 21 (UC-06, UC-08)</h3>
@@ -547,7 +557,7 @@
   <li>On the next screen change the System Clock runs the expiry check. The deadline &le; now, so the request becomes EXPIRED and both PENDING targets become CLOSED (BR-12).</li>
   <li>Seoyeon and the owner receive REQUEST_EXPIRED. Minho and Doyun can no longer accept the request.</li>
 </ol>
-<p><strong>What can go wrong.</strong> The same happens if the request is ACCEPTED but the owner does not decide before the deadline. The owner then sees the request disappear from the ACCEPTED list.</p>
+<p><strong>What can go wrong.</strong> The same happens if the request is ACCEPTED but the owner does not decide before the deadline. The owner then sees the request disappear from the ACCEPTED list. In the shared mode the clock is the server time and cannot be advanced: the request expires at its real deadline, and the server refuses an acceptance made after it (BR-12).</p>
 <p><strong>End state.</strong> The Wednesday shift stays with Seoyeon. She may create a new request, because no open request exists for the shift any more, as long as the new deadline is before 2026-09-30 18:00.</p>
 
 <h3>S5. Jung Hana asks for a Sunday substitute and nobody is eligible (UC-04, FR-08)</h3>
@@ -585,11 +595,24 @@
   <li>The owner can now decide with this information. Under the default EXCUSED policy the same swap would leave Minho eligible, with 3.2 holiday hours.</li>
 </ol>
 <p><strong>End state.</strong> Depends on the owner's decision. The scenario shows why BR-06 is a setting and not a fixed rule (risk R1 of the proposal).</p>
+
+<h3>S8. A swap takes a part-time worker beyond the weekly limit (UC-10, UC-03, UC-05, UC-06; iteration 8)</h3>
+<p><strong>Starting situation.</strong> The request of S1 is REQUESTED. The owner Park Jiyoung sets the number of regular employees to 5 in <em>Settings</em> (UC-10) and adds a single shift for Choi Minho on Friday 2026-10-02 10:00&ndash;18:00 (UC-03). Minho's week of 2026-09-28 then has 24 scheduled hours against 16 contractual hours; he is part-time under BR-08 (a), because 0 &lt; 16 &lt; 40.</p>
+<p><strong>Normal flow.</strong></p>
+<ol>
+  <li>Minho accepts Lee Seoyeon's Wednesday request (UC-05).</li>
+  <li>The owner's approval card shows Minho's week going from 24 to 29 scheduled hours and, because the workplace has five regular employees, the warning of BR-15: 13 hours beyond contract, while the limit for part-time workers is 12 hours a week (29 &minus; 16 = 13 &gt; 12; FR-24).</li>
+  <li>The warning does not block the decision. Whether Minho consents is outside the system, and the owner decides whether to approve.</li>
+  <li>If the 29 hours are worked as scheduled, BR-08 (iv) takes them in chronological order: Tuesday 5, Wednesday 5 (the swapped shift), Thursday 5, Friday 8 and Saturday 6. The 16 contractual hours are reached one hour into Friday, so 7 hours on Friday and 6 hours on Saturday, 13 hours in total, are beyond contract. No day exceeds 8 hours, so no hour is also daily overtime, and October's premium includes 13 &times; 10,320 &times; 0.5 = KRW 67,080 for these hours; the night hours are paid separately under item (iii).</li>
+</ol>
+<p><strong>What can go wrong.</strong> With the Friday shift 10:00&ndash;17:00 instead, the card shows 23 &rarr; 28 hours, exactly 12 hours beyond contract, and no warning. With 4 regular employees, the setting of the demo store, there is no warning and no premium, because BR-08 and BR-15 apply only from five regular employees.</p>
+<p><strong>End state.</strong> If the owner approves, Minho holds 29 scheduled hours in the week, 13 of them beyond contract; his contractual hours and his holiday allowance for the week (3.2 h) are unchanged. If she rejects, the shift stays with Seoyeon.</p>
 </div>
 
 <a id="uml"></a>
 <h1 id="s7">7. UML diagrams for requirements analysis</h1>
 <p>This section presents the analysis models. They are drawn in UML 2.5 notation [8]. Following Chapter 2, they show the system from several perspectives: the external perspective (use case diagram), the behavioural perspective (activity and state machine diagrams) and the structural perspective (analysis class diagram). Sequence diagrams belong to the design and are given in the final report.</p>
+<p>The figures are the current versions of the project's model files, which are shared with the final report, while the text of this section describes the models at the interim stage. The later changes to the figures are therefore visible in them: after the interim stage the availability condition of BR-01 and the Availability class were retired, a request can end as FAILED when no co-worker can take it, and the automatic monthly payroll draft (UC-14) was added. Iteration 8 added notes on the shared mode: the System Clock uses the server time in the shared mode and the demo clock in the local demonstration mode (Figure 1); the row triggers of the shared database accept only the transitions drawn in Figure 4 and use the server time for expiry; the open application saves the payroll draft, and the server keeps confirmed payroll rows read-only (Figure 6); and the class diagram contains the shared-data gateway SharedGateway and the part-time rules of LaborRules (Figure 7). The final report describes these changes.</p>
 
 <h2 id="s7-1">7.1 Use case diagram</h2>
 <figure>
@@ -646,6 +669,7 @@
 <a id="ui"></a>
 <h1 id="s8">8. Main user interface screens</h1>
 <p>The screens below were captured from the prototype on the demo data of Section 2.3, with the demo clock at Monday 2026-09-28 09:00. A worker has four screens: <em>Home</em>, <em>Schedule</em>, <em>Swaps</em> and <em>Me</em>. The owner has <em>Home</em>, <em>Schedule</em>, <em>Staff</em> and <em>Pay</em>, plus <em>Settings</em>. A <em>Demo tools</em> screen controls the demo clock and the demo data. On a desktop the screens are listed in a left navigation; on a phone they become a bottom tab bar. Colour is used sparingly: blue marks the signed-in worker's own shifts and primary buttons, and amber is reserved for substitution (a dashed outline with &ldquo;Looking for cover&rdquo; for an open request, an amber edge and stripe for a handed-over shift). Status chips carry text, not only colour. The header of every screen shows the demo clock, the notification bell with its unread count, and the signed-in user.</p>
+<p>The captures show the prototype as it was at the interim stage, running on data kept in the browser, which is now the local demonstration mode; they have deliberately not been replaced. Later versions changed some screens. In iteration 8 the sign-in screen gained a notice on the data mode (shared with everyone and fictional in the shared mode; kept in this browser in the local mode) and a link to the other mode; in the shared mode the header shows the server time instead of the demo clock, and <em>Demo tools</em> shows the server time read-only, offers a reset of the demo data for everyone with a confirmation and a switch to the local demonstration mode; and the owner's approval card can show the part-time warning of FR-24. The availability section of <em>Me</em> (Figure 16) was removed after the interim stage together with UC-02. The final report shows the current screens.</p>
 
 <figure class="shot">
   <img src="img/interim/ui-01-signin.png" alt="Demo sign-in page with a three-step tour and the list of accounts">
@@ -738,7 +762,7 @@
 <tr><td>Pay, Weekly</td><td>Owner</td><td>UC-08</td><td>19</td></tr>
 <tr><td>Pay, Monthly</td><td>Owner</td><td>UC-09</td><td>20</td></tr>
 <tr><td>Settings</td><td>Owner</td><td>UC-10</td><td>22</td></tr>
-<tr><td>Demo tools</td><td>All</td><td>Demo clock and data reset (drives UC-11)</td><td>&ndash;</td></tr>
+<tr><td>Demo tools</td><td>All</td><td>Demo clock and data reset (drives UC-11); in the shared mode server time, reset for everyone and switch of the data mode (iteration 8)</td><td>&ndash;</td></tr>
 <tr><td>(no screen; runs on every screen change)</td><td>System Clock</td><td>UC-11</td><td>&ndash;</td></tr>
   </tbody>
 </table>
@@ -749,6 +773,14 @@
 
 <h2>9.1 Requirements review</h2>
 <p>Two kinds of review are used. First, an internal review: the requirements lead's FR, NFR and business-rule tables are reviewed by the other two members against the problem statement and the scenarios. Second, a review with the owner of the reference store, in which the use cases are read out as scenarios in the owner's own terms and the owner is asked whether each step matches what they need. The owner's answers to interview question 6 (Section 3) decide the default of the BR-06 policy for the reference store; the system keeps both options in any case.</p>
+<p>The internal review of the documents is carried out on the project hub, the project page that collects the deliverables and shows each document in a preview. Since iteration 8 the proposal, this interim report and the final report are editable documents on the hub, so that the three members can review the same text and record every change. The team can:</p>
+<ul>
+  <li><strong>edit</strong> the English text of a document in the preview (<em>편집</em>) and <strong>save</strong> it as a new version with the editor's name (<em>저장</em>). No version is ever deleted. A version saved on the current version becomes the next one (v2, v3, &hellip;); a version saved on an older version, or after another member has saved in the meantime, is kept as a branch with its own label (v1.1, v1.1.1, &hellip;), so that no work is overwritten. The change history (<em>변경 이력</em>) lists every version with its label, author and time;</li>
+  <li><strong>compare and restore</strong> versions: viewing a version highlights what changed against its parent version, with the number of changes and a button that moves to the next change, and restoring an earlier version creates a new current version with the old content. The highlights are not part of the document;</li>
+  <li><strong>read a Korean translation</strong> with the switch EN | 한국어, which shows a stored Korean translation of the displayed version, read-only; if a version has no stored translation yet, a browser with a built-in translation function can create one, which is then stored for everyone;</li>
+  <li><strong>save the document as a PDF</strong> (<em>PDF 저장</em>), printed without highlights and without the header and footer that the browser would otherwise add.</li>
+</ul>
+<p>Because the hub has no accounts, anyone may read the versions, writing is possible only through database functions that keep the history append-only, all stored and displayed content passes through an HTML sanitiser, saves and restores are limited to ten a minute and 100 a day per document, and the size of a version is capped per document: 300&nbsp;kB for the proposal, 400&nbsp;kB for the interim report and 1.5&nbsp;MB for the final report. The version history makes the review itself traceable: each comment that leads to a change of a requirement can be followed from the reviewed version to the changed one.</p>
 <table>
   <caption>Table 22. Validation checklist (Chapter 8)</caption>
   <thead><tr><th>Property</th><th>Question</th><th>How we check it</th></tr></thead>
@@ -756,13 +788,13 @@
     <tr><td>Validity</td><td>Does the system provide the functions that best support the owner's and workers' needs?</td><td>Each problem P1&ndash;P3 is traced to goals and FRs (P1 &rarr; FR-06&ndash;FR-10, FR-21; P2 &rarr; FR-11, FR-12, FR-14; P3 &rarr; FR-15, FR-16). Review with the owner.</td></tr>
     <tr><td>Consistency</td><td>Are there conflicting requirements?</td><td>All documents use one specification as single source of truth. State diagrams are checked against the scenarios (Section 7.3).</td></tr>
     <tr><td>Completeness</td><td>Are all required functions included?</td><td>Every FR maps to at least one UC, every UC to at least one screen (Table 21), and every BR to at least one test group (Table 23).</td></tr>
-    <tr><td>Realism</td><td>Can the requirements be implemented with the available time and technology?</td><td>MoSCoW priorities; Must requirements form increment 1. Won't list fixed in the proposal. Client-only architecture needs no server budget.</td></tr>
+    <tr><td>Realism</td><td>Can the requirements be implemented with the available time and technology?</td><td>MoSCoW priorities; Must requirements form increment 1. Won't list fixed in the proposal. A static application and a hosted database on a free plan need no paid hosting (risk R6 and NFR-16 cover the pausing of the database).</td></tr>
     <tr><td>Verifiability</td><td>Can each requirement be checked?</td><td>Each NFR has a verification method (Table 19). Each FR is stated with a single observable outcome; business rules have numeric boundaries (15 h, 40 h, 5 employees, 90&nbsp;%, 3 months, 365 days).</td></tr>
   </tbody>
 </table>
 
 <h2>9.2 Prototyping</h2>
-<p>The screens of Section 8 form a working prototype on the demo data. The prototype is used in two ways. The team walks through scenarios S1 to S7 on it and records each step where the screen does not match the use-case description. The owner and the two co-workers are each asked to perform one task: the owner approves the request of scenario S3, one co-worker creates the request of S1, and the other accepts it from <em>Home</em> as in S2. We observe whether each task can be completed without help and whether the approval card is understood. The results will be reported in the final report together with any requirement changed because of them.</p>
+<p>The screens of Section 8 form a working prototype on the demo data. The prototype is used in two ways. The team walks through scenarios S1 to S8 on it and records each step where the screen does not match the use-case description. The owner and the two co-workers are each asked to perform one task: the owner approves the request of scenario S3, one co-worker creates the request of S1, and the other accepts it from <em>Home</em> as in S2. We observe whether each task can be completed without help and whether the approval card is understood. The results will be reported in the final report together with any requirement changed because of them.</p>
 
 <h2>9.3 Test-case generation</h2>
 <p>Chapter 8 recommends writing tests for requirements as a way to find requirements that are ambiguous or cannot be tested. We derived one test group per business rule before implementation. The test groups make three boundaries of the requirements explicit: the 15-hour boundary is inclusive (tested at 14.99 h and 15 h), the holiday hours are capped at 40 contractual hours, and shifts ending after midnight are counted with the end on the next day.</p>
@@ -775,31 +807,46 @@
     <tr><td class="req-id">BR-03</td><td class="req-id">TC-02x</td><td>Request validity (own shift, future, one open request, deadline)</td><td>&ndash;</td></tr>
     <tr><td class="req-id">BR-04</td><td class="req-id">TC-06x</td><td>Approval effect on the shift and the request</td><td>&ndash;</td></tr>
     <tr><td class="req-id">BR-05, BR-06, BR-07</td><td class="req-id">TC-08x</td><td>Holiday allowance at 14.99 h and 15 h, 40 h cap, both substitution policies, and the worked example (Choi Minho 3.2 h, KRW 33,024)</td><td>NFR-10</td></tr>
-    <tr><td class="req-id">BR-08</td><td class="req-id">TC-09x</td><td>Premium zero at 4 regular employees and non-zero at 5; night hours, including a shift that ends after midnight</td><td>NFR-10</td></tr>
+    <tr><td class="req-id">BR-08</td><td class="req-id">TC-09x</td><td>Premium zero at 4 regular employees and non-zero at 5; night hours, including a shift that ends after midnight; for part-time workers (iteration 8), hours beyond contract only with 0 &lt; C &lt; 40, the weekly test in chronological order across a month boundary, an hour counted once, and the worked example of S8</td><td>NFR-10</td></tr>
     <tr><td class="req-id">BR-09, BR-10</td><td class="req-id">TC-10x</td><td>Minimum-wage warning and each probation condition</td><td>NFR-10</td></tr>
     <tr><td class="req-id">BR-11</td><td class="req-id">TC-11x</td><td>Monthly payroll totals</td><td>&ndash;</td></tr>
     <tr><td class="req-id">BR-12</td><td class="req-id">TC-12x</td><td>Expiry at deadline and at shift start</td><td>&ndash;</td></tr>
+    <tr><td class="req-id">BR-15</td><td class="req-id">TC-15x</td><td>Part-time limit warning: 12 h beyond contract gives no warning, 13 h does; no warning with 4 regular employees (iteration 8)</td><td>NFR-10</td></tr>
   </tbody>
 </table>
 <p>The test groups are written as automated unit tests of the rule functions. Test results will be reported in the final report.</p>
 
 <h1 id="s10">10. Progress and next steps</h1>
 <p>Work package 3 of the WBS (requirements: elicitation and specification) is complete with this report, and the analysis diagrams of work package 4.1 are drawn. Work package 4.2 (UI design) has produced the screens of Section 8. Requirements validation continues with the review and prototype sessions of Section 9.</p>
-<p>The next steps follow the schedule of the proposal. By 2026-10-21 (Week 8) the team completes the design models of work package 4.1: the design class diagram and sequence diagrams SD-1 (request substitute), SD-2 (accept with a concurrent second acceptance), SD-3 (approve with weekly recomputation) and SD-4 (generate monthly payroll). The UI design (4.2) is finished by 2026-10-30, and prompt engineering (5.1) follows in Week 9. Increment 1 (Must use cases) is due at the end of Week 10 (2026-11-06) and increment 2 (Should use cases) at the end of Week 11 (2026-11-13). The system is deployed to GitHub Pages in Week 12 (2026-11-16 to 11-20). The final report, slides and presentation are due in Week 14 (2026-12-04).</p>
+<p>The prototype is developed in iterations, each of which starts with a change to the project specification. Iteration 8 (2026-09-29) carried the revision of the proposal into the specification and the prototype. The shared database is in place: the tables, row triggers and database functions of the shared mode are set up in the Supabase project, the scheduled keep-alive job runs every six hours, and the local demonstration mode remains available as the fallback. The part-time overtime rule is implemented as BR-08 (iv) with the warning of BR-15 and FR-24. At the end of iteration 8 all 125 automated unit and integration tests pass, the automated screen check in the local demonstration mode passes 154 of 154 checks, a check with two browsers on a throwaway store passes 12 of 12, and the REST test of the shared database passes 64 of 64 checks. The documents are reviewed on the project hub as described in Section 9.1.</p>
+<p>The next steps follow the schedule of the proposal. By 2026-10-21 (Week 8) the team completes the design models of work package 4.1: the design class diagram and sequence diagrams SD-1 (request substitute), SD-2 (accept with a concurrent second acceptance), SD-3 (approve with weekly recomputation) and SD-4 (generate monthly payroll). The UI design (4.2) is finished by 2026-10-30, and prompt engineering (5.1) follows in Week 9. The shared database with its keep-alive job, planned for Week 9 (WBS 5.2.3) before increment 1 is built, was set up ahead of that schedule in iteration 8. Until grading ends, the team checks the public URL every week and before every submission (WBS 1.1.2, risk R6). Increment 1 (Must use cases) is due at the end of Week 10 (2026-11-06) and increment 2 (Should use cases) at the end of Week 11 (2026-11-13). The system is deployed to GitHub Pages in Week 12 (2026-11-16 to 11-20). The final report, slides and presentation are due in Week 14 (2026-12-04).</p>
 
 <h1 id="refs">References</h1>
 <ol class="small">
   <li>Ministry of Employment and Labor, &ldquo;2026 minimum wage KRW 10,320 per hour,&rdquo; MOEL notice, Aug. 2025. https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144</li>
   <li>Korea Policy Briefing, &ldquo;2026년 시간당 최저임금 10,320원.&rdquo; https://www.korea.kr/news/policyNewsView.do?newsId=148956812</li>
-  <li>Labor Standards Act (근로기준법), Art. 11, 18, 55, 56; Enforcement Decree Art. 30. https://www.law.go.kr</li>
-  <li>Minimum Wage Act (최저임금법), Art. 5 &#9313;; Enforcement Decree Art. 3. https://www.law.go.kr</li>
-  <li>Easy-Law (찾기쉬운 생활법령정보), part-time workers' rest and holidays. https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&amp;csmSeq=896&amp;ccfNo=2&amp;cciNo=3&amp;cnpClsNo=1</li>
+  <li>Labor Standards Act (근로기준법), Art. 11, 18, 55, 56; Enforcement Decree Art. 30. https://www.law.go.kr/법령/근로기준법</li>
+  <li>Easy-Law (찾기쉬운 생활법령정보), &ldquo;기간제 및 단시간근로자: 「근로기준법」 적용의 특례&rdquo; (paid holidays of part-time workers and the 15-hour threshold). https://www.easylaw.go.kr/CSP/CnpClsMain.laf?csmSeq=1347&amp;ccfNo=3&amp;cciNo=2&amp;cnpClsNo=1</li>
+  <li>Minimum Wage Act (최저임금법), Art. 5 &#9313;; Enforcement Decree Art. 3. https://www.law.go.kr/법령/최저임금법</li>
   <li>D. A. Gustafson, <em>Schaum's Outline of Software Engineering</em>, McGraw-Hill, 2002.</li>
   <li>I. Sommerville, <em>Software Engineering</em>, 10th ed., Pearson, 2016.</li>
   <li>OMG, <em>Unified Modeling Language Specification</em>, v2.5.1, 2017.</li>
   <li>sql.js &mdash; SQLite compiled to WebAssembly. https://sql.js.org</li>
-  <li>Shift-scheduling products examined: Shiftee; 알바몬 근무관리; 알바천국 스케줄; When I Work; Homebase; Deputy.</li>
+  <li>Deputy Help Center, &ldquo;Allow team members to swap or offer shifts.&rdquo; https://help.deputy.com/hc/en-au/articles/4688726501135-Allow-team-members-to-swap-or-offer-shifts</li>
+  <li>When I Work Help Center, &ldquo;Getting your shifts covered.&rdquo; https://help.wheniwork.com/articles/getting-your-shifts-covered/</li>
+  <li>When I Work Help Center, &ldquo;Giving your team schedule flexibility.&rdquo; https://help.wheniwork.com/articles/giving-your-team-schedule-flexibility/</li>
+  <li>Homebase Support, help article on trading and covering shifts. https://support.joinhomebase.com/s/article/Trading-and-covering-shifts</li>
+  <li>Deputy Help Center, &ldquo;Manage different languages in the workplace with Deputy.&rdquo; https://help.deputy.com/hc/en-au/articles/4621854798223-Manage-different-languages-in-the-workplace-with-Deputy</li>
+  <li>Shiftee, &ldquo;시프티 200% 활용하기: 근무일정 수정 요청과 전자결재,&rdquo; Shiftee blog, 2019. https://shiftee.io/ko/blog/article/tipScheduleRequest</li>
+  <li>Shiftee Help Center, frequently asked question on the conditions under which the weekly holiday allowance is recognized. https://shiftee.io/ko/help</li>
+  <li>Shopl, &ldquo;아르바이트 직원마다 다른 근무 스케줄을 관리하는 방법,&rdquo; Shopl blog. https://www.shoplworks.com/blog-guides/managing-different-work-schedules-part-time-employees</li>
+  <li>Albami (알바미), service website. https://albame.co.kr/</li>
+  <li>Gig for owners (기그 사장님), app listings on Google Play and the App Store. https://play.google.com/store/apps/details?id=connectfit.logout.ceo; https://apps.apple.com/kr/app/id1523613072</li>
+  <li>Act on the Protection, etc. of Fixed-term and Part-time Employees (기간제 및 단시간근로자 보호 등에 관한 법률), Art. 3 &#9313;, Art. 6; Enforcement Decree Art. 2 and Annex 1. https://www.law.go.kr/법령/기간제및단시간근로자보호등에관한법률</li>
+  <li>Supabase Docs, &ldquo;Free project pausing.&rdquo; https://supabase.com/docs/guides/platform/free-project-pausing</li>
+  <li>GitHub Docs, &ldquo;Events that trigger workflows&rdquo; (schedule). https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows</li>
 </ol>
+<p class="small">Web pages were accessed on 29 September 2026.</p>
 
 </body>
 </html>
