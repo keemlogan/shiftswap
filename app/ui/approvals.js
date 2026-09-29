@@ -62,6 +62,7 @@ export function decisionCard(d, { primary }) {
       <h3 class="card-title" id="dec-${d.id}">${esc(t('owner.covers', { req: given(req.name), acc: given(acc.name), shift: fmtShift(d) }))}</h3>
       ${d.reason ? `<p class="muted">${esc(t('home.reason', { text: d.reason }))}</p>` : ''}
       <div class="effects">${effectLines(req, 'owner')}${effectLines(acc, 'owner')}</div>
+      ${acc.overtime && acc.overtime.warn ? `<p class="notice notice-warn">${icon('alert')}<span>${esc(t('owner.overtimeWarn', { name: given(acc.name), h: fmtHours(acc.overtime.beyondContract) }))}</span></p>` : ''}
       <div class="details is-hidden" id="details-${d.id}">${detailsTable(d)}</div>
       <div class="actions">
         ${button({ label: t('owner.approve'), kind: primary ? 'primary' : 'secondary', block: true, attrs: `data-approve="${d.id}" data-acc="${esc(given(acc.name))}" data-day="${esc(dayLong(d.workDate))}"` })}
@@ -84,18 +85,18 @@ export function openRequestCard(r, now) {
 }
 
 export function bindDecisionActions(view, ctx) {
-  view.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.decideRequest(Number(b.dataset.approve), 'APPROVED');
+      await ctx.run(() => svc.decideRequest(Number(b.dataset.approve), 'APPROVED'));
       ctx.toast(t('owner.approved', { acc: b.dataset.acc, day: b.dataset.day }));
       ctx.refresh();
     } catch (err) {
       ctx.fail(err);
     }
   }));
-  view.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.decideRequest(Number(b.dataset.reject), 'REJECTED');
+      await ctx.run(() => svc.decideRequest(Number(b.dataset.reject), 'REJECTED'));
       ctx.toast(t('owner.rejected', { req: b.dataset.req }));
       ctx.refresh();
     } catch (err) {

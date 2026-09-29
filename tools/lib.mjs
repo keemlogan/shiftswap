@@ -73,21 +73,39 @@ export async function chrome({ port = 9300 + Math.floor(Math.random() * 500) } =
   return { send, evaluate, problems, version, close: () => { ws.close(); proc.kill(); } };
 }
 
-/** App-level helpers on top of a page. */
-export function app(page, base) {
+/**
+ * App-level helpers on top of a page. mode 'local' (the default) uses the local demonstration mode with the demo clock;
+ * mode 'shared' uses the shared database, normally with a throwaway store (store: 'e2e-…').
+ */
+export function app(page, base, { mode = 'local', store = '' } = {}) {
   const { send, evaluate } = page;
+  const start = `${base}?mode=${mode}${store ? `&store=${encodeURIComponent(store)}` : ''}`;
   const api = {
     evaluate,
     async viewport(width, height = 900, scale = 1) {
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: width < 900 });
     },
-    /** Fresh seed: clear storage, set the language, reload on the sign-in screen. */
+    /** Fresh seed (local mode): clear storage, set the language, reload on the sign-in screen. */
     async fresh(lang = 'en') {
-      await send('Page.navigate', { url: `${base}#/login` });
-      await sleep(900);
+      await send('Page.navigate', { url: `${start}#/login` });
+      await api.ready();
       await evaluate(`localStorage.clear(); sessionStorage.clear(); localStorage.setItem('shiftswap.lang', '${lang}'); history.replaceState(null, '', '#/login')`);
       await send('Page.reload', { ignoreCache: true });
-      await sleep(1400);
+      await sleep(300);
+      await api.ready();
+    },
+    /** Wait until the app has drawn its first screen (the shared mode loads the store over the network first). */
+    async ready(timeout = 15000) {
+      const until = Date.now() + timeout;
+      while (Date.now() < until) {
+        await sleep(150);
+        const state = await evaluate(`document.readyState === 'complete' && !!document.querySelector('#view .signin, #view > *, .shared-failed')`).catch(() => false);
+        if (state) {
+          await sleep(250);
+          return;
+        }
+      }
+      throw new Error('the app did not start');
     },
     async go(hash) {
       await evaluate(`location.hash = ${JSON.stringify(hash)}`);
@@ -99,7 +117,7 @@ export function app(page, base) {
       await sleep(280);
     },
     async signIn(id, hash = '#/home') {
-      await evaluate(`document.getElementById('toast-root').innerHTML = ''; sessionStorage.setItem('shiftswap.user', '${id}')`);
+      await evaluate(`(document.getElementById('toast-root') || {}).innerHTML = ''; sessionStorage.setItem('shiftswap.user', '${id}')`);
       await api.go('#/login');
       await api.go(hash);
       await evaluate('dispatchEvent(new HashChangeEvent("hashchange"))');

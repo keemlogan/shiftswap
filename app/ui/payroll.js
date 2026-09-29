@@ -127,9 +127,9 @@ function renderMonth(view, ctx, week, month) {
       ${drafts.length ? button({ label: t('pay.remake'), kind: 'text', id: 'remake' }) : ''}
     </div>` : ''}`;
 
-  const make = () => {
+  const make = async () => {
     try {
-      svc.generatePayroll(month);
+      await ctx.run(() => svc.generatePayroll(month));
       ctx.toast(t('pay.drafted', { month: m }));
       ctx.go(`#/pay/month/${month}`);
     } catch (err) {
@@ -140,9 +140,9 @@ function renderMonth(view, ctx, week, month) {
   if (makeBtn) makeBtn.addEventListener('click', make);
   const remake = view.querySelector('#remake');
   if (remake) remake.addEventListener('click', make);
-  view.querySelectorAll('[data-ack]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-ack]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.acknowledgeMinWage(month, Number(b.dataset.ack));
+      await ctx.run(() => svc.acknowledgeMinWage(month, Number(b.dataset.ack)));
       ctx.toast(t('pay.ackDone'));
       ctx.refresh();
     } catch (err) {
@@ -150,9 +150,9 @@ function renderMonth(view, ctx, week, month) {
     }
   }));
   const confirm = view.querySelector('#confirm');
-  if (confirm && !confirm.disabled) confirm.addEventListener('click', () => {
+  if (confirm && !confirm.disabled) confirm.addEventListener('click', async () => {
     try {
-      svc.confirmPayroll(month);
+      await ctx.run(() => svc.confirmPayroll(month));
       ctx.toast(t('pay.confirmed', { month: m }));
       ctx.refresh();
     } catch (err) {

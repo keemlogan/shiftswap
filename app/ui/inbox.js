@@ -26,8 +26,13 @@ export function render(view, ctx) {
         ${actionable(n, ctx.user) ? `<a class="btn btn-secondary btn-small" href="#/home">${esc(t('notif.open'))}${icon('chevronRight')}</a>` : ''}
       </li>`).join('')}</ul>` : emptyState(t('notif.empty'))}`;
   const readAll = view.querySelector('#read-all');
-  if (readAll && !readAll.disabled) readAll.addEventListener('click', () => {
-    svc.markNotificationsRead(ctx.user.id);
+  if (readAll && !readAll.disabled) readAll.addEventListener('click', async () => {
+    try {
+      await ctx.run(() => svc.markNotificationsRead(ctx.user.id));
+    } catch (err) {
+      ctx.fail(err);
+      return;
+    }
     ctx.toast(t('notif.readDone'));
     ctx.refresh();
   });

@@ -1,4 +1,6 @@
 // Data access: sql.js database, schema (spec §8), seed data (spec §10), persistence and tx().
+// Local demonstration mode keeps the database in localStorage; shared mode (iteration 8) keeps an in-memory replica of one
+// store of the shared database (loadTables/dumpTables, used by shared.js).
 import { seedWorkHistory } from './services.js';
 
 export const DB_KEY = 'shiftswap.db.v2';
@@ -32,6 +34,11 @@ CREATE TABLE MinimumWage (year INTEGER PRIMARY KEY, hourly INTEGER NOT NULL);
 CREATE TABLE Notification (id INTEGER PRIMARY KEY, workerId INTEGER NOT NULL REFERENCES Worker(id), subRequestId INTEGER REFERENCES SubRequest(id),
   kind TEXT NOT NULL, message TEXT NOT NULL, createdAt TEXT NOT NULL, readAt TEXT);
 `;
+
+/** The tables of spec §8 in dependency order; MinimumWage is keyed by year, the others by id. */
+export const TABLES = ['Workplace', 'Worker', 'FixedSchedule', 'Shift', 'SubRequest', 'SubRequestTarget', 'Attendance',
+  'WeeklySummary', 'Payroll', 'MinimumWage', 'Notification'];
+export const keyOf = (table) => (table === 'MinimumWage' ? 'year' : 'id');
 
 let SQLlib = null;
 let db = null;
@@ -87,6 +94,44 @@ export function resetDatabase() {
   db.run(SCHEMA);
   seedDatabase();
   persist();
+}
+
+/**
+ * Shared mode: replace the database by an in-memory replica built from rows ({Table: [row objects with the column
+ * names of the schema]}). Nothing is saved in the browser; unknown tables and columns are refused.
+ */
+export function loadTables(SQL, tables) {
+  const next = new SQL.Database();
+  next.run(SCHEMA);
+  next.run('BEGIN');
+  try {
+    for (const table of TABLES) {
+      const columns = new Set(next.exec(`PRAGMA table_info(${table})`)[0].values.map((c) => c[1]));
+      for (const row of tables[table] || []) {
+        const names = Object.keys(row);
+        const unknown = names.find((n) => !columns.has(n));
+        if (unknown) throw new Error(`Unknown column ${table}.${unknown}`);
+        next.run(`INSERT INTO ${table} (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`, names.map((n) => row[n]));
+      }
+    }
+    next.run('COMMIT');
+  } catch (err) {
+    next.close();
+    throw err;
+  }
+  if (db) db.close();
+  SQLlib = SQL;
+  storage = null;
+  depth = 0;
+  db = next;
+  return db;
+}
+
+/** Every row of every table ({Table: [rows]}, ordered by key): the state a shared-mode change set is computed from. */
+export function dumpTables() {
+  const out = {};
+  for (const table of TABLES) out[table] = all(`SELECT * FROM ${table} ORDER BY ${keyOf(table)}`);
+  return out;
 }
 
 function persist() {

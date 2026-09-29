@@ -70,9 +70,9 @@ export function myRequestCard(r, { now }) {
 
 /** Accept / Decline / Cancel handlers for the cards above. */
 export function bindRequestActions(view, ctx) {
-  view.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.respondToRequest(Number(b.dataset.accept), ctx.user.id, 'ACCEPTED');
+      await ctx.run(() => svc.respondToRequest(Number(b.dataset.accept), ctx.user.id, 'ACCEPTED'));
       ctx.toast(t('home.accepted', { day: b.dataset.day }));
       ctx.refresh();
     } catch (err) {
@@ -85,9 +85,9 @@ export function bindRequestActions(view, ctx) {
       } else ctx.fail(err);
     }
   }));
-  view.querySelectorAll('[data-decline]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-decline]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.respondToRequest(Number(b.dataset.decline), ctx.user.id, 'DECLINED');
+      await ctx.run(() => svc.respondToRequest(Number(b.dataset.decline), ctx.user.id, 'DECLINED'));
       ctx.toast(t('home.declined'));
       ctx.refresh();
     } catch (err) {
@@ -97,9 +97,9 @@ export function bindRequestActions(view, ctx) {
       } else ctx.fail(err);
     }
   }));
-  view.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.cancelRequest(Number(b.dataset.cancel), ctx.user.id);
+      await ctx.run(() => svc.cancelRequest(Number(b.dataset.cancel), ctx.user.id));
       ctx.toast(t('swaps.cancelled'));
       ctx.refresh();
     } catch (err) {
@@ -111,9 +111,9 @@ export function bindRequestActions(view, ctx) {
 
 /** 확인했어요 on a FAILED card (worker or owner, BR-13): marks that one notification read. */
 export function bindFailedAck(view, ctx) {
-  view.querySelectorAll('[data-ack-failed]').forEach((b) => b.addEventListener('click', () => {
+  view.querySelectorAll('[data-ack-failed]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      svc.markNotificationsRead(ctx.user.id, [Number(b.dataset.ackFailed)]);
+      await ctx.run(() => svc.markNotificationsRead(ctx.user.id, [Number(b.dataset.ackFailed)]));
       ctx.toast(t('failed.acked'));
       ctx.refresh();
     } catch (err) {
@@ -394,9 +394,9 @@ function flowStep3(view, ctx, draft, shift) {
     : `<p class="notice notice-warn">${icon('alert')}<span>${esc(t('flow.toNone'))}</span></p>`}
       </section>
     </div>`;
-  view.querySelector('#send').addEventListener('click', () => {
+  view.querySelector('#send').addEventListener('click', async () => {
     try {
-      const res = svc.createSubRequest({ shiftId: shift.id, requesterId: ctx.user.id, reason, deadline: draft.deadline });
+      const res = await ctx.run(() => svc.createSubRequest({ shiftId: shift.id, requesterId: ctx.user.id, reason, deadline: draft.deadline }));
       saveDraft({ result: { id: res.id, status: res.status, candidates: res.candidates.map((c) => c.name), shift: { workDate: shift.workDate, startTime: shift.startTime, endTime: shift.endTime } } });
       ctx.go('#/swaps/new/done');
     } catch (err) {

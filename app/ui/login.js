@@ -1,4 +1,5 @@
-// UC-13 Sign-in as a guided demo: a three-step tour plus the list of all accounts (prompt §2.2).
+// UC-13 Sign-in as a guided demo: a three-step tour plus the list of all accounts (prompt §2.2). In shared mode a notice
+// says that everyone who opens the page sees and changes the same fictional data (spec §9, iteration 8).
 import * as svc from '../core/services.js';
 import { contractHours } from '../core/rules.js';
 import { t, esc, dayName, getLang, displayName, initial } from './i18n.js';
@@ -35,7 +36,7 @@ function tourProgress(tour) {
   ];
 }
 
-export function render(view, { signIn, tour, resetDemo }) {
+export function render(view, { signIn, tour, resetDemo, shared = false, switchMode = () => {} }) {
   const accounts = svc.listWorkers().filter((w) => w.active);
   const done = tourProgress(tour);
   const current = done.indexOf(false);
@@ -51,6 +52,11 @@ export function render(view, { signIn, tour, resetDemo }) {
         <h1>${esc(t('login.title'))}</h1>
         <p class="purpose">${esc(t('login.sub'))}</p>
       </header>
+
+      <div class="notice mode-notice" role="note">${icon('info')}
+        <div><p>${esc(t(shared ? 'login.sharedNotice' : 'login.localNotice'))}</p>
+          ${button({ label: t(shared ? 'demo.toLocal' : 'demo.toShared'), kind: 'text', small: true, id: 'mode-switch' })}</div>
+      </div>
 
       <section class="card tour" aria-labelledby="tour-title">
         <div class="card-head">
@@ -108,10 +114,11 @@ export function render(view, { signIn, tour, resetDemo }) {
     signIn(steps[i].id, steps[i].hash);
   }));
   view.querySelectorAll('.account').forEach((b) => b.addEventListener('click', () => signIn(Number(b.dataset.id))));
+  view.querySelector('#mode-switch').addEventListener('click', () => switchMode(shared ? 'local' : 'shared'));
   const restart = view.querySelector('#restart');
   if (restart) restart.addEventListener('click', () => openSheet({
     title: t('demo.reset'),
-    body: `<p>${esc(t('demo.resetConfirm'))}</p><div class="row-2 sheet-actions">${button({ label: t('common.cancel'), attrs: 'data-close' })}${button({ label: t('demo.resetYes'), kind: 'danger', id: 'restart-yes' })}</div>`,
+    body: `<p>${esc(t(shared ? 'demo.resetSharedConfirm' : 'demo.resetConfirm'))}</p><div class="row-2 sheet-actions">${button({ label: t('common.cancel'), attrs: 'data-close' })}${button({ label: t('demo.resetYes'), kind: 'danger', id: 'restart-yes' })}</div>`,
     onMount: (panel, close) => {
       panel.querySelector('#restart-yes').addEventListener('click', () => { close(); resetDemo(); });
       panel.querySelectorAll('[data-close]').forEach((x) => x.addEventListener('click', close));

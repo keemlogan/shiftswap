@@ -178,15 +178,39 @@ function nightMinutes(s, e) {
   return windows.reduce((sum, [ws, we]) => sum + Math.max(0, Math.min(e, we) - Math.max(s, ws)), 0);
 }
 
+/** BR-08 (a): a worker with weekly contractual hours C (BR-06, the current fixed schedule) is part-time iff 0 < C < 40. */
+export function isPartTime(contractHours) {
+  return contractHours > 0 && contractHours < 40;
+}
+
 /**
  * BR-08: premium hours. Applies only if regularEmployees ≥ 5; then (i) daily hours beyond 8,
- * (ii) weekly hours beyond 40 not already counted in (i), (iii) night hours 22:00–06:00.
+ * (ii) weekly hours beyond 40 not already counted in (i), (iii) night hours 22:00–06:00 and (iv) for a part-time
+ * worker (rule (a), C = options.contractHours) the hours beyond C not already counted in (i) or (ii).
  * Night hours add to overtime hours. Each premium hour is paid +50 % of the wage.
+ * (iv), system rules (b)–(e): the test is weekly against C (b); the hours of an ISO week are taken in chronological
+ * order, a shift's hours on its work date, and every hour after the first C hours is beyond contract (c); an hour is
+ * counted once, so a day's overtime is the larger of its hours beyond 8 and its hours beyond contract, and hours
+ * counted in (ii) are not counted again (d); night hours are added separately (e).
+ * In a monthly payroll `month` ('YYYY-MM') is the payroll month and `context` the worker's shifts of the same ISO
+ * weeks on dates outside it: they only move where the first C hours end and are never paid (c). Without `month`,
+ * `context` is ignored. (i)–(iii) use `shifts` only.
  * @param {Array<{workDate:string,startTime:string,endTime:string}>} shifts worked intervals
+ * @param {number} regularEmployees
+ * @param {{contractHours?:number, month?:string|null, context?:Array<{workDate:string,startTime:string,endTime:string}>}} [options]
+ * @returns {{daily:number, weekly:number, night:number, partTime?:number, total:number}} `partTime` is (iv); a call
+ *   without options returns the (i)–(iii) result without the `partTime` key, exactly as before iteration 8
  */
-export function premiumHours(shifts, regularEmployees) {
-  const zero = { daily: 0, weekly: 0, night: 0, total: 0 };
-  if (regularEmployees < 5) return zero;
+export function premiumHours(shifts, regularEmployees, options) {
+  const { contractHours: contract = 0, month = null, context = [] } = options || {};
+  const result = (daily, weekly, night, partTime) => ({
+    daily: round2(daily),
+    weekly: round2(weekly),
+    night: round2(night),
+    ...(options ? { partTime: round2(partTime) } : {}),
+    total: round2(daily + weekly + night + partTime),
+  });
+  if (regularEmployees < 5) return result(0, 0, 0, 0);
   const byDay = new Map();
   let night = 0;
   for (const s of shifts) {
@@ -202,14 +226,47 @@ export function premiumHours(shifts, regularEmployees) {
     const wk = weekStartOf(date);
     byWeek.set(wk, (byWeek.get(wk) || 0) + hours - extra);
   }
+  const weeklyOf = new Map();
   let weekly = 0;
-  for (const regular of byWeek.values()) weekly += Math.max(0, regular - 40);
-  return {
-    daily: round2(daily),
-    weekly: round2(weekly),
-    night: round2(night),
-    total: round2(daily + weekly + night),
-  };
+  for (const [wk, regular] of byWeek) {
+    weeklyOf.set(wk, Math.max(0, regular - 40));
+    weekly += weeklyOf.get(wk);
+  }
+  let partTime = 0;
+  if (isPartTime(contract)) {
+    const hoursOf = new Map(byDay);
+    for (const s of month ? context : []) {
+      if (s.workDate.slice(0, 7) === month) continue;
+      const [a, b] = span(s.startTime, s.endTime);
+      hoursOf.set(s.workDate, (hoursOf.get(s.workDate) || 0) + (b - a) / 60);
+    }
+    const done = new Map(); // week → its hours before the current day
+    const beyond = new Map(); // week → hours beyond C on the paid days, less those counted in (i)
+    for (const date of [...hoursOf.keys()].sort()) {
+      const wk = weekStartOf(date);
+      const before = done.get(wk) || 0;
+      const upTo = before + hoursOf.get(date);
+      done.set(wk, upTo);
+      if (!byDay.has(date)) continue;
+      const overContract = Math.max(0, upTo - Math.max(contract, before));
+      const overEight = Math.max(0, byDay.get(date) - 8);
+      beyond.set(wk, (beyond.get(wk) || 0) + Math.max(0, overContract - overEight));
+    }
+    for (const [wk, hours] of beyond) partTime += Math.max(0, hours - weeklyOf.get(wk));
+  }
+  return result(daily, weekly, night, partTime);
+}
+
+/**
+ * BR-15 / FR-24: part-time weekly limit warning for the acceptor of a swap. S = `scheduledHours`, the acceptor's
+ * scheduled hours in the ISO week of the requested shift after the swap (WeeklySummary.scheduledHours), and
+ * C = `contractHours` (BR-06). Warn when regularEmployees ≥ 5, the acceptor is part-time (BR-08 (a)) and S − C > 12;
+ * exactly 12 hours beyond contract gives no warning. The warning never blocks the approval.
+ * @returns {{beyondContract:number, warn:boolean}} beyondContract = max(0, S − C), rounded to 2 decimals
+ */
+export function partTimeLimitCheck({ regularEmployees, contractHours: contract, scheduledHours }) {
+  const beyondContract = round2(Math.max(0, scheduledHours - contract));
+  return { beyondContract, warn: regularEmployees >= 5 && isPartTime(contract) && beyondContract > 12 };
 }
 
 /** BR-09: the minimum hourly wage of a year (the latest row not after that year). */
@@ -238,12 +295,17 @@ export function probationApplies(worker, date) {
  * times are the actual clock-in/out of WORKED shifts, or the scheduled times when no attendance
  * is recorded yet (estimated = true). `holidayWeeks` are the holiday-allowance hours of the weeks
  * whose Sunday falls in the month. Amounts are integers in KRW, rounded down.
+ * BR-08 (iv): `contractHours` is the worker's weekly contractual hours C, `month` the payroll month ('YYYY-MM') and
+ * `context` the worker's shifts (same form) of the month's first and last ISO weeks on dates outside the month;
+ * they only place the first C hours of those weeks and are not paid (see premiumHours).
  */
-export function computePayrollRow({ hourlyWage, shifts, holidayWeeks, regularEmployees, minimumHourly, probation }) {
+export function computePayrollRow({
+  hourlyWage, shifts, holidayWeeks, regularEmployees, minimumHourly, probation, contractHours: contract = 0, month = null, context = [],
+}) {
   const baseHours = round2(shifts.reduce((sum, s) => sum + durationHours(s.startTime, s.endTime), 0));
   const basePay = Math.floor(round2(baseHours * hourlyWage));
   const holidayPay = holidayWeeks.reduce((sum, h) => sum + Math.floor(round2(h * hourlyWage)), 0);
-  const premium = premiumHours(shifts, regularEmployees);
+  const premium = premiumHours(shifts, regularEmployees, { contractHours: contract, month, context });
   const premiumPay = Math.floor(round2(premium.total * hourlyWage * 0.5));
   const floor = minimumHourly == null ? 0 : (probation ? (minimumHourly * 9) / 10 : minimumHourly); // 9/10, not 0.9: 10,320 × 0.9 is not exactly 9,288 in floating point
   return {

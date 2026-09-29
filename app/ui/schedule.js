@@ -91,9 +91,9 @@ export function render(view, ctx) {
     b.setAttribute('aria-expanded', String(open));
   }));
   const gen = view.querySelector('#generate');
-  if (gen) gen.addEventListener('click', () => {
+  if (gen) gen.addEventListener('click', async () => {
     try {
-      const { created } = svc.generateWeek(week);
+      const { created } = await ctx.run(() => svc.generateWeek(week));
       ctx.toast(created ? t('schedule.generated', { n: created }) : t('schedule.generatedNone'));
       ctx.refresh();
     } catch (err) {
@@ -217,9 +217,9 @@ function openDetail(ctx, shiftId, week) {
             ${button({ label: t('detail.saveTime'), kind: 'primary', block: true, id: 'save-time' })}
           </form>`;
         const form = area.querySelector('#time-form');
-        area.querySelector('#save-time').addEventListener('click', () => {
+        area.querySelector('#save-time').addEventListener('click', async () => {
           try {
-            svc.editShift(d.id, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value });
+            await ctx.run(() => svc.editShift(d.id, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value }));
             close();
             ctx.toast(t('detail.changed'));
             ctx.go(`#/schedule/${weekStartOf(form.workDate.value)}`);
@@ -239,9 +239,9 @@ function openDetail(ctx, shiftId, week) {
             ${button({ label: t('detail.saveWorker'), kind: 'primary', block: true, id: 'save-worker' })}
           </form>`;
         const form = area.querySelector('#worker-form');
-        area.querySelector('#save-worker').addEventListener('click', () => {
+        area.querySelector('#save-worker').addEventListener('click', async () => {
           try {
-            svc.editShift(d.id, { workerId: Number(form.workerId.value) });
+            await ctx.run(() => svc.editShift(d.id, { workerId: Number(form.workerId.value) }));
             close();
             ctx.toast(t('detail.changed'));
             ctx.refresh();
@@ -252,9 +252,9 @@ function openDetail(ctx, shiftId, week) {
         form.workerId.focus();
       });
       const del = panel.querySelector('#act-delete');
-      if (del && !del.disabled) del.addEventListener('click', () => {
+      if (del && !del.disabled) del.addEventListener('click', async () => {
         try {
-          svc.editShift(d.id, { delete: true });
+          await ctx.run(() => svc.editShift(d.id, { delete: true }));
           close();
           ctx.toast(t('detail.deleted'));
           ctx.go(`#/schedule/${week}`);
@@ -286,9 +286,9 @@ function openAdd(ctx, week) {
       </form>`,
     onMount: (panel, close) => {
       const form = panel.querySelector('#add-form');
-      panel.querySelector('#add-save').addEventListener('click', () => {
+      panel.querySelector('#add-save').addEventListener('click', async () => {
         try {
-          svc.editShift(null, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value, workerId: Number(form.workerId.value) });
+          await ctx.run(() => svc.editShift(null, { workDate: form.workDate.value, startTime: form.startTime.value, endTime: form.endTime.value, workerId: Number(form.workerId.value) }));
           close();
           ctx.toast(t('detail.added'));
           ctx.refresh();

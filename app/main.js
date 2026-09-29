@@ -1,7 +1,11 @@
 // Bootstrap, header, navigation and hash router. Every route change first lets the System Clock expire
 // overdue requests (UC-11) and prepare last month's payroll draft (UC-14, BR-14).
+// Iteration 8 (spec §9): shared mode, the default, keeps the data in the shared database (core/shared.js) and uses the
+// server's time; the local demonstration mode (?mode=local) keeps them in this browser with the demo clock (v7).
 import { openDatabase, resetDatabase } from './core/db.js';
 import { attachClockStorage, now, setNow, advance, resetClock } from './core/clock.js';
+import { createGateway, restTransport } from './core/shared.js';
+import { SUPABASE_URL, SUPABASE_KEY, STORE } from './config.js';
 import * as svc from './core/services.js';
 import { t, esc, getLang, setLang, errorText, fmtClock, displayName, initial } from './ui/i18n.js';
 import { icon, openSheet, closeSheet, toast, button } from './ui/components.js';
@@ -21,6 +25,7 @@ const SCREENS = {
 const NAV_ICONS = { home: 'home', schedule: 'calendar', swaps: 'swap', me: 'user', staff: 'users', pay: 'pay' };
 const SESSION_KEY = 'shiftswap.user';
 const TOUR_KEY = 'shiftswap.tour.v1';
+const MODE_KEY = 'shiftswap.mode';
 
 const root = document.getElementById('app');
 let pendingToast = null;
@@ -47,6 +52,33 @@ function usable(getStore) {
 
 const local = usable(() => window.localStorage);
 const session = usable(() => window.sessionStorage);
+
+/** ?mode=local|shared chooses the mode and is remembered in this browser; shared is the default. */
+function chooseMode() {
+  const asked = new URLSearchParams(location.search).get('mode');
+  if (asked === 'local' || asked === 'shared') local.setItem(MODE_KEY, asked);
+  if (!SUPABASE_URL || !SUPABASE_KEY) return 'local';
+  return local.getItem(MODE_KEY) === 'local' ? 'local' : 'shared';
+}
+
+/** The demo store: config.js, or ?store= (used by the tests with a throwaway store). */
+function storeSlug() {
+  const asked = new URLSearchParams(location.search).get('store');
+  return asked && /^[a-z0-9][a-z0-9-]{0,39}$/.test(asked) ? asked : STORE;
+}
+
+const shared = chooseMode() === 'shared';
+let gateway = null; // shared mode: core/shared.js
+let pendingRender = false; // shared mode: another person changed the data; draw again when the user is idle
+let edited = false; // the user typed into the current screen
+
+function switchMode(next) {
+  local.setItem(MODE_KEY, next);
+  session.removeItem(SESSION_KEY);
+  const params = new URLSearchParams(location.search);
+  params.set('mode', next);
+  location.assign(`${location.pathname}?${params}#/login`);
+}
 
 function currentUser() {
   const id = Number(session.getItem(SESSION_KEY));
@@ -77,17 +109,36 @@ function markTour(step) {
   local.setItem(TOUR_KEY, JSON.stringify({ ...tourState(), [step]: true }));
 }
 
+/** System Clock duties before drawing; in shared mode they are paused for a minute after the server refused them. */
+function systemDuties() {
+  if (shared && !gateway.systemAllowed()) return;
+  try {
+    if (shared) svc.completeSharedSeed();
+    svc.expireOverdue();
+    svc.prepareMonthlyPayroll();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 function render() {
+  pendingRender = false;
+  edited = false;
   closeSheet();
-  svc.expireOverdue();
-  svc.prepareMonthlyPayroll();
+  systemDuties();
+  draw();
+  // Shared mode: save what the System Clock and the screens changed while drawing (a no-op when nothing changed).
+  if (shared) gateway.settle();
+}
+
+function draw() {
   document.documentElement.lang = getLang();
   const user = currentUser();
   const { name, args } = parseHash();
   if (!user) {
     if (name !== 'login') history.replaceState(null, '', '#/login');
     renderShell(null, 'login', false);
-    login.render(root.querySelector('#view'), { signIn, tour: tourState(), resetDemo });
+    login.render(root.querySelector('#view'), { signIn, tour: tourState(), resetDemo, shared, switchMode });
     document.title = `${t('login.title')} · ShiftSwap`;
     flushToast();
     return;
@@ -109,6 +160,8 @@ function render() {
       if (!err || !err.code) console.error(err);
       toast(errorText(err), 'alert');
     },
+    /** Every command goes through run(): shared mode saves its changes in the shared database (await it). */
+    run: shared ? (fn) => saving(gateway.command(fn)) : async (fn) => fn(),
     markTour,
   };
   try {
@@ -140,13 +193,70 @@ function signOut() {
   go('#/login');
 }
 
-function resetDemo() {
-  resetDatabase();
-  resetClock();
+async function resetDemo() {
+  if (shared) {
+    try {
+      await saving(gateway.reset());
+    } catch (err) {
+      toast(errorText(err), 'alert');
+      return;
+    }
+  } else {
+    resetDatabase();
+    resetClock();
+  }
   local.removeItem(TOUR_KEY);
   session.removeItem(SESSION_KEY);
-  pendingToast = { msg: t('demo.resetDone'), kind: 'ok' };
+  pendingToast = { msg: t(shared ? 'demo.resetSharedDone' : 'demo.resetDone'), kind: 'ok' };
   go('#/login');
+}
+
+/** Shared mode: the screen is busy while a change is being saved. */
+async function saving(promise) {
+  document.body.classList.add('is-saving');
+  root.setAttribute('aria-busy', 'true');
+  try {
+    return await promise;
+  } finally {
+    document.body.classList.remove('is-saving');
+    root.removeAttribute('aria-busy');
+  }
+}
+
+/** Shared mode: nothing open, typed or being saved, so the screen can be drawn again with the new data. */
+function idle() {
+  const active = document.activeElement;
+  const typing = active && root.contains(active) && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName);
+  return !document.getElementById('sheet-root').childElementCount && !typing && !edited
+    && !document.body.classList.contains('in-flow') && !gateway.busy();
+}
+
+function requestRender() {
+  pendingRender = true;
+  setTimeout(renderIfIdle, 0);
+}
+
+function renderIfIdle() {
+  if (pendingRender && idle()) render();
+}
+
+/** Shared mode, every second: draw pending changes, move the server clock in the header and expire requests on time. */
+function tick() {
+  renderIfIdle();
+  const chip = root.querySelector('#open-demo');
+  const when = fmtClock(now());
+  if (!chip || chip.querySelector('.num').textContent === when) return;
+  chip.querySelector('.num').textContent = when;
+  chip.setAttribute('aria-label', t('header.serverClock', { when }));
+  if (idle() && gateway.systemAllowed() && svc.expireOverdue()) render();
+}
+
+function startSharedTimers() {
+  const poll = () => { if (!document.hidden) gateway.poll().catch(() => {}); };
+  setInterval(poll, 10000);
+  setInterval(tick, 1000);
+  window.addEventListener('focus', poll);
+  document.addEventListener('visibilitychange', poll);
 }
 
 function navHtml(user, route) {
@@ -164,7 +274,7 @@ function renderShell(user, route, flow) {
     <header class="topbar">
       <a class="brand" href="#/${user ? 'home' : 'login'}">${esc(displayName(wp.name))}</a>
       <div class="top-actions">
-        <button type="button" class="clock-chip" id="open-demo" aria-label="${esc(t('header.clock', { when: fmtClock(now()) }))}">${icon('clock')}<span class="num">${esc(fmtClock(now()))}</span></button>
+        <button type="button" class="clock-chip" id="open-demo" aria-label="${esc(t(shared ? 'header.serverClock' : 'header.clock', { when: fmtClock(now()) }))}">${icon('clock')}<span class="num">${esc(fmtClock(now()))}</span></button>
         ${user ? `
         <a class="icon-btn bell" href="#/notifications" aria-label="${esc(unread ? t('header.bellCount', { n: unread }) : t('header.bell'))}" ${route === 'notifications' ? 'aria-current="page"' : ''}>${icon('bell')}${unread ? `<span class="badge num" aria-hidden="true">${unread}</span>` : ''}</a>
         <button type="button" class="person-btn" id="switch-person" aria-label="${esc(`${displayName(user.name)}, ${t('header.switch')}`)}">
@@ -190,8 +300,39 @@ function bindShell(user) {
   if (sw) sw.addEventListener('click', signOut);
 }
 
-/** Demo tools: the demo clock and the data reset (prompt §2.1). */
+/** Demo tools, shared mode: the server time (read-only), the reset for everyone and the switch to local mode. */
+function openSharedTools() {
+  openSheet({
+    title: t('demo.title'),
+    variant: 'popover',
+    body: `
+      <p class="muted">${esc(t('demo.sharedIntro'))}</p>
+      <p class="server-time"><span class="field-label">${esc(t('demo.serverTime'))}</span> <strong class="num">${esc(fmtClock(now()))}</strong></p>
+      <div class="divider"></div>
+      <div id="reset-area">${button({ label: t('demo.resetShared'), kind: 'text', id: 'reset-ask', iconName: 'alert' })}</div>
+      ${button({ label: t('demo.toLocal'), kind: 'text', id: 'mode-switch', iconName: 'swap' })}`,
+    onMount: (panel, close) => {
+      panel.querySelector('#mode-switch').addEventListener('click', () => switchMode('local'));
+      panel.querySelector('#reset-ask').addEventListener('click', () => {
+        const area = panel.querySelector('#reset-area');
+        area.innerHTML = `<div class="confirm-box" role="alert">
+          <p>${esc(t('demo.resetSharedConfirm'))}</p>
+          <div class="row-2">${button({ label: t('common.cancel'), id: 'reset-no' })}${button({ label: t('demo.resetYes'), kind: 'danger', id: 'reset-yes' })}</div>
+        </div>`;
+        area.querySelector('#reset-no').addEventListener('click', () => { close(); openDemoTools(); });
+        area.querySelector('#reset-yes').addEventListener('click', () => { close(); resetDemo(); });
+        area.querySelector('#reset-yes').focus();
+      });
+    },
+  });
+}
+
+/** Demo tools: the demo clock and the data reset (prompt §2.1); in shared mode openSharedTools. */
 function openDemoTools() {
+  if (shared) {
+    openSharedTools();
+    return;
+  }
   openSheet({
     title: t('demo.title'),
     variant: 'popover',
@@ -207,9 +348,12 @@ function openDemoTools() {
         </div>
       </form>
       <div class="divider"></div>
-      <div id="reset-area">${button({ label: t('demo.reset'), kind: 'text', id: 'reset-ask', iconName: 'alert' })}</div>`,
+      <div id="reset-area">${button({ label: t('demo.reset'), kind: 'text', id: 'reset-ask', iconName: 'alert' })}</div>
+      ${SUPABASE_URL ? button({ label: t('demo.toShared'), kind: 'text', id: 'mode-switch', iconName: 'swap' }) : ''}`,
     onMount: (panel, close) => {
       const input = panel.querySelector('#clock-input');
+      const modeSwitch = panel.querySelector('#mode-switch');
+      if (modeSwitch) modeSwitch.addEventListener('click', () => switchMode('shared'));
       panel.querySelector('#clock-apply').addEventListener('click', () => {
         const value = input.value.slice(0, 16);
         if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
@@ -272,14 +416,32 @@ function openMenu(user) {
 
 async function boot() {
   document.documentElement.lang = getLang();
+  document.body.classList.toggle('mode-shared', shared);
+  let SQL;
   try {
-    const SQL = await window.initSqlJs({ locateFile: (file) => `vendor/${file}` });
-    attachClockStorage(local);
-    openDatabase(SQL, local);
+    SQL = await window.initSqlJs({ locateFile: (file) => `vendor/${file}` });
+    if (!shared) {
+      attachClockStorage(local);
+      openDatabase(SQL, local);
+    }
   } catch (err) {
     console.error(err);
     root.innerHTML = `<p class="notice notice-alert" role="alert">${esc(t('app.loadFailed'))}</p>`;
     return;
+  }
+  if (shared) {
+    gateway = createGateway({ SQL, transport: restTransport({ url: SUPABASE_URL, key: SUPABASE_KEY }), store: storeSlug(), onReload: requestRender });
+    try {
+      await gateway.load();
+    } catch (err) {
+      console.error(err);
+      root.innerHTML = `<div class="shared-failed">
+        <p class="notice notice-alert" role="alert">${esc(t('app.sharedFailed'))}</p>
+        ${button({ label: t('app.openLocal'), kind: 'primary', block: true, href: '?mode=local#/login' })}</div>`;
+      return;
+    }
+    startSharedTimers();
+    root.addEventListener('input', (e) => { if (e.target.closest('#view')) edited = true; });
   }
   window.addEventListener('hashchange', render);
   render();

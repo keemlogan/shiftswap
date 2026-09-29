@@ -663,3 +663,12 @@ body.in-flow .toast-root, body:not(.signed-in) .toast-root { bottom: calc(var(--
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* Iteration 8, shared mode (spec §9): mode notice on the sign-in screen, server time, saving state */
+.mode-notice { color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+.mode-notice p { margin: 0; }
+.mode-notice .btn { margin: 2px 0 -10px -12px; color: var(--shift); white-space: normal; text-align: left; }
+.server-time { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0; }
+.shared-failed { display: flex; flex-direction: column; gap: 16px; max-width: 480px; margin: 48px auto; padding: 0 20px; }
+body.is-saving { cursor: progress; }
+body.is-saving #view, body.is-saving #sheet-root .sheet-body { pointer-events: none; opacity: 0.6; transition: opacity 0.15s 0.2s; }

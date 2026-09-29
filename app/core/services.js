@@ -5,7 +5,7 @@ import { now, addMinutes } from './clock.js';
 import {
   addDays, isoWeekday, weekStartOf, durationHours, overlaps, round2,
   isEligibleCandidate, hasNoTaker, validateRequest, contractHours, computeWeeklySummary,
-  minimumWageFor, probationApplies, computePayrollRow,
+  minimumWageFor, probationApplies, computePayrollRow, partTimeLimitCheck,
 } from './rules.js';
 
 /** A rule or validation failure. `code` is translated by the UI; `message` is the English text. */
@@ -192,11 +192,14 @@ function holidayPayOf(summary, workerId) {
 /**
  * FR-11 / NFR-13: the effect of handing `shiftId` from its current worker to `acceptorId` on the week of the
  * shift, for both people: summary before and after, holiday pay before and after, and whether eligibility changes.
+ * FR-24 / BR-15: the acceptor's row also has `overtime` = {beyondContract, warn}, the part-time weekly limit check
+ * of their week after the swap.
  */
 function swapEffect(shiftId, acceptorId) {
   const target = get('SELECT s.*, a.clockIn, a.clockOut FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id WHERE s.id = ?', [shiftId]);
   const weekStart = weekStartOf(target.workDate);
-  const policy = getWorkplace().subAttendancePolicy;
+  const wp = getWorkplace();
+  const policy = wp.subAttendancePolicy;
   const people = [
     { role: 'requester', id: target.workerId },
     { role: 'acceptor', id: acceptorId },
@@ -216,6 +219,9 @@ function swapEffect(shiftId, acceptorId) {
         before: { ...b, holidayPay: holidayPayOf(b, id) },
         after: { ...a, holidayPay: holidayPayOf(a, id) },
         eligibilityChanged: b.holidayEligible !== a.holidayEligible,
+        ...(role === 'acceptor' ? {
+          overtime: partTimeLimitCheck({ regularEmployees: wp.regularEmployees, contractHours: a.contractHours, scheduledHours: a.scheduledHours }),
+        } : {}),
       };
     }),
   };
@@ -847,6 +853,19 @@ function payrollDate(worker, first) {
 }
 
 /**
+ * BR-11: the worker's paid shifts from `from` to `to` (dates included): the actual clock-in/out of WORKED shifts,
+ * otherwise the scheduled times (estimated). ABSENT shifts are not paid.
+ */
+function payShifts(workerId, from, to) {
+  return all(
+    `SELECT s.*, a.clockIn, a.clockOut FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id
+     WHERE s.workerId = ? AND s.workDate BETWEEN ? AND ? AND s.status != 'ABSENT'`, [workerId, from, to])
+    .map((s) => (s.status === 'WORKED' && s.clockIn
+      ? { workDate: s.workDate, startTime: s.clockIn, endTime: s.clockOut, estimated: false }
+      : { workDate: s.workDate, startTime: s.startTime, endTime: s.endTime, estimated: true }));
+}
+
+/**
  * UC-09 / FR-15, FR-16, BR-11: build the DRAFT payroll of a month for every worker with shifts in it.
  * CONFIRMED rows are kept; DRAFT rows are replaced, so a regenerated draft needs a new acknowledgement.
  */
@@ -868,12 +887,7 @@ export function generatePayroll(yearMonth) {
     const workers = all("SELECT * FROM Worker WHERE role = 'WORKER' ORDER BY id");
     for (const w of workers) {
       if (get("SELECT id FROM Payroll WHERE workerId = ? AND yearMonth = ? AND status = 'CONFIRMED'", [w.id, yearMonth])) continue;
-      const shifts = all(
-        `SELECT s.*, a.clockIn, a.clockOut FROM Shift s LEFT JOIN Attendance a ON a.shiftId = s.id
-         WHERE s.workerId = ? AND s.workDate BETWEEN ? AND ? AND s.status != 'ABSENT'`, [w.id, first, last])
-        .map((s) => (s.status === 'WORKED' && s.clockIn
-          ? { workDate: s.workDate, startTime: s.clockIn, endTime: s.clockOut, estimated: false }
-          : { workDate: s.workDate, startTime: s.startTime, endTime: s.endTime, estimated: true }));
+      const shifts = payShifts(w.id, first, last);
       const holidayWeeks = all(
         `SELECT holidayHours FROM WeeklySummary WHERE workerId = ? AND weekStart IN (${weeks.map(() => '?').join(',') || "''"})`,
         [w.id, ...weeks]).map((r) => r.holidayHours);
@@ -885,6 +899,14 @@ export function generatePayroll(yearMonth) {
         regularEmployees: wp.regularEmployees,
         minimumHourly,
         probation: probationApplies(w, payrollDate(w, first)),
+        // BR-08 (iv): C from the current fixed schedule; the days of the month's first and last ISO weeks outside
+        // the month only place the first C hours of those weeks.
+        contractHours: contractHours(getFixedSchedules(w.id)),
+        month: yearMonth,
+        context: [
+          ...payShifts(w.id, weekStartOf(first), addDays(first, -1)),
+          ...payShifts(w.id, addDays(last, 1), addDays(weekStartOf(last), 6)),
+        ],
       });
       run(`INSERT INTO Payroll (workerId, yearMonth, baseHours, basePay, holidayPay, premiumPay, total, minWageWarning, estimated, status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
@@ -1098,11 +1120,36 @@ export function seedWorkHistory(lastDate = '2026-09-20', lastMonth = '2026-08') 
         confirmAttendance(shiftId);
       }
     }
+    seedPayrollHistory(lastMonth);
+  });
+}
+
+/**
+ * Spec §10: the payroll of every month from the first contract month to `lastMonth` generated, acknowledged (BR-09)
+ * and confirmed with the payroll services.
+ */
+export function seedPayrollHistory(lastMonth) {
+  return tx(() => {
+    const first = firstContractMonth();
+    if (!first) return;
     for (let month = first; month <= lastMonth; month = addMonths(month, 1)) {
       const rows = generatePayroll(month);
       if (!rows.length) continue;
       for (const p of rows) if (p.minWageWarning) acknowledgeMinWage(month, p.workerId);
       confirmPayroll(month);
     }
+  });
+}
+
+/**
+ * Spec §10, shared-mode seed: the template of the shared database has no Payroll rows. When a store has none, confirm
+ * the payroll of every month up to two months before `today` as the local seed does; BR-14 then prepares the previous
+ * month's draft. Returns true when the history was added.
+ */
+export function completeSharedSeed(today = now()) {
+  return tx(() => {
+    if (get('SELECT id FROM Payroll LIMIT 1')) return false;
+    seedPayrollHistory(addMonths(today.slice(0, 7), -2));
+    return true;
   });
 }

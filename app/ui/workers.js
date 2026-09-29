@@ -73,10 +73,10 @@ function renderDetail(view, ctx, w) {
     </form>`;
   const form = view.querySelector('#worker-form');
   bindSlotEditor(view.querySelector('#fixed-card'));
-  view.querySelector('#save-worker').addEventListener('click', () => {
+  view.querySelector('#save-worker').addEventListener('click', async () => {
     let id = w ? w.id : null;
     try {
-      id = svc.registerWorker({
+      id = await ctx.run(() => svc.registerWorker({
         id: w ? w.id : undefined,
         name: form.name.value,
         phone: form.phone.value,
@@ -86,14 +86,14 @@ function renderDetail(view, ctx, w) {
         probationEnd: form.probationEnd.value,
         simpleLabor: form.simpleLabor.checked,
         active: form.active.checked,
-      });
+      }));
     } catch (err) {
       showFormError(form, err);
       return;
     }
     const slots = readSlots(view.querySelector('#fixed-card'));
     try {
-      svc.saveFixedSchedule(id, slots);
+      await ctx.run(() => svc.saveFixedSchedule(id, slots));
     } catch (err) {
       if (!w) {
         // The worker was created; continue on their page so a second save does not create them again.

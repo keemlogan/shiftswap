@@ -21,6 +21,17 @@ function doyunSaturdayWithNoTaker() {
   return get("SELECT id FROM Shift WHERE workerId = 5 AND workDate = '2026-10-03'").id;
 }
 
+/**
+ * Demo walkthrough S10 (spec §10): the owner sets the number of regular employees (other settings kept), adds a shift
+ * for Minho on Fri 10-02 10:00–`end`, and Minho accepts Seoyeon's Wednesday request 1.
+ */
+function s10(regularEmployees, end = '18:00') {
+  const { workplace, minimumWages } = svc.getSettings();
+  svc.updateSettings({ ...workplace, regularEmployees, minimumWages });
+  svc.editShift(null, { workDate: '2026-10-02', startTime: '10:00', endTime: end, workerId: 3 });
+  svc.respondToRequest(1, 3, 'ACCEPTED');
+}
+
 // ---- Seed state (spec §10) ----
 
 test('TC-001 seed reproduces spec §10', () => {
@@ -373,6 +384,25 @@ test('TC-095 payroll premium is zero at 4 employees and non-zero at 5', () => {
   const seoyeon = svc.generatePayroll('2026-09').find((p) => p.workerId === 2);
   // Seoyeon's September shifts are 18:00-23:00: Wed 2, 9, 16, 23, 30 and Mon 7, 14, 21, 28 → 9 night hours.
   assert.equal(seoyeon.premiumPay, Math.floor(9 * 10500 * 0.5));
+});
+
+test('TC-09C S10 payroll at 5 employees: October pays Minho 13 h beyond contract and 1 night hour; September only night hours (BR-08 iv)', () => {
+  s10(5);
+  svc.decideRequest(1, 'APPROVED');
+  setNow('2026-10-04T09:00');
+  // Minho works the week of 09-28 as scheduled: Tue 5, Wed 5 (the swapped shift), Thu 5, Fri 8, Sat 6 = 29 h.
+  const week = all("SELECT * FROM Shift WHERE workerId = 3 AND workDate BETWEEN '2026-09-28' AND '2026-10-04' ORDER BY workDate");
+  assert.deepEqual(week.map((s) => s.workDate), ['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03']);
+  for (const s of week) {
+    svc.recordAttendance(s.id, 3, s.startTime, s.endTime);
+    svc.confirmAttendance(s.id);
+  }
+  // The first 16 h end one hour into Friday: 7 h Fri + 6 h Sat beyond contract, all in October, plus Thu 22:00-23:00.
+  const october = svc.generatePayroll('2026-10').find((p) => p.workerId === 3);
+  assert.deepEqual([october.baseHours, october.premiumPay, october.estimated], [19, Math.floor((13 + 1) * 10320 * 0.5), 0]);
+  // September's Tue 29 and Wed 30 stay within the first 16 h: only the night hours (Tue ×5, Thu ×4, Wed 30) are premium.
+  const september = svc.generatePayroll('2026-09').find((p) => p.workerId === 3);
+  assert.equal(september.premiumPay, Math.floor(10 * 10320 * 0.5));
 });
 
 // ---- TC-10x minimum wage in payroll ----
@@ -968,4 +998,34 @@ test('TC-145 demo walkthrough S9: confirmed Mar–Aug, clock to 10-01, September
   assert.equal(get("SELECT count(*) AS n FROM Payroll WHERE yearMonth = '2026-09'").n, 4);
   assert.equal(svc.listPayrollMonths().find((m) => m.yearMonth === '2026-09').status, 'CONFIRMED');
   assert.equal(svc.getOwnerHome().payrollReady, null);
+});
+
+// ---- TC-15x part-time weekly limit warning (BR-15, FR-24) ----
+
+test('TC-153 demo walkthrough S10: with 5 employees the preview shows Minho 24 → 29 h and warns of 13 h beyond contract (BR-15, FR-24)', () => {
+  s10(5);
+  const preview = svc.getApprovalPreview(1);
+  const minho = preview.rows.find((r) => r.role === 'acceptor');
+  assert.deepEqual([minho.name, minho.before.scheduledHours, minho.after.scheduledHours, minho.after.contractHours], ['Choi Minho', 24, 29, 16]);
+  assert.deepEqual(minho.overtime, { beyondContract: 13, warn: true });
+  // Only the acceptor is checked; the owner's Home decision card carries the same warning.
+  assert.equal('overtime' in preview.rows.find((r) => r.role === 'requester'), false);
+  assert.deepEqual(svc.getOwnerHome().decisions[0].rows.find((r) => r.role === 'acceptor').overtime, { beyondContract: 13, warn: true });
+  // The warning does not block the decision.
+  svc.decideRequest(1, 'APPROVED');
+  assert.equal(get('SELECT status FROM SubRequest WHERE id = 1').status, 'APPROVED');
+});
+
+test('TC-154 S10 with Friday 10:00-17:00: Minho 23 → 28 h is exactly 12 h beyond contract, no warning (BR-15)', () => {
+  s10(5, '17:00');
+  const minho = svc.getApprovalPreview(1).rows.find((r) => r.role === 'acceptor');
+  assert.deepEqual([minho.before.scheduledHours, minho.after.scheduledHours], [23, 28]);
+  assert.deepEqual(minho.overtime, { beyondContract: 12, warn: false });
+});
+
+test('TC-155 S10 with 4 regular employees: Minho 24 → 29 h, 13 h beyond contract, no warning (BR-15)', () => {
+  s10(4);
+  const minho = svc.getApprovalPreview(1).rows.find((r) => r.role === 'acceptor');
+  assert.deepEqual([minho.before.scheduledHours, minho.after.scheduledHours], [24, 29]);
+  assert.deepEqual(minho.overtime, { beyondContract: 13, warn: false });
 });

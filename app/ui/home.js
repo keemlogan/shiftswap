@@ -151,9 +151,13 @@ function renderOwner(view, ctx) {
   bindFailedAck(view, ctx);
   bindConfirmActions(view, ctx);
   const readyBtn = view.querySelector('[data-payroll-ready]');
-  if (readyBtn) readyBtn.addEventListener('click', () => {
+  if (readyBtn) readyBtn.addEventListener('click', async () => {
     // UC-14: opening the draft is what "read" means for this notification.
-    svc.markNotificationsRead(ctx.user.id, [Number(readyBtn.dataset.payrollReady)]);
+    try {
+      await ctx.run(() => svc.markNotificationsRead(ctx.user.id, [Number(readyBtn.dataset.payrollReady)]));
+    } catch (err) {
+      ctx.fail(err);
+    }
     ctx.go(`#/pay/month/${readyBtn.dataset.month}`);
   });
 }

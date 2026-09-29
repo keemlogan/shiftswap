@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   overlaps, durationHours, weekStartOf, isEligibleCandidate, hasNoTaker, validateRequest, contractHours,
   computeWeeklySummary, holidayHours, premiumHours, minimumWageFor, probationApplies, computePayrollRow,
+  isPartTime, partTimeLimitCheck,
 } from '../app/core/rules.js';
 
 const wedShift = { workDate: '2026-09-30', startTime: '18:00', endTime: '23:00' };
@@ -158,6 +159,83 @@ test('TC-094 weekly hours beyond 40 not already counted as daily overtime', () =
   assert.equal(p.night, 0);
 });
 
+/** A part-time week of 14 h: Mon 5, Wed 5, Fri 4. */
+const partWeek = [
+  { workDate: '2026-09-28', startTime: '10:00', endTime: '15:00' },
+  { workDate: '2026-09-30', startTime: '10:00', endTime: '15:00' },
+  { workDate: '2026-10-02', startTime: '10:00', endTime: '14:00' },
+];
+
+test('TC-096 part-time with C = 10 and 5 employees: 14 h in the week are 4 h beyond contract; none with 4 employees (BR-08 iv b)', () => {
+  assert.deepEqual(premiumHours(partWeek, 5, { contractHours: 10 }), { daily: 0, weekly: 0, night: 0, partTime: 4, total: 4 });
+  assert.deepEqual(premiumHours(partWeek, 4, { contractHours: 10 }), { daily: 0, weekly: 0, night: 0, partTime: 0, total: 0 });
+  // The test is weekly: 5 h on the next Monday start a new week and stay within its first 10 hours.
+  const twoWeeks = [...partWeek, { workDate: '2026-10-05', startTime: '10:00', endTime: '15:00' }];
+  assert.equal(premiumHours(twoWeeks, 5, { contractHours: 10 }).partTime, 4);
+});
+
+test('TC-097 no hours beyond contract without a fixed schedule (C = 0) or with C >= 40 (BR-08 iv a)', () => {
+  const zero = { daily: 0, weekly: 0, night: 0, partTime: 0, total: 0 };
+  assert.deepEqual(premiumHours(partWeek, 5, { contractHours: 40 }), zero);
+  assert.deepEqual(premiumHours(partWeek, 5, { contractHours: 0 }), zero);
+  assert.deepEqual([isPartTime(0), isPartTime(0.5), isPartTime(39.99), isPartTime(40)], [false, true, true, false]);
+});
+
+test('TC-098 an hour is counted once: a 10 h day with C = 5 is 2 h beyond 8 plus 3 h more beyond contract (BR-08 iv d)', () => {
+  const p = premiumHours([{ workDate: '2026-09-29', startTime: '10:00', endTime: '20:00' }], 5, { contractHours: 5 });
+  // The day's overtime is the larger of 2 h beyond 8 and 5 h beyond contract: 5 h, not 7 h.
+  assert.deepEqual(p, { daily: 2, weekly: 0, night: 0, partTime: 3, total: 5 });
+});
+
+test('TC-099 night hours are added separately to hours beyond contract, also on an overnight shift (BR-08 iv e)', () => {
+  const week = [
+    { workDate: '2026-09-28', startTime: '18:00', endTime: '23:00' },
+    { workDate: '2026-09-30', startTime: '18:00', endTime: '23:00' },
+    { workDate: '2026-10-02', startTime: '19:00', endTime: '23:00' },
+  ];
+  // Friday's 4 h are beyond C = 10; each day's 22:00-23:00 is a night hour as well.
+  assert.deepEqual(premiumHours(week, 5, { contractHours: 10 }), { daily: 0, weekly: 0, night: 3, partTime: 4, total: 7 });
+  // Mon 5 h, then Tue 22:00-06:00 (8 h on its work date): 3 h beyond contract, 9 night hours.
+  const overnight = [week[0], { workDate: '2026-09-29', startTime: '22:00', endTime: '06:00' }];
+  assert.deepEqual(premiumHours(overnight, 5, { contractHours: 10 }), { daily: 0, weekly: 0, night: 9, partTime: 3, total: 12 });
+});
+
+test('TC-09A S10 worked example across the month boundary: 13 h beyond contract in October, premium 72,240 won (BR-08 iv c)', () => {
+  const sep = [
+    { workDate: '2026-09-29', startTime: '18:00', endTime: '23:00' },
+    { workDate: '2026-09-30', startTime: '18:00', endTime: '23:00' },
+  ];
+  const oct = [
+    { workDate: '2026-10-01', startTime: '18:00', endTime: '23:00' },
+    { workDate: '2026-10-02', startTime: '10:00', endTime: '18:00' },
+    { workDate: '2026-10-03', startTime: '12:00', endTime: '18:00' },
+  ];
+  // Tue 5, Wed 5, Thu 5: the 16 contractual hours end one hour into Friday, so 7 h Fri + 6 h Sat are beyond contract.
+  const october = { daily: 0, weekly: 0, night: 1, partTime: 13, total: 14 };
+  assert.deepEqual(premiumHours(oct, 5, { contractHours: 16, month: '2026-10', context: sep }), october);
+  // Context days inside the month are ignored: they are already in the shifts.
+  assert.deepEqual(premiumHours(oct, 5, { contractHours: 16, month: '2026-10', context: [...sep, oct[0]] }), october);
+  // September's days of that week stay within the first 16 hours; October's days only follow them.
+  assert.deepEqual(premiumHours(sep, 5, { contractHours: 16, month: '2026-09', context: oct }),
+    { daily: 0, weekly: 0, night: 2, partTime: 0, total: 2 });
+  // Without the month the context is ignored: October's 19 h alone are 3 h beyond contract.
+  assert.equal(premiumHours(oct, 5, { contractHours: 16, context: sep }).partTime, 3);
+  const row = computePayrollRow({
+    hourlyWage: 10320, shifts: oct, holidayWeeks: [], regularEmployees: 5, minimumHourly: 10320, probation: false,
+    contractHours: 16, month: '2026-10', context: sep,
+  });
+  // 13 × 10,320 × 0.5 = 67,080 beyond contract + 1 night hour × 5,160.
+  assert.equal(row.premiumPay, 72240);
+});
+
+test('TC-09B hours counted as weekly overtime (ii) are not counted again as beyond contract (BR-08 iv d)', () => {
+  // TC-094's week (Mon-Fri 8 h, Sat 10 h = 50 h) for C = 30: 20 h beyond contract, each counted once.
+  const days = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03'];
+  const shifts = days.map((d) => ({ workDate: d, startTime: '09:00', endTime: '17:00' }));
+  shifts[5] = { workDate: '2026-10-03', startTime: '09:00', endTime: '19:00' };
+  assert.deepEqual(premiumHours(shifts, 5, { contractHours: 30 }), { daily: 2, weekly: 8, night: 0, partTime: 10, total: 20 });
+});
+
 // ---- TC-10x minimum wage & probation (BR-09/10) ----
 
 const wages = [{ year: 2025, hourly: 10030 }, { year: 2026, hourly: 10320 }];
@@ -237,4 +315,22 @@ test('TC-113 fractional amounts are rounded down to the won', () => {
   assert.equal(row.baseHours, 0.33);
   assert.equal(row.basePay, 3300);
   assert.equal(row.holidayPay, 13301);
+});
+
+// ---- TC-15x part-time weekly limit warning (BR-15, FR-24) ----
+
+test('TC-151 12 h beyond contract gives no warning; 12.5 h and 13 h do (BR-15)', () => {
+  const check = (scheduledHours) => partTimeLimitCheck({ regularEmployees: 5, contractHours: 16, scheduledHours });
+  assert.deepEqual(check(28), { beyondContract: 12, warn: false });
+  assert.deepEqual(check(28.5), { beyondContract: 12.5, warn: true });
+  assert.deepEqual(check(29), { beyondContract: 13, warn: true });
+  assert.deepEqual(check(10), { beyondContract: 0, warn: false });
+  // S − C is compared on 2 decimals: 28.1 − 16.1 is exactly 12 h, not 12.000000000000002.
+  assert.deepEqual(partTimeLimitCheck({ regularEmployees: 5, contractHours: 16.1, scheduledHours: 28.1 }), { beyondContract: 12, warn: false });
+});
+
+test('TC-152 no warning with 4 regular employees, with C >= 40 or without a fixed schedule (C = 0) (BR-15, BR-08 a)', () => {
+  assert.deepEqual(partTimeLimitCheck({ regularEmployees: 4, contractHours: 16, scheduledHours: 29 }), { beyondContract: 13, warn: false });
+  assert.deepEqual(partTimeLimitCheck({ regularEmployees: 5, contractHours: 40, scheduledHours: 53 }), { beyondContract: 13, warn: false });
+  assert.deepEqual(partTimeLimitCheck({ regularEmployees: 5, contractHours: 0, scheduledHours: 13 }), { beyondContract: 13, warn: false });
 });

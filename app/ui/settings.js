@@ -60,9 +60,9 @@ export function render(view, ctx) {
     if (b) b.closest('li').remove();
   });
   const numOrNaN = (v) => (v === '' ? NaN : Number(v));
-  view.querySelector('#save-settings').addEventListener('click', () => {
+  view.querySelector('#save-settings').addEventListener('click', async () => {
     try {
-      svc.updateSettings({
+      await ctx.run(() => svc.updateSettings({
         name: form.name.value,
         regularEmployees: numOrNaN(form.regularEmployees.value),
         subAttendancePolicy: (form.querySelector('input[name="subAttendancePolicy"]:checked') || {}).value,
@@ -70,7 +70,7 @@ export function render(view, ctx) {
           year: numOrNaN(li.querySelector('[name="year"]').value),
           hourly: numOrNaN(li.querySelector('[name="hourly"]').value),
         })),
-      });
+      }));
       ctx.toast(t('settings.saved'));
       ctx.refresh();
     } catch (err) {

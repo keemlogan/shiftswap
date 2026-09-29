@@ -22,9 +22,9 @@ export function openRecordSheet(ctx, shift) {
       </form>`,
     onMount: (panel, close) => {
       const form = panel.querySelector('#record-form');
-      panel.querySelector('#record-save').addEventListener('click', () => {
+      panel.querySelector('#record-save').addEventListener('click', async () => {
         try {
-          svc.recordAttendance(shift.id, ctx.user.id, form.clockIn.value, form.clockOut.value);
+          await ctx.run(() => svc.recordAttendance(shift.id, ctx.user.id, form.clockIn.value, form.clockOut.value));
           close();
           ctx.toast(t('record.saved'));
           ctx.refresh();
@@ -67,9 +67,9 @@ export function confirmCard(s, { primary }) {
 }
 
 export function bindConfirmActions(view, ctx) {
-  const act = (fn, msg) => {
+  const act = async (fn, msg) => {
     try {
-      fn();
+      await ctx.run(fn);
       ctx.toast(msg);
       ctx.refresh();
     } catch (err) {
