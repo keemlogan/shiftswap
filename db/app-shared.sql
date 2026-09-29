@@ -11,6 +11,8 @@
 -- select public.app_reset_store(id); to delete one, in one transaction: select set_config('app.seeding', 'on', true);
 -- delete from public.app_store where slug = '…' (the row triggers would refuse the cascaded deletes otherwise).
 -- Apply with: node run.mjs -f db/app-shared.sql (the file is idempotent).
+-- Client settings of the shared mode (public by design; app/config.js): URL https://dbahxuegxnqsthntpuqy.supabase.co,
+-- publishable key sb_publishable_Efbr07Evn3lAJUKUqmZWmg_EvWp5DkY, demo store 'dalbit'.
 
 create table if not exists public.app_store (
   id bigint generated always as identity primary key,

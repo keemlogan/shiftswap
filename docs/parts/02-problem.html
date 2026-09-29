@@ -9,7 +9,7 @@
 <p>The requirements were drawn from one real workplace, a small café where Hyewon Kim works part-time. To protect the store and its staff, the report does not name the store; the demonstration data of the system uses a fictitious café, Dalbit Café (달빛카페), with one owner and four part-time workers, which has the same structure. The real store has the following characteristics, which are typical of the stores the system targets:</p>
 
 <ul>
-  <li>fewer than ten part-time workers; whether the store reaches five regular employees, the threshold for premium pay (Section 2.3.3), depends on how many workers it employs at a given time, so the system treats the number as a setting;</li>
+  <li>fewer than ten part-time workers; whether the store reaches five regular employees, the threshold for premium pay (Sections 2.3.3 and 2.3.5), depends on how many workers it employs at a given time, so the system treats the number as a setting;</li>
   <li>the owner acts as the manager, sets the schedule and pays the wages; there is no separate HR or payroll staff;</li>
   <li>each worker has a fixed weekly pattern of shifts written in the employment contract, and the pattern changes rarely;</li>
   <li>the schedule is kept in a spreadsheet maintained by the owner, and messages about substitutes are sent by phone call or personal message;</li>
@@ -112,7 +112,7 @@
 
 <h3 id="ch2-p3">P3. Legal pay rules are applied from memory, so errors are not caught before payday</h3>
 
-<p>The weekly holiday allowance, the minimum wage, the five-employee threshold for premium pay and the probation reduction are all conditional rules with numeric thresholds (Section 2.3). In the reference store they are applied from memory at month end. Errors that this practice allows include paying a holiday allowance to a worker below 15 contractual hours, not paying it to a worker at or above the threshold, continuing to pay the previous year's minimum wage after 1 January, and applying the 90 % probation rate to a worker whose contract does not qualify for it. Because no check is made before the transfer, these errors are discovered, if at all, only when a worker complains.</p>
+<p>The weekly holiday allowance, the minimum wage, the five-employee threshold for premium pay, the limit on work of part-time workers beyond their contractual hours and the probation reduction are all conditional rules with numeric thresholds (Section 2.3). In the reference store they are applied from memory at month end. Errors that this practice allows include paying a holiday allowance to a worker below 15 contractual hours, not paying it to a worker at or above the threshold, continuing to pay the previous year's minimum wage after 1 January, applying the 90 % probation rate to a worker whose contract does not qualify for it, and, in a store with five or more regular employees, approving a swap that takes a part-time worker more than 12 hours beyond the contractual hours of the week. Because no check is made before the transfer, these errors are discovered, if at all, only when a worker complains.</p>
 
 <table>
   <caption>Table {{tab}}. Summary of problems, causes in the as-is process and consequences</caption>
@@ -128,7 +128,7 @@
 
 <h2 id="ch2-legal">2.3 Legal Background</h2>
 
-<p>Part-time workers in Korea are covered by the same labour statutes as full-time workers. The provisions below determine the pay rules the system implements as business rules BR-06 to BR-10 (Chapter 3). The team read the statutes on the National Law Information Center [3], [4] and the explanations of the government's legal information service for part-time workers [5]. The system is a tool for applying these rules consistently; it is not legal advice, and the rules were simplified in the ways stated below.</p>
+<p>Part-time workers in Korea are covered by the same labour statutes as full-time workers and, in addition, by the Act on the Protection, etc. of Fixed-term and Part-time Employees (in this report, the Fixed-term and Part-time Employees Act). The provisions below determine the pay rules the system implements as business rules BR-06 to BR-10 and BR-15 (Chapter 3). The team read the statutes on the National Law Information Center [3], [4], [15] and the explanations of the government's legal information service for part-time workers [5]. The system is a tool for applying these rules consistently; it is not legal advice, and the rules were simplified in the ways stated below. Where the law leaves the method open, the system's rule is stated as a design decision of this project (Section 2.3.5).</p>
 
 <h3 id="ch2-minwage">2.3.1 Minimum wage</h3>
 
@@ -142,11 +142,26 @@
 
 <h3 id="ch2-premium">2.3.3 Premium pay and the five-employee threshold</h3>
 
-<p>Article 56 of the Labor Standards Act requires an additional 50 % of the ordinary wage for extended work (beyond 8 hours a day or 40 hours a week) and for night work between 22:00 and 06:00. Article 11 limits the application of the Act: a workplace that ordinarily employs fewer than five workers is subject only to the provisions listed in the Enforcement Decree, and Article 56 is not among them [3]. Many small cafés fall below this threshold; the demonstration store Dalbit Café is configured with four regular employees. The system therefore stores the number of regular employees as a workplace setting and computes premium pay only when it is five or more (BR-08). Holiday-work premium under Article 56 ② is outside the scope of the system.</p>
+<p>Article 56 of the Labor Standards Act requires an additional 50 % of the ordinary wage for extended work (beyond 8 hours a day or 40 hours a week) and for night work between 22:00 and 06:00. Article 11 limits the application of the Act: a workplace that ordinarily employs fewer than five workers is subject only to the provisions listed in the Enforcement Decree, and Article 56 is not among them [3]. Many small cafés fall below this threshold; the demonstration store Dalbit Café is configured with four regular employees. The system therefore stores the number of regular employees as a workplace setting and computes premium pay only when it is five or more (BR-08). Holiday-work premium under Article 56 ② is outside the scope of the system. For part-time workers, the same threshold also governs the premium for hours beyond the contractual hours (Section 2.3.5).</p>
 
 <h3 id="ch2-probation">2.3.4 Probation reduction</h3>
 
 <p>Article 5 ② of the Minimum Wage Act allows an employer to pay 90 % of the minimum wage during the first three months of employment for a worker under probation, but only if the employment contract is for one year or more, and not for workers in simple labour occupations designated by the Ministry of Employment and Labor (Enforcement Decree Art. 3) [4]. Many part-time jobs in cafés and convenience stores, such as serving and cashier work, fall into the designated simple labour occupations. The system requires all conditions to hold before it lowers the minimum-wage threshold for a worker (BR-10).</p>
+
+<h3 id="ch2-parttime">2.3.5 Work of part-time workers beyond contractual hours</h3>
+
+<p>The Fixed-term and Part-time Employees Act adds a rule that concerns substitutes directly. Like the premiums of Section 2.3.3, it applies only in workplaces with five or more regular employees (Art. 3 ②; Enforcement Decree Art. 2 and Annex 1). In such workplaces a part-time worker may work beyond their contractual hours only with their consent and for at most 12 hours a week, and these hours earn a premium of at least 50 % (Art. 6) [15]. Accepting a substitute shift usually creates such hours, so the rule bears on the owner's decision to approve a swap.</p>
+
+<p>For counting these hours the system applies the following rules. They are design decisions of this project, taken where the law does not fix the method, and are not statements of law (BR-08 (iv) with its rules (a)–(e), and BR-15, in Chapter 3):</p>
+
+<ul>
+  <li>a worker whose weekly contractual hours C, the sum of the fixed schedule, satisfy 0 &lt; C &lt; 40 is treated as part-time; a worker without a fixed schedule (C = 0) or with C ≥ 40 is not;</li>
+  <li>the test is weekly against C, not daily: the hours of an ISO week are taken in chronological order, and every hour after the first C hours is beyond the contract;</li>
+  <li>an hour that is both daily or weekly overtime (Section 2.3.3) and beyond the contract is counted once, and the night premium is added separately;</li>
+  <li>the worker's consent is outside the system, and the 12-hour weekly limit is checked before approval: the approval panel warns when a swap would leave a part-time acceptor with more than 12 hours beyond the contractual hours in that week, without blocking the decision (BR-15).</li>
+</ul>
+
+<p>Two other readings were considered and not adopted: a daily test against daily contractual hours, and the definition of part-time by comparison with a full-time worker doing the same kind of work in the same workplace. Both need data the system does not keep.</p>
 
 <table>
   <caption>Table {{tab}}. Legal provisions and the business rules that implement them</caption>
@@ -159,51 +174,50 @@
     <tr><td>Labor Standards Act Art. 18 ③ [3], [5]</td><td>No weekly paid holiday below 15 contractual hours per week (four-week average)</td><td>BR-06</td></tr>
     <tr><td>Labor Standards Act Art. 11, Art. 56 [3]</td><td>+50 % for daily hours over 8, weekly hours over 40 and night hours 22:00–06:00; only with five or more regular employees</td><td>BR-08</td></tr>
     <tr><td>Minimum Wage Act Art. 5 ②; Enforcement Decree Art. 3 [4]</td><td>90 % of the minimum wage for the first three months of probation, contract of one year or more, not simple labour</td><td>BR-10</td></tr>
+    <tr><td>Fixed-term and Part-time Employees Act Art. 6, Art. 3 ②; Enforcement Decree Art. 2, Annex 1 [15]</td><td>Work of a part-time worker beyond the contractual hours only with consent and for at most 12 hours a week; premium of at least 50 %; only with five or more regular employees (counting method: design decision, Section 2.3.5)</td><td>BR-08, BR-15</td></tr>
   </tbody>
 </table>
 
 <h2 id="ch2-related">2.4 Related Work</h2>
 
-<p>Shift scheduling is an established product category. The team examined five products or product groups named in [10]: Shiftee, a Korean workforce-management service; the schedule and work-management functions of the Korean job portals Albamon (알바몬 근무관리) and Alba Cheonguk (알바천국 스케줄); and three international products, When I Work, Homebase and Deputy. The comparison uses five features that correspond to the core of ShiftSwap:</p>
+<p>Shift scheduling is an established product category. The team compared seven products on the basis of their own help pages and public descriptions, consulted on 29 September 2026: three international products, Deputy, When I Work and Homebase, and four Korean products, Shiftee, Shopl, Albami and Gig. The comparison records only what these pages state.</p>
 
-<ul>
-  <li><b>Substitute broadcast</b>: a request for cover is sent to several workers at once, restricted to those who are eligible;</li>
-  <li><b>First-accept</b>: the first worker to accept is the substitute, and later acceptances are refused;</li>
-  <li><b>Owner approval</b>: the swap takes effect only after a manager or owner approves it;</li>
-  <li><b>Holiday-allowance recomputation at approval</b>: the effect of the swap on both workers' weekly holiday allowance is shown when the owner approves;</li>
-  <li><b>Korean legal rules</b>: the 15-hour threshold, the five-employee threshold and the probation reduction are applied in pay calculation.</li>
-</ul>
+<p>Scheduling products abroad already support a substitute workflow. In Deputy a worker can offer a shift to co-workers who are qualified and available; the manager is notified when the offer is accepted, and swaps can be set to require the manager's approval [10]. When I Work lets a worker offer a shift to all or selected eligible co-workers, subject by default to a manager's approval, and its Find Replacement function lets a manager offer a shift to eligible workers, and the first one to pick it up takes it [18], [19]. In Homebase a worker asks all or selected co-workers to cover a shift, and a manager gives final approval after one of them accepts [20]. Adopting these products in a small Korean store is not straightforward: Deputy's employee app is available in Korean, but managers who build schedules on its web interface must work in English [21], and the team found no mention of the Korean weekly holiday allowance in the help centres of the three products.</p>
 
-<p>The comparison table below records only what the team could confirm from the public product descriptions available to it. "Supported" means the team found the feature described; "not documented" means the team did not find a description of it, which does not prove that the feature is absent. The products change frequently, and the table reflects the team's reading at the time of writing.</p>
+<p>Korean products follow a different workflow, in which the manager edits the schedule or an employee sends a change request to the manager. Shiftee lets an employee request a new or changed shift, tags the request when it involves overtime, night or holiday work, and computes the weekly holiday allowance automatically [22], [23]. Its help centre states that the allowance is recognised only when every contractual working day is worked, so that a worker contracted for Monday to Friday who works Tuesday to Saturday is not eligible [23]. Shopl lets employees request schedule changes that the manager approves or rejects [24]. Albami lets the owner manage recurring and daily schedules and set the holiday allowance for each worker [25], and Gig shares the owner's schedule with the workers and manages allowances including the holiday allowance [26]. The public feature descriptions of these four products do not include a substitute request between co-workers.</p>
+
+<p>The table below summarises these statements. A dash means that the comparison does not cover the point for that product. The products change frequently, and the table reflects the pages as consulted on the date stated above.</p>
 
 <table>
-  <caption>Table {{tab}}. Feature comparison of shift-scheduling products (based on public product descriptions; see text for the meaning of each entry)</caption>
+  <caption>Table {{tab}}. Comparison of shift-scheduling products (statements of the products' own help pages and public descriptions, consulted on 29 September 2026)</caption>
   <thead>
-    <tr><th style="width:22%">Product</th><th>Substitute broadcast</th><th>First-accept</th><th>Owner approval</th><th>Holiday-allowance recomputation at approval</th><th>Korean legal rules</th></tr>
+    <tr><th style="width:13%">Product</th><th style="width:30%">Schedule changes</th><th style="width:17%">Substitute request between co-workers</th><th>Korean weekly holiday allowance</th><th style="width:10%">Sources</th></tr>
   </thead>
   <tbody>
-    <tr><td>Shiftee</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
-    <tr><td>Albamon work management / Alba Cheonguk schedule</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
-    <tr><td>When I Work</td><td>supported (shifts offered to eligible staff)</td><td>not documented</td><td>supported (manager approves swaps and drops)</td><td>not documented</td><td>not documented</td></tr>
-    <tr><td>Homebase</td><td>not documented</td><td>not documented</td><td>supported (manager approves trades and cover requests)</td><td>not documented</td><td>not documented</td></tr>
-    <tr><td>Deputy</td><td>supported (shift offers to qualified staff)</td><td>not documented</td><td>supported (manager approves swaps and offers)</td><td>not documented</td><td>not documented</td></tr>
-    <tr><td><b>ShiftSwap</b></td><td>supported (FR-07, BR-01)</td><td>supported (FR-09, BR-02)</td><td>supported (FR-12, BR-04)</td><td>supported (FR-11)</td><td>supported (BR-06…BR-10)</td></tr>
+    <tr><td>Deputy</td><td>A worker offers a shift to qualified and available co-workers; the manager is notified on acceptance; approval of swaps can be required</td><td>yes</td><td>no mention found in the help centre</td><td>[10]</td></tr>
+    <tr><td>When I Work</td><td>A worker offers a shift to all or selected eligible co-workers, by default subject to approval; with Find Replacement, the first eligible worker to pick up a shift offered by a manager takes it</td><td>yes</td><td>no mention found in the help centre</td><td>[18], [19]</td></tr>
+    <tr><td>Homebase</td><td>A worker asks all or selected co-workers to cover a shift; a manager gives final approval after one of them accepts</td><td>yes</td><td>no mention found in the help centre</td><td>[20]</td></tr>
+    <tr><td>Shiftee</td><td>An employee requests a new or changed shift; the request is tagged when it involves overtime, night or holiday work</td><td>not in the public feature description</td><td>computed automatically; recognised only when every contractual working day is worked</td><td>[22], [23]</td></tr>
+    <tr><td>Shopl</td><td>Employees request schedule changes that the manager approves or rejects</td><td>not in the public feature description</td><td>—</td><td>[24]</td></tr>
+    <tr><td>Albami</td><td>The owner manages recurring and daily schedules</td><td>not in the public feature description</td><td>set by the owner for each worker</td><td>[25]</td></tr>
+    <tr><td>Gig</td><td>The owner's schedule is shared with the workers</td><td>not in the public feature description</td><td>managed together with other allowances</td><td>[26]</td></tr>
+    <tr><td><b>ShiftSwap</b></td><td>A request reaches every free co-worker at once; the first acceptance wins; the owner approves or rejects (FR-07, FR-09, FR-12)</td><td>yes (BR-01, BR-02)</td><td>computed by BR-06 and BR-07; the change for both workers is shown at approval (FR-11); a handed-over shift is judged by a workplace setting</td><td>—</td></tr>
   </tbody>
 </table>
 
-<p>The international products share a pattern: a worker offers or trades a shift, colleagues who are qualified for it can pick it up, and a manager approves the change. They are designed for the labour law of other countries and for larger organisations with several locations and roles, and their pay features, where present, are connected to external payroll services. The Korean services are closer to the target users in language and in their awareness of part-time work, but the team did not find a description of a substitute workflow with first acceptance and approval in them. None of the products, in the descriptions the team read, shows the owner the change in both workers' holiday-allowance eligibility at the moment of approving a swap [10].</p>
+<p>The team found no product that combines the co-worker substitute request with the Korean holiday-allowance rule, that is, one that shows the owner at the moment of approval how a swap changes the holiday-allowance eligibility of both workers. ShiftSwap adopts the substitute workflow that Deputy, When I Work and Homebase already offer and applies the Korean pay rules to it. Because a strict every-contract-day rule would also remove the allowance of a worker who hands a shift to a colleague, ShiftSwap makes the treatment of such a shift a workplace setting (Section 2.3.2, BR-06).</p>
 
-<p>Besides products, the course material provides the methods used in this project. The life-cycle models and the requirements classification come from the course textbook [6] and from Sommerville's classification of non-functional requirements used in the lecture on requirements [7]. The UML diagrams follow the OMG UML 2.5.1 specification [8], and the embedded database is SQLite compiled to WebAssembly (sql.js) [9].</p>
+<p>Besides products, the course material provides the methods used in this project. The life-cycle models and the requirements classification come from the course textbook [6] and from Sommerville's classification of non-functional requirements used in the lecture on requirements [7]. The UML diagrams follow the OMG UML 2.5.1 specification [8]. The shared data are kept in Supabase, a hosted PostgreSQL service with a free plan [16], and the working copy in the browser and the local demonstration mode use SQLite compiled to WebAssembly (sql.js) [9].</p>
 
 <h2 id="ch2-gap">2.5 The Gap ShiftSwap Fills</h2>
 
-<p>ShiftSwap targets the part of the problem that general scheduling products do not address for small Korean stores. Its contribution is the combination of four elements in one workflow:</p>
+<p>ShiftSwap targets the part of the problem that the products compared in Section 2.4 do not address for small Korean stores. Its contribution is the combination of four elements in one workflow:</p>
 
 <ol>
   <li>candidate selection from the existing shifts, so that a request reaches at once every co-worker who is not already working at that time, and ends with a clear message to the owner when none of them can take it (addresses P1). The proposal planned selection by recorded availability; this was replaced in iteration 6 (Section 3.11.4);</li>
-  <li>a first-acceptance-wins rule enforced in a single database transaction, so that two acceptances can never both succeed (addresses the double-acceptance variation of P1);</li>
+  <li>a first-acceptance-wins rule enforced in a single database transaction, so that two acceptances can never both succeed; in the shared database the server applies each change under a lock on the store and refuses a change computed on outdated data (addresses the double-acceptance variation of P1);</li>
   <li>an approval step that shows, for both workers, contractual hours, scheduled hours and holiday-allowance eligibility before and after the swap, and recomputes the weekly summaries on approval (addresses P2);</li>
-  <li>pay rules taken from Korean law and stored as data where they change (minimum wage by year, number of regular employees, substitution-attendance policy), with warnings before payroll confirmation (addresses P3).</li>
+  <li>pay rules taken from Korean law, including the premium for hours of part-time workers beyond their contractual hours, and stored as data where they change (minimum wage by year, number of regular employees, substitution-attendance policy), with warnings before payroll confirmation and, when a swap would leave a part-time acceptor with more than 12 hours beyond the contractual hours of the week, before approval (addresses P3).</li>
 </ol>
 
-<p>The system is deliberately small. It serves one store, runs without a server and does not replace a full payroll or HR system. Its value lies in making the rules explicit and applying them at the moment a decision is made, rather than at the end of the month. Chapter 3 turns these four elements into use cases, functional requirements and business rules.</p>
+<p>The system is deliberately small. It serves one demonstration store, whose data are kept in a hosted shared database that the owner and every worker reach from their own phones; it has no application server of its own, keeps a local demonstration mode in the browser as a fallback, and does not replace a full payroll or HR system. Its value lies in making the rules explicit and applying them at the moment a decision is made, rather than at the end of the month. Chapter 3 turns these four elements into use cases, functional requirements and business rules.</p>

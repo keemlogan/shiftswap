@@ -210,3 +210,9 @@ Source of every row: the revised proposal (2026-09-29) and the team's decision t
 | 6 | FR-20 / UC-13, §9 step 8: shared notice on the sign-in screen, mode switch, demo tools with the server time and the reset for everyone; offline start offers the local mode | `ui/login.js`, `main.js` `openSharedTools`, `switchMode`, `resetDemo`; `i18n.js` shared-mode keys and error texts (ko/en) | `tools/shared-check.mjs` (two headless browsers, throwaway store) |
 
 Result: the app's tests are 113, all pass (the 89 tests of iteration 7 unchanged, plus 12 part-time tests TC-096…TC-09C and TC-151…TC-155 and 12 shared-mode tests TC-160…TC-16B; `npm test` also runs the 12 tests of the hub's editing feature in `tests/collab.test.js`, 125 in total); `tools/shared-rest.mjs` 64/64; `tools/shared-check.mjs` 12/12; `node tools/check.mjs` in the local demonstration mode (see the test report).
+
+Reproduction run 5 (prompt v8, `docs/reproducibility.md`): a new session in an empty folder with the prompt, the specification, the three test files and the two server files built a system that passes all 113 tests unchanged and met done criteria 1–7 in the local demonstration mode. It reported one conflict that is a defect of the supplied material:
+
+| # | Finding | Change | Check |
+|---|---|---|---|
+| 7 | Prompt §1 says the publishable key is given in the header comment of `db/app-shared.sql`, but the header did not contain it, so the rebuilt app could only start in the local demonstration mode | The header of `db/app-shared.sql` now names the URL, the publishable key and the demo store (a comment only; the SQL is unchanged and needs no re-applying) | `npm test` 125/125 (TC-16A reads the file) |

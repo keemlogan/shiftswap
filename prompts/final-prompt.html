@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>ShiftSwap — Final prompt</title>
-<link rel="stylesheet" href="../docs/web.css"></head><body><main class="doc"><h1 id="shiftswap--final-vibe-coding-prompt-v7">ShiftSwap — Final
-Vibe-Coding Prompt (v7)</h1>
+<link rel="stylesheet" href="../docs/web.css"></head><body><main class="doc"><h1 id="shiftswap--final-vibe-coding-prompt-v8">ShiftSwap — Final
+Vibe-Coding Prompt (v8)</h1>
 <blockquote>
 <p>Version history: v1 was built in iteration 1; v2 (iteration 2)
 resolved the build ambiguities and document-review gaps; v3 (iteration
@@ -17,15 +17,21 @@ longer collected, every co-worker is asked, a "can't" answer lets a
 request end as FAILED with a message to the requester and an
 acknowledge-only card for the owner (spec §15); v7 (iteration 7) adds
 the work and payroll history from the contracts and the automatic
-monthly payroll draft (spec §16). Earlier versions are kept as
-<code>prompts/prompt-v1.md</code> … <code>prompts/prompt-v6.md</code>;
-the reasons for every change are in
+monthly payroll draft (spec §16); v8 (iteration 8) propagates the
+revised proposal: a shared database on Supabase as the default data mode
+with the browser-only version kept as the local demonstration mode, the
+server time as the System Clock in the shared mode, and the part-time
+overtime rule with the approval warning (spec §17). Earlier versions are
+kept as <code>prompts/prompt-v1.md</code> …
+<code>prompts/prompt-v7.md</code>; the reasons for every change are in
 <code>prompts/prompt-log.md</code>.</p>
 <p>How to use: in an empty folder, place
-<code>tests/rules.test.js</code> and <code>tests/services.test.js</code>
-from the repository, then paste this whole prompt, followed by the
-complete contents of <code>spec/spec.md</code>, into a coding agent that
-can create files and run shell commands. The agent must produce the same
+<code>tests/rules.test.js</code>, <code>tests/services.test.js</code>
+and <code>tests/shared.test.js</code> and the supplied server files
+<code>db/app-shared.sql</code> and <code>tools/seed-sql.mjs</code> from
+the repository, then paste this whole prompt, followed by the complete
+contents of <code>spec/spec.md</code>, into a coding agent that can
+create files and run shell commands. The agent must produce the same
 system that is deployed at <a
 href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/shiftswap/app/</a>.</p>
 </blockquote>
@@ -33,63 +39,133 @@ href="https://keemlogan.github.io/shiftswap/app/">https://keemlogan.github.io/sh
 <p>You are building <strong>ShiftSwap</strong>, a shift schedule and
 substitute management web application for a small café with part-time
 workers. The complete specification (actors, use cases UC-01…UC-14
-(UC-02 retired), functional requirements FR-01…FR-23 (FR-03 retired),
-non-functional requirements NFR-01…NFR-13, business rules BR-01…BR-14,
+(UC-02 retired), functional requirements FR-01…FR-24 (FR-03 retired),
+non-functional requirements NFR-01…NFR-16, business rules BR-01…BR-15,
 states, SQLite schema, seed data, test IDs) follows this prompt. Treat
 the specification as the contract: use its identifiers, table and column
 names, state names and seed data exactly. Do not add features that are
 not in it.</p>
 <h2 id="0-acceptance-tests-supplied--read-them-first">0. Acceptance
 tests (supplied — read them first)</h2>
-<p>The folder already contains <code>tests/rules.test.js</code> and
-<code>tests/services.test.js</code>. They are the executable form of the
+<p>The folder already contains <code>tests/rules.test.js</code>,
+<code>tests/services.test.js</code> and
+<code>tests/shared.test.js</code>. They are the executable form of the
 specification and they fix the API: module paths, exported names,
 argument order, return shapes, error codes and the Node-side database
-factory. Read both files completely before writing code. <strong>Do not
-modify, rename, skip or delete any test.</strong> Write the
-implementation so that <code>npm test</code> passes all of them
-unchanged. Where a test and the prose below seem to disagree about an
-API detail, the test wins; where they disagree about behaviour, stop and
-report the conflict instead of guessing. You may add further tests in a
-new file <code>tests/extra.test.js</code>.</p>
+factory. Read all three files completely before writing code. The server
+side of the shared mode is supplied and already deployed:
+<code>db/app-shared.sql</code> (tables, row triggers, the RPC functions
+<code>app_snapshot</code>, <code>app_commit</code>,
+<code>app_reset</code>, grants and policies, and the seed template) and
+<code>tools/seed-sql.mjs</code> (regenerates the seed template in that
+file from the seed code and is used by
+<code>tests/shared.test.js</code>). <strong>Do not modify these two
+files and do not run the SQL</strong>; read the header of
+<code>db/app-shared.sql</code> to learn the RPC arguments, the answers
+and the error messages. <strong>Do not modify, rename, skip or delete
+any test.</strong> Write the implementation so that
+<code>npm test</code> passes all of them unchanged. Where a test and the
+prose below seem to disagree about an API detail, the test wins; where
+they disagree about behaviour, stop and report the conflict instead of
+guessing. You may add further tests in a new file
+<code>tests/extra.test.js</code>.</p>
 <h2 id="1-technology-constraints">1. Technology constraints</h2>
 <ul>
 <li>Static site only: <code>index.html</code>, CSS, and JavaScript ES
-modules. No build step, no framework, no server. It must work when the
-folder is served by GitHub Pages under the sub-path
-<code>/shiftswap/app/</code> (use only relative URLs).</li>
+modules. No build step, no framework, no application server of its own.
+It must work when the folder is served by GitHub Pages under the
+sub-path <code>/shiftswap/app/</code> (use only relative URLs).</li>
 <li>Database: SQLite in the browser with <strong>sql.js</strong>
 (WebAssembly). Vendor <code>sql-wasm.js</code> and
 <code>sql-wasm.wasm</code> into <code>app/vendor/</code> (copy them from
 the <code>sql.js</code> npm package) so the app does not depend on a CDN
 at runtime.</li>
-<li>Persistence: after every committed transaction, export the database
-and save it to <code>localStorage</code> under the key
+<li>Two data modes (spec §9). <strong>Shared mode</strong> is the
+default whenever <code>app/config.js</code> contains the database URL
+and the publishable key:
+<code>export const SUPABASE_URL = 'https://dbahxuegxnqsthntpuqy.supabase.co'</code>,
+<code>SUPABASE_KEY</code> = the publishable key given in the header
+comment of <code>db/app-shared.sql</code> (public by design),
+<code>STORE = 'dalbit'</code>. It talks to the database with
+<code>fetch</code> only (no client library):
+<code>POST {URL}/rest/v1/rpc/&lt;name&gt;</code> with named JSON
+arguments and the header <code>apikey</code> (add
+<code>Authorization: Bearer</code> only for a key starting with
+<code>eyJ</code>), and
+<code>GET {URL}/rest/v1/app_store?slug=eq.&lt;store&gt;&amp;select=rev</code>
+to poll the revision. <strong>Local demonstration mode</strong> is the
+behaviour of v7 (sql.js in <code>localStorage</code>, adjustable demo
+clock); <code>?mode=local</code> / <code>?mode=shared</code> switch and
+the choice is remembered under <code>shiftswap.mode</code>;
+<code>?store=&lt;slug&gt;</code> selects another existing store (used by
+the checks with throwaway stores).</li>
+<li>Shared mode works on a replica: on start
+<code>app_snapshot(p_store)</code> returns
+<code>{rev, now, tables}</code> (rows in snake_case); load them into an
+in-memory sql.js database with the schema of §8 and let
+<code>now()</code> follow the server time. Every user command runs the
+unchanged service function on the replica; the gateway compares all
+tables before and after, sends the changed rows
+(<code>[{t, op: 'insert'|'update'|'delete', row}]</code>, snake_case)
+with the base revision to
+<code>app_commit(p_store, p_base_rev, p_changes)</code>, and on
+<code>STALE</code> reloads and re-runs the command (at most three
+times); on a refusal by a server rule it reloads and re-runs once so
+that the user gets the service's own message (e.g. ALREADY_TAKEN).
+Commands, system work, polling and reset never overlap (one queue). Poll
+the revision every 10 s and on focus; redraw after a remote change only
+when the user is idle (no sheet open, nothing typed, nothing being
+saved). The System Clock duties and the weekly recomputation that a
+screen triggers are saved after drawing; when the server refuses them,
+pause them for a minute.</li>
+<li>Persistence (local mode): after every committed transaction, export
+the database and save it to <code>localStorage</code> under the key
 <code>shiftswap.db.v2</code> (base64). The demo clock is stored under
 <code>shiftswap.clock.v1</code> and the language under
 <code>shiftswap.lang</code>. On start, load them if present, otherwise
 create the schema and insert the seed data. Provide "Reset demo data" in
 the header menu; it also resets the clock to
-<code>2026-09-28T09:00</code>.</li>
+<code>2026-09-28T09:00</code>. In the shared mode the reset calls
+<code>app_reset(p_store)</code>, which restores the seed for everyone
+(rate-limited by the server).</li>
 <li>Folder layout:
 <ul>
 <li><code>app/index.html</code>, <code>app/styles.css</code>,
-<code>app/main.js</code> (router + bootstrap)</li>
+<code>app/main.js</code> (router + bootstrap; chooses the mode)</li>
+<li><code>app/config.js</code> — the shared-mode settings above.</li>
+<li><code>app/core/shared.js</code> — the shared-mode gateway:
+<code>diffTables(before, after)</code>, <code>classify(err)</code>,
+<code>restTransport({url, key, fetchFn})</code>,
+<code>createGateway({SQL, transport, store, onReload, retries, pause})</code>
+with <code>load</code>, <code>command(fn)</code>, <code>settle</code>,
+<code>poll</code>, <code>reset</code>, <code>busy</code>,
+<code>systemAllowed</code>, <code>rev</code>, and the key mappers
+<code>snake</code> / <code>camel</code> (the tests fix the
+details).</li>
 <li><code>app/core/db.js</code> — init, schema (exactly the SQL of spec
 §8), seed (spec §10), <code>tx(fn)</code> helper that runs
 <code>BEGIN</code>…<code>COMMIT</code> / <code>ROLLBACK</code> and
 persists after commit, <code>all(sql, params)</code>,
-<code>get(sql, params)</code>, <code>run(sql, params)</code>.</li>
-<li><code>app/core/clock.js</code> — demo clock: <code>now()</code>
-returns the stored demo datetime (default
-<code>2026-09-28T09:00</code>), <code>setNow(iso)</code>,
-<code>advance(minutes)</code>.</li>
+<code>get(sql, params)</code>, <code>run(sql, params)</code>; for the
+shared mode <code>TABLES</code> (the 11 tables in dependency order),
+<code>keyOf(table)</code>, <code>loadTables(SQL, tables)</code> (replace
+the database by an in-memory replica) and
+<code>dumpTables()</code>.</li>
+<li><code>app/core/clock.js</code> — System Clock: <code>now()</code>
+returns the stored demo datetime (default <code>2026-09-28T09:00</code>)
+in the local mode, <code>setNow(iso)</code>,
+<code>advance(minutes)</code>; in the shared mode
+<code>useServerTime(serverMs, localMs)</code> makes <code>now()</code>
+follow the server time in Korea (<code>usesServerTime()</code>), and
+<code>setNow</code> refuses.</li>
 <li><code>app/core/rules.js</code> — pure functions only (no DB, no
 DOM): <code>overlaps</code>, <code>durationHours</code> (supports end ≤
 start as next day), <code>weekStartOf</code>,
 <code>isEligibleCandidate</code>, <code>validateRequest</code>,
 <code>contractHours</code>, <code>computeWeeklySummary</code>,
-<code>holidayHours</code>, <code>premiumHours</code>,
+<code>holidayHours</code>, <code>premiumHours</code> (with the part-time
+item (iv) of BR-08 when <code>options.contractHours</code> is given),
+<code>isPartTime</code>, <code>partTimeLimitCheck</code> (BR-15),
 <code>minimumWageFor</code>, <code>probationApplies</code>,
 <code>computePayrollRow</code>. Each function has a JSDoc comment citing
 the BR it implements.</li>
@@ -119,7 +195,11 @@ open (the router uses it to hide menus and to redirect routes the role
 may not open, FR-20), and home-screen queries
 <code>getWorkerHome(workerId)</code> and <code>getOwnerHome()</code>
 that return, in one call, every item §2.3 / §2.5 needs (including the
-before/after effect of accepting or approving).</li>
+before/after effect of accepting or approving and the BR-15 warning of
+the acceptor). For the shared seed it exports
+<code>seedPayrollHistory(lastMonth)</code> and
+<code>completeSharedSeed(today)</code> (spec §10, shared-mode
+seed).</li>
 <li><code>app/ui/</code> — one module per screen: <code>login.js</code>,
 <code>home.js</code> (worker and owner Home, §2.3/§2.5),
 <code>me.js</code> (worker Me: profile + attendance),
@@ -143,14 +223,22 @@ Name each test with its spec test ID (e.g.
 script <code>"test": "node --test tests/*.test.js"</code> (a bare
 directory argument fails on Node 24).</li>
 </ul></li>
+<li>Every command of a screen goes through <code>ctx.run(fn)</code> and
+is awaited: in the local mode it just calls <code>fn</code>; in the
+shared mode it is the gateway's <code>command(fn)</code>, and the screen
+shows a busy state (<code>aria-busy</code>, dimmed, no clicks) until the
+change is saved.</li>
 <li>The System Clock actor runs <code>expireOverdue()</code> (UC-11) and
 then <code>prepareMonthlyPayroll()</code> (UC-14, BR-14: draft for the
 previous month if it has no rows yet, plus one PAYROLL_DRAFT_READY
 notification for the owner) on app start, on every route change, and
-after the demo clock changes. The seed builds the work history of spec
-§10 by calling the same services (generate shifts, record and confirm
-attendance, generate and confirm payroll with acknowledgements) so that
-the stored history equals what the rules compute.</li>
+after the demo clock changes; in the shared mode it also runs
+<code>completeSharedSeed()</code> first and uses the server time, and
+the server refuses an expiry before the deadline. The seed builds the
+work history of spec §10 by calling the same services (generate shifts,
+record and confirm attendance, generate and confirm payroll with
+acknowledgements) so that the stored history equals what the rules
+compute.</li>
 </ul>
 <h2 id="2-screens-and-behaviour">2. Screens and behaviour</h2>
 <h3
@@ -219,8 +307,21 @@ opens the account list without resetting data.</li>
 <li><strong>Demo tools</strong> panel (sheet on mobile, popover on
 desktop): demo clock date-time input, <strong>+1시간</strong>,
 <strong>+1일</strong>, <strong>데모 데이터 초기화</strong> (Reset demo
-data, asks for confirmation in the panel itself). The clock no longer
-sits permanently in the header.</li>
+data, asks for confirmation in the panel itself) and <strong>공유 데모
+모드로 바꾸기</strong>. The clock no longer sits permanently in the
+header. In the shared mode the chip shows the server time and the panel
+shows instead: one sentence that the demo is shared and the time is the
+server time, <strong>서버 시각</strong> (read-only), <strong>모두의 데모
+데이터 초기화</strong> with a confirmation that says every visitor's
+data go back to the start, and <strong>로컬 데모 모드로
+바꾸기</strong>.</li>
+<li>Shared-mode messages (toasts, both languages, spec §9): another
+person changed the same data at the same moment several times
+(SHARED_BUSY), refused by the server (SHARED_REFUSED, data reloaded),
+offline (SHARED_OFFLINE, nothing saved), unavailable, the per-minute /
+per-day limits, a full store, and the reset limits. If the database
+cannot be reached on start, show a notice with the button <strong>로컬
+데모 모드로 열기</strong>.</li>
 </ul>
 <h3 id="22-sign-in--demo-guide-uc-13">2.2 Sign-in = demo guide
 (UC-13)</h3>
@@ -237,6 +338,13 @@ already done in this browser.</li>
 its one-line summary (owner: "사장님 · 달빛카페 · 직원 4명"; worker:
 fixed shifts and weekly contract hours, e.g. "월·수 18:00–23:00 · 주
 10시간").</li>
+<li>A notice above the tour states the mode with a text button to
+switch: shared — "공유 데모예요. 이 페이지를 연 모든 사람이 같은 가상
+데이터를 보고 바꿀 수 있어요. 개인 정보는 입력하지 마세요."; local — the
+data stay in this browser and the clock can be set in the demo tools. In
+the shared mode the tour's progress follows the shared data and
+restarting the tour is the reset for everyone (with its
+confirmation).</li>
 <li>The chosen account is kept in <code>sessionStorage</code>.</li>
 </ul>
 <h3 id="23-worker-home">2.3 Worker Home</h3>
@@ -301,9 +409,13 @@ request: the sentence "이서연님의 9월 30일(수) 18:00–23:00 근무를
 최민호님이 대신해요", then one impact line per person (scheduled hours
 before → after this week, holiday allowance status and amount before →
 after; a changed eligibility is highlighted in amber with the words
-"주휴수당이 바뀌어요"), then <strong>승인하기</strong> (primary) /
-<strong>거절</strong> (text). A <strong>자세히</strong> toggle shows the
-full FR-11 before/after table.</li>
+"주휴수당이 바뀌어요"), then, when BR-15 applies (≥ 5 regular employees,
+part-time acceptor, more than 12 h beyond contract that week), the amber
+notice "최민호님은 이번 주 계약보다 13시간 더 일하게 돼요. 단시간
+근로자는 주 12시간까지예요." (it does not block the decision, FR-24),
+then <strong>승인하기</strong> (primary) / <strong>거절</strong> (text).
+A <strong>자세히</strong> toggle shows the full FR-11 before/after
+table.</li>
 <li><strong>답을 기다리는 요청</strong> — open REQUESTED requests with
 deadline countdown and each co-worker's answer (대기 중 / 불가).
 <strong>대타를 못 구했어요</strong> — one card per unacknowledged
@@ -465,6 +577,15 @@ acknowledge; moving the clock further within October does not create a
 second draft.</li>
 <li>Every screen has exactly one filled primary button (a headless check
 counts them), every disabled button has a visible reason, and all touch
-targets are at least 44 × 44 px.</li>
+targets are at least 44 × 44 px. Criteria 3–7 are checked in the local
+demonstration mode (<code>?mode=local</code>).</li>
+<li>The shared mode works with two browsers on a throwaway store
+(<code>?mode=shared&amp;store=e2e-…</code>, created and deleted with the
+owner connection): the sign-in screen says that the demo is shared; the
+demo tools show the server time without clock controls; when Choi Minho
+and Kang Doyun tap <strong>수락하기</strong> at the same moment exactly
+one succeeds and the other is told who was faster, and the server holds
+one ACCEPTED request; the owner's approval appears in the other browser
+within 20 s; the reset for everyone brings the open request back.</li>
 </ol>
 </main></body></html>

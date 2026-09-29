@@ -246,7 +246,88 @@ holiday pay in the month; "prepared automatically" derived from the
 notification; reason chips stored in English and shown in Korean; Pay
 opens on the weekly segment.</li>
 </ol>
-<h2 id="summary-of-the-four-runs">Summary of the four runs</h2>
+<h1
+id="reproducibility-check--run-5-prompt-v8--spec--supplied-tests--server-files">Reproducibility
+check — run 5 (prompt v8 + spec + supplied tests + server files)</h1>
+<p>Date: 2026-09-29. Same method, with the final prompt v8 (iteration 8:
+shared database as the default data mode, local demonstration mode,
+part-time overtime rule BR-08 (iv) with the approval warning
+BR-15/FR-24). The empty folder received the prompt followed by the
+specification (<code>PROMPT.md</code>), the three supplied test files
+(113 tests) and the two supplied server files
+<code>db/app-shared.sql</code> and <code>tools/seed-sql.mjs</code>. The
+session had no database connection and was told not to run the SQL.</p>
+<h2 id="result-3">Result</h2>
+<ul>
+<li><code>npm test</code>: 113 tests, 113 pass, 0 fail — the supplied
+tests only (the session added none). The team re-ran them in the rebuilt
+folder: 113/113.</li>
+<li>Supplied files unchanged (shasum at start = at end): rules.test.js
+f8e84742b5b68e32cb8a8600afd727f33277a717, services.test.js
+0249358faee378ab9372c432b91db1af52e2887e, shared.test.js
+49ca71a6d05e15e18917912ee509ff26669c824d, app-shared.sql
+3c86cdbdd92bbc5387f87be4309b90277c48e63a, seed-sql.mjs
+266da489ca92dad34721b561307cf18e1650a1ff.</li>
+<li>The run was interrupted once: the first session built the core
+modules, the UI modules and passed 113/113, but stopped before it had
+written <code>app/index.html</code> and <code>app/styles.css</code>. A
+second session with the same restrictions (only the folder, no view of
+the repository) read the prompt, wrote the two missing files from prompt
+§3, and checked the done criteria. The rebuild has 4,319 lines under
+<code>app/</code> without the vendored sql.js (core 1,853; UI
+1,720).</li>
+<li>Done criteria 1–7 PASS in the local demonstration mode. The
+session's own headless check (Node static server, Chrome DevTools
+protocol, storage cleared per scenario) passed 25 of 25 checks,
+including 50 screen audits at 360 and 1280 px: sign-in without console
+errors (3); the tour with "16시간 → 21시간", one-tap accept, "최민호님이
+먼저 수락했어요", the decision card "(33,024원 유지)" and the handover
+marker (4); S8 with three 불가 answers and the owner's acknowledge-only
+card (5); S9 with March–August confirmed and the automatic September
+draft at 2026-10-01, no second draft at 10-02 and 10-20 (6); one filled
+primary per screen, reasons on disabled buttons, targets ≥ 44 px, no
+horizontal scroll (7). The check first found three small defects of the
+rebuild (arrows and weekday chips disabled without a reason, a missing
+favicon), which the session fixed.</li>
+<li>Done criterion 8 (two browsers on a throwaway store) needs the
+owner's database connection and was not run by the session. The team ran
+it afterwards at the data level: two separate Node processes, each
+loading the rebuilt <code>app/core/shared.js</code> gateway and
+<code>services.js</code> with the real REST transport and the
+publishable key on a throwaway store <code>e2e-r5-…</code>, accepted
+request 1 at the same moment; the server held one ACCEPTED request with
+exactly one ACCEPTED target, one process succeeded and the other
+received ALREADY_TAKEN after its stale change set was re-run on the
+current data (two runs, both PASS; the stores were deleted). The rebuilt
+screens were not driven in two browsers, because the team's two-browser
+script depends on the reference app's element names.</li>
+</ul>
+<h2 id="ambiguities-reported-in-run-5-17--main-ones">Ambiguities
+reported in run 5 (17) — main ones</h2>
+<ol type="1">
+<li>Conflict in the supplied material: prompt §1 says the publishable
+key is given in the header comment of <code>db/app-shared.sql</code>,
+but the header did not contain it, so the rebuild started in the local
+demonstration mode only. The team added the URL, the key and the demo
+store to the header comment (a comment only; the SQL is unchanged;
+prompt log, iteration 8, item 7). For the criterion-8 check the team
+supplied the key to the rebuilt gateway directly.</li>
+<li>One filled primary per screen vs. an action on every Home card — as
+in runs 3 and 4, the first card action stays primary.</li>
+<li>"Someone was faster" as a toast after a late tap (§2.3) vs. a card
+without a tap (criterion 4) — the TARGET_CLOSED notification is shown as
+a card with 확인했어요.</li>
+<li>The payroll draft month and the "prepared automatically" note have
+no column — both derived from the PAYROLL_DRAFT_READY notification (as
+in run 4).</li>
+<li>Unspecified choices: notification text stored in English and
+rendered from its kind; one fixed-schedule row per weekday in 30-minute
+steps; the System Clock duties also run after every command; the expiry
+inside accept/approve committed before REQUEST_CLOSED (as in run
+4).</li>
+</ol>
+<hr />
+<h2 id="summary-of-the-five-runs">Summary of the five runs</h2>
 <table>
 <thead>
 <tr>
@@ -285,6 +366,13 @@ opens on the weekly segment.</li>
 <td>prompt + spec + tests</td>
 <td>89/89</td>
 <td>1–7 met</td>
+</tr>
+<tr>
+<td>5</td>
+<td>v8</td>
+<td>prompt + spec + tests + server files</td>
+<td>113/113</td>
+<td>1–7 met; 8 at the data level by the team</td>
 </tr>
 </tbody>
 </table>
