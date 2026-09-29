@@ -1,10 +1,26 @@
 import { GROUPS, ITEMS, TODAY } from "./data.js";
+import { EDITABLE } from "./collab-config.js";
 
 const view = document.getElementById("view");
 const KIND = { doc: "문서", pdf: "파일", img: "다이어그램", app: "앱", ext: "외부 링크" };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const md = (d) => (d ? `${d.slice(5, 7)}.${d.slice(8, 10)}` : "");
+
+// 편집 가능한 문서(제안서)는 collab.js 가 미리보기 위 도구 막대와 변경 이력을 붙인다. 처음 필요할 때 불러오고,
+// 불러오지 못하면 정적 미리보기를 그대로 둔다. 화면을 다시 그릴 때마다 먼저 떼어 낸다.
+let collab = null;
+let renders = 0;
+function unmountCollab() {
+  renders++;
+  collab?.unmountCollab();
+}
+function mountCollab(opts) {
+  const at = renders;
+  import("./collab.js")
+    .then((m) => { collab = m; if (at === renders) m.mountCollab(opts); })
+    .catch((err) => console.error("collab.js", err));
+}
 
 function facts() {
   const done = ITEMS.filter((i) => !i.todo).length;
@@ -13,6 +29,7 @@ function facts() {
 }
 
 function listView() {
+  unmountCollab();
   const deadlines = GROUPS.filter((g) => g.due && g.id !== "talk");
   const rail = deadlines.map((g) => {
     const past = g.due <= TODAY;
@@ -44,6 +61,7 @@ function preview(e) {
 }
 
 function detailView(id, tab = 0) {
+  unmountCollab();
   const i = ITEMS.find((x) => x.id === id);
   if (!i) return listView();
   const g = GROUPS.find((x) => x.id === i.group);
@@ -78,6 +96,9 @@ function detailView(id, tab = 0) {
       ${next ? `<a href="#/r/${next.id}" class="nx"><span>다음</span>${next.id} ${esc(next.title)}</a>` : "<span></span>"}
     </nav>
   </article>`;
+  if (e.kind === "doc" && EDITABLE[e.href.split("#")[0]]) {
+    mountCollab({ item: i, evidence: e, leftEl: view.querySelector(".dtext"), previewEl: view.querySelector(".dpreview") });
+  }
   view.focus({ preventScroll: true });
   window.scrollTo(0, 0);
 }
