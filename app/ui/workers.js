@@ -50,8 +50,8 @@ function renderDetail(view, ctx, w) {
         <h2 class="section-title">${esc(t('staff.info'))}</h2>
         <div class="card form">
           <div class="fields">
-            ${field('name', t('staff.name'), v.name, { attrs: 'autocomplete="off"' })}
-            ${field('phone', t('staff.phone'), v.phone, { type: 'tel', attrs: 'autocomplete="off"' })}
+            ${field('name', t('staff.name'), v.name, { attrs: 'autocomplete="off" maxlength="100"' })}
+            ${field('phone', t('staff.phone'), v.phone, { type: 'tel', attrs: 'autocomplete="off" maxlength="40"' })}
             ${field('hourlyWage', t('staff.wage'), v.hourlyWage, { type: 'number', attrs: 'min="1" step="1" inputmode="numeric"' })}
             ${field('contractStart', t('staff.start'), v.contractStart, { type: 'date' })}
             ${field('contractEnd', t('staff.end'), v.contractEnd, { type: 'date', hint: t('staff.endHint') })}

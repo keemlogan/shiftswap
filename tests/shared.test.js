@@ -258,4 +258,8 @@ test('TC-16B the REST transport sends only the publishable key and reports serve
   assert.equal(calls[0].init.headers.Authorization, undefined);
   const offline = restTransport({ url: 'https://example.supabase.co', key: 'k', fetchFn: async () => { throw new TypeError('fetch failed'); } });
   await assert.rejects(offline.rpc('app_snapshot', {}), (err) => classify(err) === 'SHARED_OFFLINE');
+  let signal = null;
+  const hung = restTransport({ url: 'https://example.supabase.co', key: 'k', timeoutMs: 20, fetchFn: (url, init) => { signal = init.signal; return new Promise(() => {}); } });
+  await assert.rejects(hung.rpc('app_commit', {}), (err) => classify(err) === 'SHARED_OFFLINE');
+  assert.equal(signal.aborted, true);
 });

@@ -216,3 +216,14 @@ Reproduction run 5 (prompt v8, `docs/reproducibility.md`): a new session in an e
 | # | Finding | Change | Check |
 |---|---|---|---|
 | 7 | Prompt §1 says the publishable key is given in the header comment of `db/app-shared.sql`, but the header did not contain it, so the rebuilt app could only start in the local demonstration mode | The header of `db/app-shared.sql` now names the URL, the publishable key and the demo store (a comment only; the SQL is unchanged and needs no re-applying) | `npm test` 125/125 (TC-16A reads the file) |
+
+Independent review after iteration 8 (correctness and security, diff since the proposal revision): no high-severity finding; the following were fixed without a change of the prompt or the specification (implementation details below the level of the specification).
+
+| # | Finding | Change | Check |
+|---|---|---|---|
+| 8 | A request to the shared database that never answers blocks the gateway's queue; the screen stays busy until a reload | `restTransport` aborts a request after 15 s and reports it as offline (`SHARED_OFFLINE`, back to the last saved state); polling is skipped while a change is being saved | TC-16B (abort of a hung request); `npm test` 125/125 |
+| 9 | Names over 100 characters and phone numbers over 40 characters pass the services but are refused by the database with a general message | `NAME_TOO_LONG`, `PHONE_TOO_LONG`, `STORE_NAME_TOO_LONG` with messages in both languages; `maxlength` on the inputs | TC-01D (two new cases) |
+| 10 | A change set can insert a key above 2^53 (not exact in the browser) or a payroll row that is already CONFIRMED (read-only for the owner) | `app_commit` accepts new keys from 1 to 2^31−1 only; the payroll trigger accepts new rows only as DRAFT (`db/app-shared.sql` re-applied) | `tools/shared-rest.mjs` 67/67 (three new checks) |
+| 11 | Hub: the style filter misses `image-set()` and CSS escapes; the per-document caps allow about 520 MB of anonymous saves a day | the filter refuses backslashes, `image-set` and `src()` in styles and SVG attributes; a daily budget of 60 MB over all saves, restores and translations (`doc_bytes_today`, `db/hub-collab.sql` re-applied) | `tools/collab-check.mjs` 37/37 (sanitizer probe extended); budget refused in a rolled-back probe (DAILY_BYTES) |
+
+Not changed: the limits of NFR-14 are per store and shared by all visitors, so one visitor can use up the day's changes or resets of the demo store; this follows from the absence of accounts (spec §8, trust boundary), and the team can reset the store at any time through the owner connection.

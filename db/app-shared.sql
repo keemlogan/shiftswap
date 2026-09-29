@@ -373,6 +373,9 @@ begin
     raise exception 'RULE: confirmed payroll is read-only';
   end if;
   if tg_op = 'DELETE' then return old; end if;
+  if tg_op = 'INSERT' and new.status = 'CONFIRMED' then
+    raise exception 'RULE: a payroll row is created as DRAFT and confirmed afterwards';
+  end if;
   if new.status = 'CONFIRMED' and new.min_wage_warning = 1 and new.min_wage_ack = 0 then
     raise exception 'RULE: acknowledge the minimum-wage warning before confirming (BR-09)';
   end if;
@@ -527,6 +530,10 @@ begin
     if v_table is null or v_op is null or v_op not in ('insert', 'update', 'delete')
        or jsonb_typeof(v_change -> 'row') is distinct from 'object' or jsonb_typeof(v_change -> 'row' -> v_key) is distinct from 'number' then
       raise exception 'BAD_CHANGES: %', left(v_change::text, 200);
+    end if;
+    -- New keys stay small integers: a key above 2^53 would lose precision in the browser and break later commits.
+    if v_op = 'insert' and (v_change -> 'row' ->> v_key)::numeric not between 1 and 2147483647 then
+      raise exception 'BAD_CHANGES: % key out of range', v_change ->> 't';
     end if;
     v_row := (v_change -> 'row') || jsonb_build_object('store_id', v_store.id);
     if v_op = 'delete' then

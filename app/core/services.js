@@ -412,6 +412,7 @@ export function registerWorker(data) {
   return tx(() => {
     const name = (data.name || '').trim();
     if (!name) throw new ServiceError('NAME_REQUIRED', 'Enter the worker\'s name.');
+    if (name.length > 100) throw new ServiceError('NAME_TOO_LONG', 'The name can have at most 100 characters.');
     const wage = Number(data.hourlyWage);
     if (!Number.isInteger(wage) || wage <= 0) throw new ServiceError('WAGE_INVALID', 'Enter the hourly wage as a whole number of won, for example 10320.');
     if (!DATE.test(data.contractStart || '')) throw new ServiceError('CONTRACT_START_REQUIRED', 'Enter the contract start date.');
@@ -420,6 +421,7 @@ export function registerWorker(data) {
     const probationEnd = data.probationEnd || null;
     if (probationEnd && probationEnd < data.contractStart) throw new ServiceError('PROBATION_BEFORE_START', 'The probation end date is before the contract start date. Change it or leave it empty.');
     const phone = (data.phone || '').trim() || null;
+    if (phone && phone.length > 40) throw new ServiceError('PHONE_TOO_LONG', 'The phone number can have at most 40 characters.');
     const values = [name, phone, wage, data.contractStart, contractEnd, probationEnd, data.simpleLabor ? 1 : 0, data.active === false || data.active === 0 ? 0 : 1];
     if (data.id) {
       run(`UPDATE Worker SET name = ?, phone = ?, hourlyWage = ?, contractStart = ?, contractEnd = ?, probationEnd = ?,
@@ -1022,6 +1024,7 @@ export function updateSettings({ name, regularEmployees, subAttendancePolicy, mi
   return tx(() => {
     const store = (name || '').trim();
     if (!store) throw new ServiceError('STORE_NAME_REQUIRED', 'Enter the store name.');
+    if (store.length > 100) throw new ServiceError('STORE_NAME_TOO_LONG', 'The store name can have at most 100 characters.');
     const n = Number(regularEmployees);
     if (!Number.isInteger(n) || n < 0) throw new ServiceError('EMPLOYEES_INVALID', 'Enter the number of regular employees as a whole number, for example 4.');
     if (!['EXCUSED', 'ABSENT'].includes(subAttendancePolicy)) throw new ServiceError('POLICY_INVALID', 'Choose a substitution-attendance policy.');

@@ -252,7 +252,8 @@ function tick() {
 }
 
 function startSharedTimers() {
-  const poll = () => { if (!document.hidden) gateway.poll().catch(() => {}); };
+  // A poll waits in the gateway's queue; while a save is running, skip it instead of queueing more of them.
+  const poll = () => { if (!document.hidden && !gateway.busy()) gateway.poll().catch(() => {}); };
   setInterval(poll, 10000);
   setInterval(tick, 1000);
   window.addEventListener('focus', poll);

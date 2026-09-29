@@ -177,38 +177,44 @@ try {
   r = await commit(6, [{ t: 'Shift', op: 'insert', row: { ...worked, id: 9001, status: 'WORKED' } }]);
   check('a new shift is SCHEDULED (RULE)', refused(r, 'RULE'), r);
   const payroll = (id, over = {}) => ({ id, worker_id: 5, year_month: '2026-07', base_hours: 48, base_pay: 480000, holiday_pay: 0,
-    premium_pay: 0, total: 480000, min_wage_warning: 1, min_wage_ack: 0, estimated: 0, status: 'CONFIRMED', ...over });
+    premium_pay: 0, total: 480000, min_wage_warning: 1, min_wage_ack: 1, estimated: 0, status: 'CONFIRMED', ...over });
   r = await commit(6, [{ t: 'Payroll', op: 'insert', row: payroll(1) }]);
+  check('a payroll row cannot be inserted as CONFIRMED (RULE)', refused(r, 'RULE'), r);
+  r = await commit(6, [{ t: 'Payroll', op: 'insert', row: payroll(1, { status: 'DRAFT', min_wage_ack: 0 }) }]);
+  check('a payroll row is inserted as DRAFT (rev 7)', r.status === 200 && r.body.rev === 7, r);
+  r = await commit(7, [{ t: 'Payroll', op: 'update', row: payroll(1, { min_wage_ack: 0 }) }]);
   check('payroll with an unacknowledged minimum-wage warning cannot be confirmed (RULE)', refused(r, 'RULE'), r);
-  r = await commit(6, [{ t: 'Payroll', op: 'insert', row: payroll(1, { min_wage_ack: 1 }) }]);
-  check('acknowledged payroll is confirmed (rev 7)', r.status === 200 && r.body.rev === 7, r);
-  r = await commit(7, [{ t: 'Payroll', op: 'update', row: payroll(1, { min_wage_ack: 1, total: 1 }) }]);
+  r = await commit(7, [{ t: 'Payroll', op: 'update', row: payroll(1) }]);
+  check('acknowledged payroll is confirmed (rev 8)', r.status === 200 && r.body.rev === 8, r);
+  r = await commit(8, [{ t: 'Payroll', op: 'update', row: payroll(1, { total: 1 }) }]);
   check('confirmed payroll is read-only (RULE)', refused(r, 'RULE'), r);
-  r = await commit(7, [{ t: 'Payroll', op: 'delete', row: { id: 1 } }]);
+  r = await commit(8, [{ t: 'Payroll', op: 'delete', row: { id: 1 } }]);
   check('confirmed payroll cannot be deleted (RULE)', refused(r, 'RULE'), r);
-  r = await commit(7, [{ t: 'Workplace', op: 'insert', row: { id: 2, name: 'Second', regular_employees: 4, sub_attendance_policy: 'EXCUSED' } }]);
+  r = await commit(8, [{ t: 'Payroll', op: 'insert', row: payroll(2 ** 53 + 2, { status: 'DRAFT', year_month: '2026-06' }) }]);
+  check('a new key outside 1..2^31-1 is refused (BAD_CHANGES)', refused(r, 'BAD_CHANGES'), r);
+  r = await commit(8, [{ t: 'Workplace', op: 'insert', row: { id: 2, name: 'Second', regular_employees: 4, sub_attendance_policy: 'EXCUSED' } }]);
   check('a store keeps its one workplace (RULE)', refused(r, 'RULE'), r);
-  r = await commit(7, [{ t: 'Worker', op: 'update', row: { ...row(s, 'Worker', 2), workplace_id: 77 } }]);
+  r = await commit(8, [{ t: 'Worker', op: 'update', row: { ...row(s, 'Worker', 2), workplace_id: 77 } }]);
   check('references are checked inside the store', r.status >= 400, r.body?.message);
 
   // ---- Limits --------------------------------------------------------------------------------------------------
   const gate = () => JSON.parse(sql(`select minute_count, day_count from public.app_store_gate where store_id = ${storeId}`))[0];
-  check('successful change sets are counted per store', gate().minute_count === 6 && gate().day_count === 6, gate());
+  check('successful change sets are counted per store', gate().minute_count === 7 && gate().day_count === 7, gate());
   sql(`update public.app_store_gate set minute_count = 60 where store_id = ${storeId}`);
   s = await snapshot();
   const note = row(s, 'Notification', 2);
-  r = await commit(7, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
+  r = await commit(8, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
   check('the 61st change set in a minute is refused (RATE_LIMIT)', refused(r, 'RATE_LIMIT'), r);
   sql(`update public.app_store_gate set minute_count = 0, day_count = 3000 where store_id = ${storeId}`);
-  r = await commit(7, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
+  r = await commit(8, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
   check('the 3,001st change set in a day is refused (DAILY_LIMIT)', refused(r, 'DAILY_LIMIT'), r);
   sql(`update public.app_store_gate set minute_start = now() - interval '2 minutes', minute_count = 60, day = day - 1, day_count = 3000 where store_id = ${storeId}`);
-  r = await commit(7, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
-  check('the counters start again in the next minute and the next day (rev 8)', r.status === 200 && r.body.rev === 8, r);
+  r = await commit(8, [{ t: 'Notification', op: 'update', row: { ...note, read_at: kst(s.now) } }]);
+  check('the counters start again in the next minute and the next day (rev 9)', r.status === 200 && r.body.rev === 9, r);
   sql(`select set_config('app.seeding', 'on', true); insert into public.app_notification (store_id, id, worker_id, kind, message, created_at)
     select ${storeId}, 1000 + g, 3, 'REQUEST_RECEIVED', 'filler', '2026-01-01T00:00' from generate_series(1, 19700) g`);
   s = await snapshot();
-  r = await commit(8, [newRequest(3, { shift_id: s.tables.Shift.find((z) => z.status === 'SCHEDULED' && `${z.work_date}T${z.start_time}` > kst(s.now, 120)).id,
+  r = await commit(9, [newRequest(3, { shift_id: s.tables.Shift.find((z) => z.status === 'SCHEDULED' && `${z.work_date}T${z.start_time}` > kst(s.now, 120)).id,
     requester_id: s.tables.Shift.find((z) => z.status === 'SCHEDULED' && `${z.work_date}T${z.start_time}` > kst(s.now, 120)).worker_id })]);
   check('an insert into a store with more than 20,000 rows is refused (STORE_FULL)', refused(r, 'STORE_FULL'), r);
 

@@ -134,6 +134,8 @@ test('TC-01D worker registration refuses invalid input with a message that says 
   const ok = { name: 'Yoon Jisu', hourlyWage: 10500, contractStart: '2026-10-01' };
   const cases = [
     [{ ...ok, name: '   ' }, 'NAME_REQUIRED'],
+    [{ ...ok, name: 'x'.repeat(101) }, 'NAME_TOO_LONG'],
+    [{ ...ok, phone: '0'.repeat(41) }, 'PHONE_TOO_LONG'],
     [{ ...ok, hourlyWage: 0 }, 'WAGE_INVALID'],
     [{ ...ok, hourlyWage: 10320.5 }, 'WAGE_INVALID'],
     [{ ...ok, hourlyWage: NaN }, 'WAGE_INVALID'],

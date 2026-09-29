@@ -24,7 +24,7 @@ export function render(view, ctx) {
       <section class="section">
         <div class="card form">
           <label class="field"><span class="field-label">${esc(t('settings.store'))}</span>
-            <input type="text" name="name" value="${esc(workplace.name)}" autocomplete="off"></label>
+            <input type="text" name="name" value="${esc(workplace.name)}" autocomplete="off" maxlength="100"></label>
           <label class="field"><span class="field-label">${esc(t('settings.employees'))}</span>
             <input type="number" name="regularEmployees" class="num" min="0" step="1" inputmode="numeric" value="${workplace.regularEmployees}" aria-describedby="emp-hint">
             <span class="hint" id="emp-hint">${esc(t('settings.employeesHint', { n: workplace.regularEmployees }))}</span></label>

@@ -19,7 +19,7 @@
   </tbody>
 </table>
 
-<p>Beyond the six objectives, the revised proposal asked for a shared database, and iteration 8 delivered it: in the default shared mode the owner and the workers use one demonstration store from their own devices, the server re-checks the state rules and the time of every change, and a change made on one device appears on the others within about ten seconds (Sections 4.5.2 and 5.4.8). The browser-only version remains available as the local demonstration mode. The shared mode is verified by 64 of 64 REST checks against a throwaway store and 12 of 12 checks with two headless browsers.</p>
+<p>Beyond the six objectives, the revised proposal asked for a shared database, and iteration 8 delivered it: in the default shared mode the owner and the workers use one demonstration store from their own devices, the server re-checks the state rules and the time of every change, and a change made on one device appears on the others within about ten seconds (Sections 4.5.2 and 5.4.8). The browser-only version remains available as the local demonstration mode. The shared mode is verified by 67 of 67 REST checks against a throwaway store and 12 of 12 checks with two headless browsers.</p>
 
 <h2 id="conclusion-size">8.2 Size and Complexity of the System</h2>
 
@@ -39,7 +39,7 @@
     <tr><td>Notification kinds</td><td class="num">9</td><td>With a fixed recipients table (spec §8)</td></tr>
     <tr><td>UML diagrams of the system</td><td class="num">16</td><td>2 use-case, 1 class, 1 ER, 1 component, 1 deployment, 5 sequence (SD-1, SD-2, SD-3a, SD-3b, SD-4), 3 state, 2 activity</td></tr>
     <tr><td>Screens</td><td class="num">11</td><td>Sign-in and ten working screens (Section 4.9)</td></tr>
-    <tr><td>Automated tests</td><td class="num">125</td><td>36 rule tests, 65 service tests, 12 shared-mode tests and 12 tests of the project hub's editing feature; all pass. In addition, 64 REST checks of the shared database and 12 two-browser checks of the shared mode</td></tr>
+    <tr><td>Automated tests</td><td class="num">125</td><td>36 rule tests, 65 service tests, 12 shared-mode tests and 12 tests of the project hub's editing feature; all pass. In addition, 67 REST checks of the shared database and 12 two-browser checks of the shared mode</td></tr>
     <tr><td>Lines of application code</td><td class="num">6,298</td><td>Core modules 2,054 (services 1155, rules 320, db 280, shared-data gateway 243, clock 56); presentation 4,244 (router, 15 UI modules including translations and shared components, page skeleton, style sheet and configuration)</td></tr>
     <tr><td>Lines of test code</td><td class="num">1,628</td><td><code>tests/rules.test.js</code> 336, <code>tests/services.test.js</code> 1031, <code>tests/shared.test.js</code> 261 (without the hub's <code>tests/collab.test.js</code>, 160)</td></tr>
     <tr><td>Lines of server SQL</td><td class="num">1,116</td><td><code>db/app-shared.sql</code>: tables, triggers, functions, grants and the seed template of the shared database</td></tr>

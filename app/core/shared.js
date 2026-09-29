@@ -36,18 +36,23 @@ export function diffTables(before, after) {
   return changes;
 }
 
-/** PostgREST access with the publishable key: the three RPCs and the store revision (read-only). */
-export function restTransport({ url, key, fetchFn = (...args) => fetch(...args) }) {
+/**
+ * PostgREST access with the publishable key: the three RPCs and the store revision (read-only). A request without an
+ * answer after timeoutMs is aborted and reported as offline, so that one hung request cannot block the gateway's queue.
+ */
+export function restTransport({ url, key, fetchFn = (...args) => fetch(...args), timeoutMs = 15000 }) {
   const headers = { apikey: key, 'Content-Type': 'application/json' };
   if (key.startsWith('eyJ')) headers.Authorization = `Bearer ${key}`;
-  async function call(path, init) {
+  const offline = (cause) => Object.assign(new Error('The shared database cannot be reached.'), { offline: true, cause });
+  async function request(path, init, signal) {
     let res;
+    let text;
     try {
-      res = await fetchFn(`${url}${path}`, { ...init, headers, cache: 'no-store' });
+      res = await fetchFn(`${url}${path}`, { ...init, headers, cache: 'no-store', signal });
+      text = await res.text();
     } catch (err) {
-      throw Object.assign(new Error('The shared database cannot be reached.'), { offline: true, cause: err });
+      throw offline(err);
     }
-    const text = await res.text();
     let body = null;
     try {
       body = text ? JSON.parse(text) : null;
@@ -59,6 +64,18 @@ export function restTransport({ url, key, fetchFn = (...args) => fetch(...args) 
       throw Object.assign(new Error(message), { status: res.status, serverMessage: message });
     }
     return body;
+  }
+  async function call(path, init) {
+    const controller = new AbortController();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(offline(new Error(`no answer within ${timeoutMs} ms`))); }, timeoutMs);
+    });
+    try {
+      return await Promise.race([request(path, init, controller.signal), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
   return {
     rpc: (name, args) => call(`/rest/v1/rpc/${name}`, { method: 'POST', body: JSON.stringify(args) }),

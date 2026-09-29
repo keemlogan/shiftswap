@@ -1267,4 +1267,65 @@ and needs no re-applying)</td>
 </tr>
 </tbody>
 </table>
+<p>Independent review after iteration 8 (correctness and security, diff
+since the proposal revision): no high-severity finding; the following
+were fixed without a change of the prompt or the specification
+(implementation details below the level of the specification).</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Change</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>A request to the shared database that never answers blocks the
+gateway's queue; the screen stays busy until a reload</td>
+<td><code>restTransport</code> aborts a request after 15 s and reports
+it as offline (<code>SHARED_OFFLINE</code>, back to the last saved
+state); polling is skipped while a change is being saved</td>
+<td>TC-16B (abort of a hung request); <code>npm test</code> 125/125</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Names over 100 characters and phone numbers over 40 characters pass
+the services but are refused by the database with a general message</td>
+<td><code>NAME_TOO_LONG</code>, <code>PHONE_TOO_LONG</code>,
+<code>STORE_NAME_TOO_LONG</code> with messages in both languages;
+<code>maxlength</code> on the inputs</td>
+<td>TC-01D (two new cases)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>A change set can insert a key above 2^53 (not exact in the browser)
+or a payroll row that is already CONFIRMED (read-only for the
+owner)</td>
+<td><code>app_commit</code> accepts new keys from 1 to 2^31−1 only; the
+payroll trigger accepts new rows only as DRAFT
+(<code>db/app-shared.sql</code> re-applied)</td>
+<td><code>tools/shared-rest.mjs</code> 67/67 (three new checks)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Hub: the style filter misses <code>image-set()</code> and CSS
+escapes; the per-document caps allow about 520 MB of anonymous saves a
+day</td>
+<td>the filter refuses backslashes, <code>image-set</code> and
+<code>src()</code> in styles and SVG attributes; a daily budget of 60 MB
+over all saves, restores and translations (<code>doc_bytes_today</code>,
+<code>db/hub-collab.sql</code> re-applied)</td>
+<td><code>tools/collab-check.mjs</code> 37/37 (sanitizer probe
+extended); budget refused in a rolled-back probe (DAILY_BYTES)</td>
+</tr>
+</tbody>
+</table>
+<p>Not changed: the limits of NFR-14 are per store and shared by all
+visitors, so one visitor can use up the day's changes or resets of the
+demo store; this follows from the absence of accounts (spec §8, trust
+boundary), and the team can reset the store at any time through the
+owner connection.</p>
 </main></body></html>
