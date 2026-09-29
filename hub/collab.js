@@ -339,7 +339,10 @@ export class SupabaseBackend {
 
 const FRAME_CSS = ".ss-ins{background:#fff59d;color:inherit;text-decoration:none;border-radius:2px;box-shadow:0 0 0 1px #fff59d}"
   + ".ss-del{background:#ffe0e0;color:#a33;text-decoration:line-through}.ss-chg-block{background:#fff9c4}"
-  + "@media print{.ss-ins{background:none!important;box-shadow:none!important}.ss-del{display:none!important}.ss-chg-block{background:none!important}}";
+  + "@media print{.ss-ins{background:none!important;box-shadow:none!important}.ss-del{display:none!important}.ss-chg-block{background:none!important}}"
+  // 브라우저 머리말·꼬리말(날짜·제목·주소·쪽 번호)은 쪽 여백에 찍히므로 쪽 여백을 0으로 하고, 같은 1인치 여백을
+  // 쪽마다 반복되는 본문 안쪽 여백으로 만든다(쪽수 18쪽은 그대로).
+  + "@media print{@page{margin:0}@page :first{margin:0}html body{margin:0;padding:1in;box-decoration-break:clone;-webkit-box-decoration-break:clone}}";
 const KO_MISSING = "이 버전의 한국어 번역이 아직 없습니다. 데스크톱 Chrome에서 열면 자동 번역을 만들 수 있습니다.";
 const PRINT_HINT = "인쇄 창에서 대상을 'PDF로 저장'으로 선택하세요.";
 const AUTHOR_KEY = "ss.collab.author";
