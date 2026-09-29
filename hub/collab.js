@@ -66,6 +66,8 @@ export function diffHtml(oldHtml, newHtml, { timeout = 1000, maxEditLength = 800
   const mark = (added, text) => {
     if (BLANK.test(text)) { if (added) html += text; return; }
     if (!added && TABLE_CTX.has(stack.at(-1))) return;
+    // 그림(SVG) 안에서는 ins·del 이 그려지지 않고 글자까지 숨기므로 새 글자만 표시 없이 둔다.
+    if (stack.includes("svg")) { if (added) html += text; return; }
     const cls = (added ? "ss-ins" : "ss-del") + (inHunk ? "" : " ss-hunk");
     if (!inHunk) { count++; inHunk = true; }
     if (added) {
@@ -111,7 +113,7 @@ function segments(root, ignore) {
   const own = new Map();
   const walker = (root.ownerDocument || root).createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    if (ignore && n.parentElement?.closest(ignore)) continue;
+    if (n.parentElement?.closest(ignore ? `svg, ${ignore}` : "svg")) continue;   // 그림(SVG) 안의 글자는 문단이 아니다
     const b = blockOf(n, root);
     if (b) (own.get(b) || own.set(b, []).get(b)).push(n);
   }
@@ -123,7 +125,7 @@ function segments(root, ignore) {
   }).filter((s) => s.text);
 }
 
-/** 자기 글자가 있는 블록을 문서 순서대로 [{ el, text }]. ignore(선택자) 안의 글자는 세지 않는다. */
+/** 자기 글자가 있는 블록을 문서 순서대로 [{ el, text }]. 그림(SVG)과 ignore(선택자) 안의 글자는 세지 않는다. */
 export function blockSegments(root, { ignore } = {}) {
   return segments(root, ignore).map(({ el, text }) => ({ el, text }));
 }
@@ -170,17 +172,28 @@ function blockDiff(oldHtml, newHtml) {
 /* ---------- 정화 ---------- */
 
 const PURIFY = {
-  USE_PROFILES: { html: true },   // SVG·MathML 은 받지 않는다
-  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "textarea", "select"],
+  USE_PROFILES: { html: true, svg: true },   // 보고서의 그림(인라인 SVG)은 받고, SVG 필터·MathML 은 받지 않는다
+  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "textarea", "select",
+    "image", "animatecolor", "animatemotion", "animatetransform"],   // SVG 의 외부 이미지와 움직임
   FORBID_ATTR: ["srcset"],
   ALLOW_DATA_ATTR: false,
 };
 // 누구나 저장할 수 있으므로 방문자 추적(외부 주소 이미지)과 화면을 덮는 스타일은 뺀다.
-// 이미지는 상대 경로와 data:image 만, style 에는 url()·position·z-index 등을 쓸 수 없다.
+// 이미지는 상대 경로와 data:image 만, style 에는 url()·position·z-index 등을 쓸 수 없다. SVG 의 href·url() 은
+// 같은 문서 안(#id)만 가리킬 수 있다(링크 a 는 HTML 링크와 같이 DOMPurify 가 검사한다).
+// DOMPurify 는 document 의 속성 이름과 같은 id(title, implementation 등)를 지우는데(DOM clobbering 방지), 그러면
+// 목차와 근거 링크(#title, #implementation)가 끊긴다. name 이 없는 요소의 id 는 document 의 속성을 가리지 못하고
+// window 에서는 이름 속성 객체 아래(EventTarget·Object 의 속성)만 가릴 수 있으므로, 그런 이름이 아닌 id 는 남긴다.
+const SVG_NS = "http://www.w3.org/2000/svg";
 if (DOMPurify.isSupported) DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {   // Node(단위 테스트)에는 DOM 이 없다
   const v = String(data.attrValue || "").trim();
   if (data.attrName === "src" && /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(v) && !/^data:image\//i.test(v)) data.keepAttr = false;
-  if (data.attrName === "style" && /url\s*\(|position\s*:|z-index|@import|expression\s*\(|behavior\s*:|-moz-binding/i.test(v)) data.keepAttr = false;
+  // CSS 이스케이프(\75rl( 등)는 아래 검사를 비껴갈 수 있으므로 style 과 SVG 속성에서는 역슬래시가 있는 값을 뺀다.
+  if (data.attrName === "style" && /\\|url\s*\(|image-set|src\s*\(|position\s*:|z-index|@import|expression\s*\(|behavior\s*:|-moz-binding/i.test(v)) data.keepAttr = false;
+  if (data.attrName !== "style" && /url\s*\(/i.test(v) && !/^url\(\s*#[\w-]+\s*\)$/i.test(v)) data.keepAttr = false;
+  if (node.namespaceURI === SVG_NS && /\\|image-set|src\s*\(/i.test(v)) data.keepAttr = false;
+  if (node.namespaceURI === SVG_NS && node.localName !== "a" && /^(xlink:)?href$/.test(data.attrName) && !/^#[\w-]+$/.test(v)) data.keepAttr = false;
+  if (data.attrName === "id" && data.keepAttr && /^[A-Za-z][\w-]*$/.test(v) && !(v in EventTarget.prototype) && !node.hasAttribute("name")) data.forceKeepAttr = true;
 });
 /** 저장하거나 iframe 에 넣는 HTML 은 모두 이 함수를 거친다(id·class·href·src·alt·colspan·rowspan·style 은 남는다). */
 export const sanitize = (html) => DOMPurify.sanitize(String(html ?? ""), PURIFY);
@@ -346,7 +359,8 @@ export class SupabaseBackend {
 
 /* ---------- 화면 ---------- */
 
-const FRAME_CSS = ".ss-ins{background:#fff59d;color:inherit;text-decoration:none;border-radius:2px;box-shadow:0 0 0 1px #fff59d}"
+// tools/print-check.mjs 가 같은 CSS 로 인쇄해 쪽수와 머리말·꼬리말이 없는지 확인한다.
+export const FRAME_CSS = ".ss-ins{background:#fff59d;color:inherit;text-decoration:none;border-radius:2px;box-shadow:0 0 0 1px #fff59d}"
   + ".ss-del{background:#ffe0e0;color:#a33;text-decoration:line-through}.ss-chg-block{background:#fff9c4}"
   + "@media print{.ss-ins{background:none!important;box-shadow:none!important}.ss-del{display:none!important}.ss-chg-block{background:none!important}}"
   // 브라우저 머리말·꼬리말(날짜·제목·주소·쪽 번호)은 쪽 여백에 찍히므로 쪽 여백을 0으로 하고, 같은 1인치 여백을

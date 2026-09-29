@@ -25,7 +25,7 @@ function mountCollab(opts) {
 function facts() {
   const done = ITEMS.filter((i) => !i.todo).length;
   document.getElementById("facts").innerHTML =
-    `과제 요구사항 <b>${ITEMS.length}</b>개 중 <b>${done}</b>개 완료 · 유스케이스 <b>13</b> · 테이블 <b>11</b> · 업무 규칙 <b>14</b> · 테스트 <b>전부 통과</b>`;
+    `과제 요구사항 <b>${ITEMS.length}</b>개 중 <b>${done}</b>개 완료 · 유스케이스 <b>13</b> · 테이블 <b>11</b> · 업무 규칙 <b>15</b> · 테스트 <b>전부 통과</b>`;
 }
 
 function listView() {

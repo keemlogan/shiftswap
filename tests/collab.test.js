@@ -129,6 +129,16 @@ test('collab: diffHtml does not put deleted text between table rows (the parser 
   assert.match(inCell.html, /<td>x<del class="ss-del ss-hunk"> y<\/del><\/td>/);
 });
 
+test('collab: diffHtml leaves text inside an inline SVG figure unmarked (ins/del would hide it there) and still marks the text around it', () => {
+  const oldHtml = '<figure><svg viewBox="0 0 10 10"><text x="1" y="5">Request</text></svg><figcaption>Figure 1. Old flow</figcaption></figure>';
+  const newHtml = '<figure><svg viewBox="0 0 10 10"><text x="1" y="5">Swap request</text></svg><figcaption>Figure 1. New flow</figcaption></figure>';
+  const d = diffHtml(oldHtml, newHtml);
+  assert.equal(d.count, 1);
+  assert.match(d.html, /<text x="1" y="5">Swap request<\/text>/);
+  assert.match(d.html, /<figcaption>Figure 1\. <del class="ss-del ss-hunk">Old<\/del><ins class="ss-ins">New<\/ins> flow<\/figcaption>/);
+  assert.equal(strip(d.html), newHtml);
+});
+
 test('collab: diffHtml returns null when the edit exceeds the limit (the caller falls back to changed blocks)', () => {
   const a = Array.from({ length: 60 }, (_, i) => `<p>alpha ${i}</p>`).join('');
   const b = Array.from({ length: 60 }, (_, i) => `<p>omega ${i * 7}</p>`).join('');

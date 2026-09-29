@@ -1,4 +1,4 @@
-// Headless check of the proposal collaboration in the hub (hub/collab.js) with the browser-local backend:
+// Headless check of the collaboration in the hub (hub/collab.js) with the browser-local backend:
 //   node tools/collab-check.mjs [screenshot dir]
 // Two tabs A and B of one Chrome profile open index.html?collab=local&collabDoc=e2e#/r/P-1/0, so they share
 // localStorage and navigator.locks the way two team members share the database. B saves first (v2), A saves later
@@ -104,6 +104,7 @@ const backend = (body) => `(async () => { const m = await import('./hub/collab.j
 const dir = process.argv[2] || join(tmpdir(), 'shiftswap-collab-shots');
 mkdirSync(dir, { recursive: true });
 const shots = [];
+const timings = [];
 const server = await serve();
 const root = server.url.replace(/app\/$/, '');
 const url = `${root}index.html?collab=local&collabDoc=e2e#/r/P-1/0`;
@@ -328,6 +329,90 @@ try {
   const list = await A.waitFor(`!!document.querySelector('.board') && !document.querySelector('.cl-bar') && document.querySelectorAll('.rows .row').length > 30`);
   check(img && wbs && list, 'P-5 image tab has no collab UI, the P-5 proposal tab (#wbs) gets it, the list view renders without it');
 
+  // ---- Second document: the final report (~530 kB, 130 pages), with timings ----
+  const FINAL = `${root}index.html?collab=local&collabDoc=e2e-final#/r/F-8/3`;   // F-8 tab 3 is docs/final-report.html#implementation
+  const fb = (body) => `(async () => { const m = await import('./hub/collab.js'); const b = new m.LocalBackend('e2e-final');
+    const vs = await b.listVersions(); const v = (l) => vs.find((x) => x.label === l); ${body} })()`;
+  const ms = (t0) => Date.now() - t0;
+  let t0 = Date.now();
+  await A.send('Page.navigate', { url: FINAL });
+  const fOpen = await A.waitFor(`${verLabel} === 'v1' && document.querySelector('.cl-history')?.textContent.includes('v1')
+    && document.querySelector('.pv-frame').contentDocument.querySelectorAll('svg').length === 2`, 30000);
+  timings.push(`final report: open F-8 with toolbar, history and v1 in the frame ${ms(t0)} ms`);
+  const fDoc = await A.frame(`({ top: Math.round(d.getElementById('implementation')?.getBoundingClientRect().top ?? 9999), title: !!d.getElementById('title'),
+    marker: !!d.getElementById('dfd-arrow'), arrows: d.querySelectorAll('[marker-end="url(#dfd-arrow)"]').length })`);
+  check(fOpen && Math.abs(fDoc.top) < 40 && fDoc.title && fDoc.marker && fDoc.arrows > 0,
+    'final report (F-8 #implementation): v1 seeded, frame scrolled to #implementation, both SVG figures, #title and the arrow markers kept', JSON.stringify(fDoc));
+  const fBar = await A.evaluate(`({ en: !!document.querySelector('[data-act="lang"][data-lang="en"]'), ko: !!document.querySelector('[data-act="lang"][data-lang="ko"]'),
+    edit: document.querySelector('[data-act="edit"]')?.disabled === false, print: document.querySelector('[data-act="print"]')?.disabled === false,
+    hist: document.querySelector('.cl-history h3')?.textContent })`);
+  check(fBar.en && fBar.ko && fBar.edit && fBar.print && fBar.hist === '변경 이력', 'final report toolbar: EN | 한국어, 편집, PDF 저장 and 변경 이력 present', JSON.stringify(fBar));
+  t0 = Date.now();
+  await A.click('[data-act="edit"]');
+  await A.waitFor(`document.querySelector('.cl-editing')?.textContent === '편집 중 · v1 기준' && document.querySelector('.pv-frame').contentDocument.designMode === 'on'`, 15000);
+  timings.push(`final report: enter edit mode ${ms(t0)} ms`);
+  await A.typeInFrame('#implementation + p', 'Edited in the final report. ');
+  await A.typeName('.cl-bar [data-author]', 'F');
+  await A.waitFor(`!document.querySelector('[data-act="save"]').disabled`);
+  t0 = Date.now();
+  await A.click('[data-act="save"]');
+  const fSaved = await A.waitFor(`${verLabel} === 'v2' && ${notice}.includes('v2로 저장했습니다.')`, 30000);
+  timings.push(`final report: save v2 (local backend) ${ms(t0)} ms`);
+  const fMarked = await A.waitFor(`(() => { const d = document.querySelector('.pv-frame').contentDocument;
+    const m = [...d.querySelectorAll('.ss-ins, .ss-chg-block')].map((e) => e.textContent).join(' ');
+    return m.includes('Edited in the final report.') && { ins: d.querySelectorAll('.ss-ins').length, blocks: d.querySelectorAll('.ss-chg-block').length,
+      count: document.querySelector('.cl-count')?.textContent, note: document.querySelector('.cl-note')?.textContent || '' }; })()`, 30000);
+  timings.push(`final report: save + highlighted v2 shown ${ms(t0)} ms (${fMarked ? (fMarked.ins ? 'word diff' : 'block fallback') : 'no highlight'})`);
+  const fStored = await A.evaluate(fb(`const h = await b.getHtml(v('2').id); return { n: vs.length, bytes: new TextEncoder().encode(h).length,
+    svg: (h.match(/<svg/g) || []).length, title: h.includes('id="title"'), edited: h.includes('Edited in the final report.') };`));
+  check(fSaved && fMarked && fMarked.count === '변경 1곳' && fStored.n === 2 && fStored.svg === 2 && fStored.title && fStored.edited && fStored.bytes > 400000,
+    `final report: edit + save → v2 (${Math.round(fStored.bytes / 1000)} kB stored with both figures), the change is highlighted (변경 1곳)`, JSON.stringify({ fMarked, fStored }));
+  await A.click('[data-act="next"]');
+  const fHunk = await A.waitFor(`(() => { const f = document.querySelector('.pv-frame'); const r = f.contentDocument.querySelector('.ss-hunk, .ss-chg-block').getBoundingClientRect(); return r.top >= 0 && r.bottom <= f.contentWindow.innerHeight; })()`);
+  const v1id = await A.evaluate(fb(`return v('1').id;`));
+  t0 = Date.now();
+  await A.click(`.cl-history [data-act="view"][data-id="${v1id}"]`);
+  const fV1 = await A.waitFor(`${verLabel} === 'v1' && document.querySelector('.pv-frame').contentDocument.querySelectorAll('${MARKS}').length === 0
+    && !document.querySelector('.pv-frame').contentDocument.body.textContent.includes('Edited in the final report.')`, 15000);
+  timings.push(`final report: view v1 from the history ${ms(t0)} ms`);
+  t0 = Date.now();
+  await A.click('[data-act="show-head"]');
+  const fV2 = await A.waitFor(`${verLabel} === 'v2' && document.querySelector('.pv-frame').contentDocument.querySelectorAll('.ss-ins, .ss-chg-block').length > 0`, 15000);
+  timings.push(`final report: back to v2 with highlights (diff cached) ${ms(t0)} ms`);
+  check(fHunk && fV1 && fV2 && (await A.text('.cl-history')).includes('현재본'), 'final report: 다음 변경 scrolls to the change; history 조회 v1 and 현재본 보기 v2 work');
+  await A.evaluate('delete window.Translator');   // as above: the path without the browser's translation API
+  t0 = Date.now();
+  await A.click('[data-act="lang"][data-lang="ko"]');
+  const fKo = await A.waitFor(`${notice}.includes('한국어 번역이 아직 없습니다')`, 15000);
+  timings.push(`final report: 한국어 without a translation ${ms(t0)} ms`);
+  await A.click('[data-act="lang"][data-lang="en"]');
+  await A.waitFor(`document.querySelector('.pv-frame').contentDocument.querySelectorAll('.ss-ins, .ss-chg-block').length > 0`, 15000);
+  check(fKo, 'final report: 한국어 without a stored translation shows the English text with the "번역이 아직 없습니다" notice', await A.evaluate(notice));
+  await A.frame(`(w.print = () => { window.parent.__printed = (window.parent.__printed || 0) + 1; }, true)`);
+  const before = await A.evaluate('window.__printed || 0');
+  t0 = Date.now();
+  await A.click('[data-act="print"]');
+  await A.waitFor(`window.__printed === ${before + 1}`, 15000);
+  timings.push(`final report: PDF 저장 preparation (clean body, before the print dialog) ${ms(t0)} ms`);
+  const fPrint = await A.frame(`({ marks: d.querySelectorAll('${MARKS}').length, title: d.title, svg: d.querySelectorAll('svg').length,
+    css: d.getElementById('ss-collab-style')?.textContent.includes('@page{margin:0}') })`);
+  await A.frame(`w.dispatchEvent(new Event('afterprint'))`);
+  const fBack = await A.waitFor(`document.querySelector('.pv-frame').contentDocument.querySelectorAll('.ss-ins, .ss-chg-block').length > 0`, 15000);
+  check(fPrint.marks === 0 && fPrint.title === 'ShiftSwap_Final_Report_v2_EN' && fPrint.svg === 2 && fPrint.css && fBack,
+    'final report PDF 저장: 0 .ss-* elements, title ShiftSwap_Final_Report_v2_EN, figures kept, print CSS present; highlights back after printing', JSON.stringify(fPrint));
+
+  // ---- Sanitizer: inline SVG figures and document ids are kept, tracking and clobbering are not ----
+  const svgSan = await A.evaluate(`(async () => { const m = await import('./hub/collab.js'); return m.sanitize(
+    '<h1 id="title">T</h1><h1 id="implementation">I</h1><p id="addEventListener">x</p><img id="cookie" name="cookie" src="a.png">'
+    + '<svg viewBox="0 0 9 9"><defs><marker id="m1"><path d="M0,0 L9,5 z"/></marker></defs><line x1="0" y1="0" x2="9" y2="9" marker-end="url(#m1)"/>'
+    + '<rect fill="url(https://t.example/p.svg#a)" width="1" height="1"/><image href="https://t.example/p.png"/><use href="https://t.example/s.svg#a"/>'
+    + '<rect fill="\\\\75rl(https://t.example/r.svg#a)" width="1" height="1"/>'
+    + '<a href="javascript:alert(1)"><text>t</text></a><animate attributeName="href" to="javascript:alert(1)"/><script>1<\/script><foreignObject><p>f</p></foreignObject></svg>'
+    + '<p style="background:image-set(&quot;https://t.example/q.png&quot; 1x)">s</p><p style="pos\\\\69tion:fixed;color:red">f</p>'); })()`);
+  check(/id="title"/.test(svgSan) && /id="implementation"/.test(svgSan) && /marker-end="url\(#m1\)"/.test(svgSan) && /<marker id="m1"/.test(svgSan)
+    && !/addEventListener|name="cookie"|t\.example|javascript|<image|<use|<animate|<script|foreignObject|image-set|69tion|75rl/i.test(svgSan),
+    'sanitize keeps inline SVG, url(#id) markers and ids such as #title/#implementation; drops external SVG references, script URLs, animation, ids that shadow EventTarget methods, clobbering names, image-set() and CSS escapes', svgSan);
+
   check(pageA.problems.length === 0 && pageB.problems.length === 0, 'no console errors, exceptions or dialogs in either tab',
     [...pageA.problems.map((x) => `A ${x}`), ...pageB.problems.map((x) => `B ${x}`)].join(' | '));
 } catch (err) {
@@ -338,5 +423,6 @@ try {
   server.close();
 }
 for (const s of shots) console.log(`screenshot ${s}`);
+for (const t of timings) console.log(`timing ${t}`);
 console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
 process.exitCode = failures ? 1 : 0;
