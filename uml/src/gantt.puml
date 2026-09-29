@@ -52,7 +52,8 @@ language en
 -- Implementation --
 [5 Implementation by vibe coding (W9-W12)] starts 2026-10-26 and ends 2026-11-20
 [5.1 Prompt engineering] starts 2026-10-26 and ends 2026-11-01
-[5.2 Application build] starts 2026-11-02 and ends 2026-11-20
+[5.2 Application build] starts 2026-10-26 and ends 2026-11-20
+[5.2.3 Shared database setup] starts 2026-10-26 and ends 2026-11-01
 [5.2.1 Increment 1 (Must) ends 11-06] starts 2026-11-02 and ends 2026-11-06
 [5.2.1 Increment 2 (Should) ends 11-13] starts 2026-11-09 and ends 2026-11-13
 [5.2.2 Deploy to GitHub Pages] starts 2026-11-16 and ends 2026-11-20
@@ -75,8 +76,8 @@ language en
 [W3 Team formation (09-18)] happens 2026-09-18
 [W3 Team formation (09-18)] is colored in #E9A23B
 
-[W5 Proposal submitted (10-02)] happens 2026-10-02
-[W5 Proposal submitted (10-02)] is colored in #E9A23B
+[W5 Proposal submitted] happens 2026-10-02
+[W5 Proposal submitted] is colored in #E9A23B
 
 [W7 Interim report submitted (10-16)] happens 2026-10-16
 [W7 Interim report submitted (10-16)] is colored in #E9A23B
