@@ -1,6 +1,8 @@
 -- ShiftSwap hub: shared version history for documents edited on the hub (Supabase, public schema).
 -- Reads are open; writes go only through the three SECURITY DEFINER functions, which keep the history append-only
 -- and assign version labels under a row lock (v1 -> v2 on the head; a stale base -> v1.1, v1.2, v1.1.1 ...).
+-- Anyone may save (no accounts, by design), so saves and restores are limited per document to 10 a minute and
+-- 100 a day, and a body to 300 kB.
 
 create table if not exists public.doc_versions (
   id bigint generated always as identity primary key,
@@ -19,6 +21,7 @@ create table if not exists public.doc_versions (
 create index if not exists doc_versions_doc_idx on public.doc_versions (doc, id);
 create index if not exists doc_versions_parent_idx on public.doc_versions (parent_id);
 create index if not exists doc_versions_restored_idx on public.doc_versions (restored_from);
+create index if not exists doc_versions_doc_time_idx on public.doc_versions (doc, created_at);
 
 create table if not exists public.doc_heads (
   doc text primary key,
@@ -69,10 +72,16 @@ declare
 begin
   p_author := btrim(coalesce(p_author, ''));
   if char_length(p_author) not between 1 and 40 then raise exception 'AUTHOR_REQUIRED'; end if;
-  if p_html is null or octet_length(p_html) not between 1 and 600000 then raise exception 'INVALID_HTML'; end if;
+  if p_html is null or octet_length(p_html) not between 1 and 300000 then raise exception 'INVALID_HTML'; end if;
 
   select * into v_head from public.doc_heads h where h.doc = p_doc for update;
   if not found then raise exception 'UNKNOWN_DOC'; end if;
+  if (select count(*) from public.doc_versions v where v.doc = p_doc and v.created_at > now() - interval '1 minute') >= 10 then
+    raise exception '저장이 너무 잦습니다. 1분 뒤 다시 저장하세요. (RATE_LIMIT)';
+  end if;
+  if (select count(*) from public.doc_versions v where v.doc = p_doc and v.created_at > now() - interval '1 day') >= 100 then
+    raise exception '오늘 저장 한도(100회)를 넘었습니다. (DAILY_LIMIT)';
+  end if;
   select * into v_base from public.doc_versions v where v.id = p_base_id and v.doc = p_doc;
   if not found then raise exception 'UNKNOWN_BASE'; end if;
 
@@ -121,6 +130,12 @@ begin
   select * into v_head from public.doc_heads h where h.doc = p_doc for update;
   if not found then raise exception 'UNKNOWN_DOC'; end if;
   if v_head.head_id is distinct from p_expected_head_id then raise exception 'HEAD_CHANGED'; end if;
+  if (select count(*) from public.doc_versions v where v.doc = p_doc and v.created_at > now() - interval '1 minute') >= 10 then
+    raise exception '저장이 너무 잦습니다. 1분 뒤 다시 저장하세요. (RATE_LIMIT)';
+  end if;
+  if (select count(*) from public.doc_versions v where v.doc = p_doc and v.created_at > now() - interval '1 day') >= 100 then
+    raise exception '오늘 저장 한도(100회)를 넘었습니다. (DAILY_LIMIT)';
+  end if;
   select * into v_src from public.doc_versions v where v.id = p_version_id and v.doc = p_doc;
   if not found then raise exception 'UNKNOWN_VERSION'; end if;
   if v_src.id = v_head.head_id then raise exception 'ALREADY_HEAD'; end if;
@@ -144,7 +159,7 @@ set search_path = ''
 as $$
 begin
   if p_lang is distinct from 'ko' then raise exception 'UNSUPPORTED_LANG'; end if;
-  if p_html is null or octet_length(p_html) not between 1 and 900000 then raise exception 'INVALID_HTML'; end if;
+  if p_html is null or octet_length(p_html) not between 1 and 400000 then raise exception 'INVALID_HTML'; end if;
   if not exists (select 1 from public.doc_versions v where v.id = p_version_id) then raise exception 'UNKNOWN_VERSION'; end if;
   insert into public.doc_translations (version_id, lang, engine, html)
   values (p_version_id, 'ko', 'chrome', p_html)

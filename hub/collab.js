@@ -70,8 +70,8 @@ export function diffHtml(oldHtml, newHtml, { timeout = 1000, maxEditLength = 800
     if (!inHunk) { count++; inHunk = true; }
     if (added) {
       // 앞뒤 공백은 새 문서의 것이므로 칠하지 않고 밖에 둔다.
-      const [, lead, core, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text);
-      html += `${lead}<ins class="${cls}">${core}</ins>${trail}`;
+      const a = text.length - text.trimStart().length, b = text.trimEnd().length;   // 정규식 역추적 없이 선형으로
+      html += `${text.slice(0, a)}<ins class="${cls}">${text.slice(a, b)}</ins>${text.slice(b)}`;
     } else html += `<del class="${cls}">${text}</del>`;
   };
   for (const { value, added, removed } of parts) {
@@ -170,9 +170,18 @@ function blockDiff(oldHtml, newHtml) {
 /* ---------- 정화 ---------- */
 
 const PURIFY = {
+  USE_PROFILES: { html: true },   // SVG·MathML 은 받지 않는다
   FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "textarea", "select"],
+  FORBID_ATTR: ["srcset"],
   ALLOW_DATA_ATTR: false,
 };
+// 누구나 저장할 수 있으므로 방문자 추적(외부 주소 이미지)과 화면을 덮는 스타일은 뺀다.
+// 이미지는 상대 경로와 data:image 만, style 에는 url()·position·z-index 등을 쓸 수 없다.
+if (DOMPurify.isSupported) DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {   // Node(단위 테스트)에는 DOM 이 없다
+  const v = String(data.attrValue || "").trim();
+  if (data.attrName === "src" && /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(v) && !/^data:image\//i.test(v)) data.keepAttr = false;
+  if (data.attrName === "style" && /url\s*\(|position\s*:|z-index|@import|expression\s*\(|behavior\s*:|-moz-binding/i.test(v)) data.keepAttr = false;
+});
 /** 저장하거나 iframe 에 넣는 HTML 은 모두 이 함수를 거친다(id·class·href·src·alt·colspan·rowspan·style 은 남는다). */
 export const sanitize = (html) => DOMPurify.sanitize(String(html ?? ""), PURIFY);
 
@@ -306,7 +315,7 @@ export class SupabaseBackend {
     return data;
   }
   listVersions(doc) {
-    return this.req(`/doc_versions?doc=eq.${encodeURIComponent(doc)}&select=id,label,parent_id,is_main,author,note,kind,restored_from,created_at&order=id.asc`);
+    return this.req(`/doc_versions?doc=eq.${encodeURIComponent(doc)}&select=id,label,parent_id,is_main,author,note,kind,restored_from,created_at&order=id.desc&limit=1000`).then((rows) => (Array.isArray(rows) ? rows.reverse() : rows));
   }
   async getHead(doc) {
     const [h] = await this.req(`/doc_heads?doc=eq.${encodeURIComponent(doc)}&select=head_id,main_count`);
@@ -397,7 +406,8 @@ export function mountCollab({ item, evidence, leftEl, previewEl }) {
 }
 
 function createCollab({ cfg, path, anchor, iframe, leftEl, previewEl }) {
-  const q = new URLSearchParams(location.search);
+  // ?collab=local, ?collabDoc 는 개발·시험용이라 localhost 에서만 받는다.
+  const q = new URLSearchParams(["localhost", "127.0.0.1"].includes(location.hostname) ? location.search : "");
   const S = {
     alive: true, started: false, ready: false, offline: false, localOnly: false,
     doc: q.get("collabDoc") || cfg.doc, backend: null, fdoc: null, fwin: null, staticHtml: "",
