@@ -1,6 +1,7 @@
 // Reproducible screenshots of ShiftSwap.
 //   node tools/screens.mjs review <dir>   every scene at 1280 px and 360 px in English and Korean (1× scale)
-//   node tools/screens.mjs report         the report set in docs/img (2× scale; English, plus ko-*.png)
+//   node tools/screens.mjs report         the report set in docs/img (2× scale; English, plus ko-*.png); local mode except
+//                                         ui-20-signin-shared.png (the sign-in screen of the shared demo store, nothing is changed)
 // Every scene starts from a fresh seed (storage cleared) with the demo clock at 2026-09-28T09:00; the S9 scenes
 // then move it to 2026-10-01 through Demo tools.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -28,6 +29,9 @@ const REPORT = [
   ['ui-16-failed-owner.png', 'failed-owner', 1280],
   ['ui-17-payroll-history.png', 'pay-month-history', 1280],
   ['ui-18-payroll-auto.png', 'owner-home-payroll-ready', 1280],
+  ['ui-19-overtime-warning.png', 'owner-overtime-warning', 1280],
+  // The default shared mode (read-only: only the sign-in screen of the demo store 'dalbit' is opened).
+  ['ui-20-signin-shared.png', 'signin', 1280, 'en', 'shared'],
 ];
 const REPORT_KO = [
   ['ko-signin.png', 'signin', 360],
@@ -38,6 +42,7 @@ const REPORT_KO = [
   ['ko-payroll.png', 'pay-month', 360],
   ['ko-failed-worker.png', 'failed-worker', 360],
   ['ko-payroll-auto.png', 'owner-home-payroll-ready', 360],
+  ['ko-overtime-warning.png', 'owner-overtime-warning', 360],
 ];
 
 /** Capture the whole page: the viewport is made as tall as the page so fixed bars sit at its bottom. */
@@ -65,6 +70,7 @@ const mode = process.argv[2] || 'review';
 const server = await serve();
 const page = await chrome();
 const a = app(page, server.url);
+const shared = app(page, server.url, { mode: 'shared' });
 try {
   if (mode === 'review') {
     const dir = process.argv[3] || join(ROOT, 'tools', 'out');
@@ -82,9 +88,10 @@ try {
   } else {
     const dir = join(ROOT, 'docs', 'img');
     mkdirSync(dir, { recursive: true });
-    for (const [file, name, width, lang = 'en'] of [...REPORT, ...REPORT_KO.map((r) => [...r, 'ko'])]) {
-      await runScene(page, a, name, lang, width);
-      const size = await capture(page, a, join(dir, file), width, 2, width < 900 ? 2400 : 1800);
+    for (const [file, name, width, lang = 'en', mode = 'local'] of [...REPORT, ...REPORT_KO.map((r) => [...r, 'ko'])]) {
+      const x = mode === 'shared' ? shared : a;
+      await runScene(page, x, name, lang, width);
+      const size = await capture(page, x, join(dir, file), width, 2, width < 900 ? 2400 : 1800);
       console.log(`${file} ${size} (${name}, ${lang}, ${width} px)`);
     }
   }

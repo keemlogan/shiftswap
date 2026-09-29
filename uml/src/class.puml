@@ -193,7 +193,7 @@ class SubstituteService <<service>> {
   +decideRequest(requestId, decision) : {status}
   +cancelRequest(requestId, requesterId) : {status}
   +expireOverdue() : int
-  +getApprovalPreview(requestId) : {request, weekStart, rows}
+  +getApprovalPreview(requestId) : {request, weekStart,\n  rows[{..., overtime (acceptor)}]}
 }
 
 class AttendanceService <<service>> {
@@ -225,12 +225,33 @@ class LaborRules <<service>> {
   +{static} contractHours(fixedSchedules) : float
   +{static} computeWeeklySummary({workerId,\n  contractHours, shifts, policy}) : WeeklySummary
   +{static} holidayHours(contractHours) : float
-  +{static} premiumHours(shifts, regularEmployees) : {daily, weekly, night, total}
+  +{static} isPartTime(contractHours) : boolean
+  +{static} premiumHours(shifts, regularEmployees,\n  {contractHours, month, context}) : {daily, weekly,\n  night, partTime, total}
+  +{static} partTimeLimitCheck({regularEmployees,\n  contractHours, scheduledHours}) : {beyondContract, warn}
   +{static} minimumWageFor(year, rows) : int
   +{static} probationApplies(worker, date) : boolean
-  +{static} computePayrollRow({hourlyWage, shifts,\n  holidayWeeks, regularEmployees,\n  minimumHourly, probation}) : Payroll
+  +{static} computePayrollRow({hourlyWage, shifts,\n  holidayWeeks, regularEmployees,\n  minimumHourly, probation, contractHours,\n  month, context}) : Payroll
   +{static} round2(x) : float
 }
+
+class SharedGateway <<service>> {
+  +load() : void
+  +command(fn) : result
+  +settle() : boolean
+  +poll() : boolean
+  +reset() : void
+  +busy() : boolean
+  +systemAllowed() : boolean
+  +{static} diffTables(before, after) : change[]
+  +{static} restTransport({url, key}) : {rpc, rev}
+}
+note bottom of SharedGateway
+  app/core/shared.js, config in app/config.js (shared mode only)
+  command runs a service function on the working copy, sends
+  the row changes to app_commit with the base revision, and on
+  STALE reloads app_snapshot and runs it again (max 3 times);
+  settle saves System Clock work; poll reads app_store.rev
+end note
 
 class HomeQueries <<query>> {
   +getWorkerHome(workerId) : {worker, today, incoming, taken,\n  myOpen, failed, nextShift, week, toRecord}
@@ -283,6 +304,10 @@ PayrollService ..> MinimumWage
 PayrollService ..> LaborRules
 PayrollService ..> Notification : prepareMonthlyPayroll()\n(UC-14, BR-14)
 NotificationService ..> Notification
+SharedGateway ..> ScheduleService : runs a command
+SharedGateway ..> SubstituteService : runs a command
+SharedGateway ..> AttendanceService : runs a command
+SharedGateway ..> PayrollService : runs a command
 HomeQueries ..> Worker
 HomeQueries ..> Workplace
 HomeQueries ..> Shift

@@ -28,7 +28,7 @@ database "db.js" as DB
 alt A2 Owner (UC-09): manual "Generate draft"
   Owner -> UI : pick month, "Generate draft"
   UI -> Svc : generatePayroll(yearMonth)
-else A3 System Clock (UC-14, FR-23, BR-14): app start,\nevery route change, after demo clock changes
+else A3 System Clock (UC-14, FR-23, BR-14): app start,\nevery route change, after demo clock changes (local mode)
   Clock -> Svc : prepareMonthlyPayroll(nowIso)
   note right of Clock : let P = month(now) - 1;\nonly proceeds if P is not earlier than the\nearliest contractStart month and no Payroll\nrow exists yet for P (else no-op — already ran)
   Svc -> Svc : yearMonth := P;\ngeneratePayroll(yearMonth) internally,\nsame computation as UC-09 (BR-14)
@@ -50,17 +50,24 @@ loop for each Worker W (skip if a CONFIRMED row exists)
   Svc -> DB : get W's shifts of the month (WORKED actual\ntimes, else SCHEDULED "estimated"),\nholidayWeeks = WeeklySummary.holidayHours
   Svc -> Rules : probationApplies(W, payrollDate) (BR-10)
   Rules --> Svc : probation
-  Svc -> Rules : computePayrollRow({hourlyWage, shifts,\nholidayWeeks, regularEmployees,\nminimumHourly, probation})
+  Svc -> Rules : computePayrollRow({hourlyWage, shifts,\nholidayWeeks, regularEmployees, minimumHourly,\nprobation, contractHours, month, context})
   activate Rules
-  Rules -> Rules : premiumHours(shifts, regularEmployees)\n(BR-08: only if regularEmployees >= 5)
-  Rules --> Svc : {baseHours, basePay, holidayPay,\npremiumPay, total, minWageWarning, estimated}
+  Rules -> Rules : premiumHours(shifts, regularEmployees,\n{contractHours, month, context})\n(BR-08: only if regularEmployees >= 5;\n(iv) part-time hours beyond contract, BR-15)
+  Rules --> Svc : {baseHours, basePay, holidayPay,\npremiumPay (with part-time premium), total, minWageWarning, estimated}
   deactivate Rules
   Svc -> DB : insert Payroll row (status='DRAFT')
 end
 
-Svc -> DB : commit + persist
+Svc -> DB : commit (working copy;\nlocal mode: also persist)
 deactivate DB
 deactivate Svc
+
+note over Svc, DB
+  shared mode: an owner action runs through ctx.run and the gateway sends the changed rows to
+  app_commit. The System Clock draft (UC-14) is committed the same way by the open client
+  (gateway.settle() after drawing the screen) on behalf of A3; the row trigger keeps CONFIRMED
+  payroll rows read-only.
+end note
 
 alt triggered by A3 System Clock (UC-14)
   Svc -> Notif : notify owner: PAYROLL_DRAFT_READY (BR-14)

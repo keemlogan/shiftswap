@@ -15,7 +15,7 @@ skinparam sequence {
   BoxBorderColor #1C2230
 }
 
-title UC-06 Approve or reject substitution — comparison preview (FR-11; includes UC-08)
+title UC-06 Approve or reject substitution — comparison preview (FR-11, FR-24, BR-15; includes UC-08)
 
 actor "A2 Owner" as Owner
 boundary "approvals.js" as UI
@@ -26,6 +26,7 @@ database "db.js" as DB
 Owner -> UI : open ACCEPTED request
 UI -> Svc : getApprovalPreview(requestId)
 activate Svc
+Svc -> Svc : swapEffect(shiftId, acceptorId)
 Svc -> DB : get SubRequest+Shift (requestWithShift),\nget Workplace.subAttendancePolicy
 DB --> Svc : r, policy
 
@@ -39,7 +40,15 @@ loop for person in [requester, acceptor]
   Svc -> Svc : eligibilityChanged =\nbefore.holidayEligible !== after.holidayEligible
 end
 
-Svc --> UI : {request, weekStart, rows: [{role, before, after,\neligibilityChanged}, ...]}
+opt person is the acceptor (FR-24, BR-15)
+  Svc -> DB : get Workplace.regularEmployees
+  Svc -> Rules : partTimeLimitCheck({regularEmployees,\ncontractHours, scheduledHours: after})
+  Rules --> Svc : {beyondContract, warn}\n(warn: >= 5 regular employees, part-time,\nmore than 12 h beyond contract that week)
+end
+
+Svc --> UI : {request, weekStart, rows: [{role, before, after,\neligibilityChanged, overtime (acceptor only)}, ...]}
 deactivate Svc
-UI --> Owner : show contract/scheduled hours & holiday\neligibility, before vs after (FR-11)
+UI --> Owner : show contract/scheduled hours & holiday\neligibility, before vs after (FR-11);\nwarning if overtime.warn (never blocks the approval)
+
+note over Svc, DB : read-only: in shared mode it reads the working copy only and sends nothing to the server
 @enduml

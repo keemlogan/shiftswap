@@ -21,7 +21,7 @@ actor "A1 Worker\n(requester)" as Worker
 boundary "requests.js\n(Request substitute form)" as UI
 control "SubstituteService" as Svc
 control "LaborRules" as Rules
-database "db.js\n(SQLite / localStorage)" as DB
+database "db.js\n(sql.js: local file store\nor shared working copy)" as DB
 
 Worker -> UI : open "Request substitute" for own future shift
 UI -> Worker : show form (reason, deadline)
@@ -59,7 +59,7 @@ else request valid
   alt at least one eligible candidate (FR-07)
     Svc -> DB : insert SubRequestTarget per eligible candidate
     Svc -> DB : insert Notification(REQUEST_RECEIVED) per candidate
-    Svc -> DB : commit + persist to localStorage
+    Svc -> DB : commit (local mode: persist to localStorage)
     deactivate DB
     Svc --> UI : {id, status: 'REQUESTED', candidates}
     UI --> Worker : show notified candidates
@@ -67,11 +67,18 @@ else request valid
     Svc -> DB : UPDATE SubRequest SET status='FAILED'\nWHERE id AND status='REQUESTED' (failRequest)
     Svc -> DB : insert Notification(REQUEST_FAILED) for requester\n("no co-worker can take it - contact the owner")
     Svc -> DB : insert Notification(REQUEST_FAILED) for owner\n(acknowledge only)
-    Svc -> DB : commit + persist to localStorage
+    Svc -> DB : commit (local mode: persist to localStorage)
     deactivate DB
     Svc --> UI : {id, status: 'FAILED', candidates: []}
     UI --> Worker : show "no eligible worker - contact the owner"
   end
 end
 deactivate Svc
+
+note over Worker, DB
+  shared mode (iteration 8): the form calls ctx.run(command), so shared.js runs createSubRequest on the
+  working copy and sends the changed rows (SubRequest, SubRequestTarget, Notification) with the base
+  revision to RPC app_commit; the row triggers accept only a new request in status REQUESTED whose
+  deadline and shift start are still in the future by server time (BR-03, BR-12).
+end note
 @enduml

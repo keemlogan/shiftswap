@@ -28,14 +28,25 @@ actor "A1 Worker /\nA2 Owner" as User
 node "Client device\n(desktop or mobile)" as ClientDevice {
   node "Browser\n(Chrome / Edge / Safari / Firefox)\n<<execution environment>>" as Browser {
     artifact "app/index.html\napp/main.js\napp/ui/*.js\napp/styles.css" as StaticAssets
-    component "sql.js runtime\n(sql-wasm.js + sql-wasm.wasm)\n<<WebAssembly>>" as SqlJs
     component "ShiftSwap SPA\n(core/services.js, core/rules.js,\ncore/db.js, core/clock.js)" as SPA
-    database "localStorage\nkey: shiftswap.db.v1\n(base64 SQLite snapshot)" as LocalStorage
+    component "Shared-data gateway\n(core/shared.js, config.js)\nshared mode only" as Gateway
+    component "sql.js runtime\n(sql-wasm.js + sql-wasm.wasm)\n<<WebAssembly>>" as SqlJs
+    database "In-memory SQLite replica\nof the store (sql.js)" as Replica
+    database "localStorage\nshiftswap.db.v2 (local mode only:\nbase64 SQLite snapshot, NFR-05),\nshiftswap.mode" as LocalStorage
   }
 }
 
 node "GitHub Pages\n<<static hosting>>" as Pages {
-  artifact "shiftswap repository\n/app/ (static files only)" as Repo
+  artifact "shiftswap repository\n/app/ (static files only)\n/hub/ (proposal hub)" as Repo
+}
+
+node "GitHub Actions\n<<scheduled workflow>>" as Actions {
+  artifact "supabase-keepalive.yml\ncron every 6 h" as KeepAlive
+}
+
+node "Supabase project shiftswap\n(Seoul region)\n<<managed backend>>" as Supabase {
+  component "API gateway (PostgREST)\nREST and RPC (app_ functions; hub:\nsave_version, restore_version,\nadd_translation)" as Api
+  database "PostgreSQL 17\nschema app_ (13 tables, 3 RPCs,\nrow triggers, RLS read policies)\ntables doc_versions, doc_heads,\ndoc_translations (hub)" as Pg
 }
 
 User --> Browser : HTTPS (mobile 360px / desktop 1440px)
@@ -43,16 +54,25 @@ Browser --> Pages : GET /shiftswap/app/* (HTTPS, first load / reload)
 Pages --> StaticAssets : serves static files\n(no server-side logic)
 StaticAssets --> SPA : bootstraps
 SPA --> SqlJs : in-memory SQLite queries\n(no network round-trip)
-SPA --> LocalStorage : export DB after each\ncommitted transaction / load on start
+SqlJs --> Replica
+SPA --> Gateway : shared mode:\nevery command, polling
+Gateway --> Api : HTTPS, REST/RPC,\npublishable key only\napp_snapshot, app_commit, app_reset,\nGET app_store.rev every 10 s
+Api --> Pg : SQL (API roles: read-only,\nwrites only via the 3 RPCs)
+SPA --> LocalStorage : local mode: export DB after each\ncommitted transaction / load on start
+Actions --> Api : HTTPS GET doc_heads\n(publishable key)
 
 note bottom of Pages
-  NFR-08: static web application only —
+  NFR-08: static web application only -
   HTML/CSS/ES modules, no build step,
   no application server
 end note
 
-note bottom of LocalStorage
-  NFR-05: data persists across reloads;
-  "Reset demo data" reseeds it
+note bottom of Supabase
+  NFR-14: the browser holds only the publishable key; the server
+  enforces integrity, rules and server time, not identity (no passwords)
+end note
+
+note bottom of Actions
+  NFR-16: keeps the free project from pausing (risk R6)
 end note
 @enduml

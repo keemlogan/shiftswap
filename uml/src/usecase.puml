@@ -50,7 +50,7 @@ rectangle "ShiftSwap" as Boundary {
 
   ' -- shared use cases (both actors, drawn in the middle) --
   usecase "UC-07\nRecord and confirm\nattendance" as UC07
-  usecase "UC-13\nSign in by role\n(demo account selection)" as UC13
+  usecase "UC-13\nSign in by role\n(demo account, no password)" as UC13
 
   ' -- owner-side use cases (near A2) --
   usecase "UC-01\nRegister worker and\nfixed schedule" as UC01
@@ -95,6 +95,9 @@ note as N1
   UC-14 also notifies A2 Owner (PAYROLL_DRAFT_READY);
   the owner still reviews/confirms via UC-09.
   UC-02 (Register availability) retired in iteration 6 (§15).
+  A3 uses the demo clock in the local mode and the database
+  server time in the shared mode (§9); UC-11 and UC-14 are then
+  saved by whichever client is open.
 end note
 
 Boundary -[hidden]d-> N1

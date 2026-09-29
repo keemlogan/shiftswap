@@ -19,12 +19,17 @@ skinparam interface {
   BackgroundColor #FFFFFF
   BorderColor #1C2230
 }
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+}
 
 actor "A1 Worker" as Worker
 actor "A2 Owner" as Owner
 
 package "Presentation\n(app/index.html, app/styles.css)" as Presentation {
-  [main.js\n(router + bootstrap)] as Main
+  [main.js\n(router + bootstrap,\nchooses the data mode)] as Main
   package "app/ui/*.js" as UI {
     [login.js]
     [home.js]
@@ -44,7 +49,7 @@ package "Presentation\n(app/index.html, app/styles.css)" as Presentation {
   }
 }
 
-package "Application services\napp/core/services.js" as AppServices {
+package "Application services\napp/core/services.js\n(same code in both modes)" as AppServices {
   [ScheduleService]
   [SubstituteService]
   [AttendanceService]
@@ -54,21 +59,37 @@ package "Application services\napp/core/services.js" as AppServices {
 
 component "Domain rules\napp/core/rules.js\n(LaborRules, pure functions)" as Rules
 
-component "Data access\napp/core/db.js\n(sql.js, schema, seed, tx())" as DBModule
+component "Shared-data gateway\napp/core/shared.js, app/config.js\n(shared mode only)\nload snapshot, send change set,\nre-run on STALE, poll revision,\nsave System Clock work, reset" as Gateway
 
-component "Clock\napp/core/clock.js\n(demo clock now())" as Clock
+component "Data access\napp/core/db.js\n(sql.js, schema, seed, tx(),\nloadTables / dumpTables)" as DBModule
 
-database "SQLite (sql.js / WASM)\n+ localStorage\n\"shiftswap.db.v1\"" as Storage
+component "Clock\napp/core/clock.js\n(now(): server time in shared mode,\ndemo clock in local mode)" as Clock
+
+database "sql.js (SQLite / WASM)\nin-memory database\n(working copy in shared mode)" as SqlJs
+
+database "localStorage\nshiftswap.db.v2\n(local mode only)" as Storage
+
+package "Shared database (shared mode)\nSupabase project, db/app-shared.sql" as Shared {
+  component "PostgREST API\nRPC app_snapshot, app_commit, app_reset\nREST read of app_store.rev" as Api
+  database "PostgreSQL\napp_ tables, row triggers (rules,\nserver time), RLS read policies" as Pg
+}
 
 Worker --> Main
 Owner --> Main
 Main --> UI
-
+Main ..> Gateway : load(), poll(), settle(), reset()
 UI ..> AppServices : calls (one fn per UC step)
-AppServices ..> Rules : imports 14 named functions\n(addDays, isoWeekday, weekStartOf,\ndurationHours, overlaps, round2, isEligibleCandidate,\nhasNoTaker, validateRequest, contractHours, computeWeeklySummary,\nminimumWageFor, probationApplies, computePayrollRow)
+UI ..> Gateway : ctx.run(command)
+Gateway ..> AppServices : runs the command
+AppServices ..> Rules : imports 15 named functions\n(addDays, isoWeekday, weekStartOf,\ndurationHours, overlaps, round2, isEligibleCandidate,\nhasNoTaker, validateRequest, contractHours, computeWeeklySummary,\nminimumWageFor, probationApplies, computePayrollRow,\npartTimeLimitCheck)
 AppServices ..> DBModule : tx(), all(), get(), run()
 AppServices ..> Clock : now(), addMinutes()
-DBModule --> Storage : persist after commit / load on start
+Gateway ..> DBModule : loadTables(), dumpTables()
+Gateway ..> Clock : useServerTime()
+Gateway --> Api : HTTPS, publishable key\nRPC app_snapshot / app_commit / app_reset,\nGET app_store.rev every 10 s
+Api --> Pg : SQL functions
+DBModule --> SqlJs : SQL
+DBModule --> Storage : local mode: persist after commit /\nload on start
 
 note bottom of Rules
   no DB access, no DOM, no Clock import;
@@ -77,9 +98,10 @@ note bottom of Rules
   (tests/rules.test.js)
 end note
 
-note bottom of DBModule
-  A3 System Clock actor drives
-  expireOverdue() on app start,
-  route change, clock change
+note bottom of Clock
+  A3 System Clock actor drives expireOverdue()
+  and prepareMonthlyPayroll() on app start and
+  route change (shared mode: the open client
+  saves them; the server checks server time)
 end note
 @enduml

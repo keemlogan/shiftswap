@@ -27,5 +27,5 @@ DRAFT --> CONFIRMED : owner confirms\n[all minWageWarning rows have minWageAck =
 CONFIRMED --> [*]
 
 note right of CONFIRMED : final state — read-only,\nnot replaced by re-generation
-note left of DRAFT : A3 System Clock only ever creates the DRAFT\n(runs at most once per month, BR-14) and\nnotifies the owner (PAYROLL_DRAFT_READY);\nit never acknowledges warnings or confirms.
+note left of DRAFT : A3 System Clock only ever creates the DRAFT\n(runs at most once per month, BR-14) and\nnotifies the owner (PAYROLL_DRAFT_READY);\nit never acknowledges warnings or confirms.\nShared mode: the open client saves the draft; the server\nkeeps CONFIRMED rows read-only.
 @enduml

@@ -41,6 +41,22 @@ export async function ownerAtOctoberFirst(a, hash = '#/home') {
   await a.go(hash);
 }
 
+/** S10 (spec §10): 5 regular employees, an extra Friday shift for Choi Minho, then Minho accepts Seoyeon's Wednesday
+ *  request — the owner's decision card shows the BR-15 warning (13 h beyond contract). */
+export async function ownerOvertimeWarning(a) {
+  await a.signIn(1, '#/settings');
+  await a.evaluate(`document.querySelector('input[name="regularEmployees"]').value = '5'`);
+  await a.click('#save-settings');
+  await a.go('#/schedule/2026-09-28');
+  await a.click('#add-shift');
+  await a.evaluate(`(() => { const f = document.getElementById('add-form');
+    f.workDate.value = '2026-10-02'; f.startTime.value = '10:00'; f.endTime.value = '18:00'; f.workerId.value = '3'; })()`);
+  await a.click('#add-save');
+  await a.signIn(3, '#/home');
+  await a.click('[data-accept]');
+  await a.signIn(1, '#/home');
+}
+
 /** Scenes: a name and the steps that bring a fresh seed into the state the screenshot shows. */
 export const SCENES = {
   signin: async () => {},
@@ -70,6 +86,7 @@ export const SCENES = {
     await a.click('[data-accept]');
     await a.signIn(1, '#/home');
   },
+  'owner-overtime-warning': async (a) => ownerOvertimeWarning(a),
   'owner-home-details': async (a) => {
     await SCENES['owner-home-decision'](a);
     await a.click('[data-details]');

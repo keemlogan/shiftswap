@@ -42,6 +42,12 @@ FAILED --> [*]
 EXPIRED --> [*]
 CANCELLED --> [*]
 
+note as N8
+  Shared mode: the row trigger of the shared database accepts
+  only the transitions drawn here (ACCEPTED only from REQUESTED,
+  EXPIRED only after the deadline or shift start; "now" is the
+  server time in the shared mode).
+end note
 note right of APPROVED : final state
 note right of REJECTED : final state
 note right of FAILED : final state\n(BR-13: REQUEST_FAILED to requester + owner;\nsurfaced as getWorkerHome/getOwnerHome "failed"\nuntil markNotificationsRead(workerId, ids) acks it;\nowner can only acknowledge; accepting or cancelling a\nFAILED request is refused as REQUEST_CLOSED)

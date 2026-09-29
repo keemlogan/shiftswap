@@ -9,10 +9,11 @@
 // 6. The S9 walkthrough in Korean: Pay → Monthly shows March–August 2026 as confirmed (‹ stops at March); at
 //    2026-10-01 the owner's Home shows "9월 급여 초안이 준비됐어요" and 급여 확인하기 opens the automatic September
 //    draft with Doyun's warning; at 2026-10-15 there is still one draft and one notification.
+// S10. The part-time overtime warning (FR-24, BR-15) on the owner's decision card, which does not block the approval.
 // 7. Every scene at 1280 px and 360 px (NFR-02) in Korean and English: exactly one filled primary button, every
 //    disabled button with a visible reason, touch targets of at least 44 × 44 px, no horizontal scroll.
 import { serve, chrome, app, sleep } from './lib.mjs';
-import { SCENES, hanaRequestsSunday, declineSunday, setClock } from './scenes.mjs';
+import { SCENES, hanaRequestsSunday, declineSunday, setClock, ownerOvertimeWarning } from './scenes.mjs';
 
 let failures = 0;
 function check(ok, label, detail = '') {
@@ -132,6 +133,15 @@ try {
   const after = await a.evaluate(s9);
   check(before.notes === 1 && JSON.stringify(after) === JSON.stringify(before) && JSON.stringify(after.months) === '["2026-09"]',
     'DC-6 at 2026-10-15 there is still one September draft and one PAYROLL_DRAFT_READY notification', `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+
+  // ---- S10 (spec §10, FR-24, BR-15): the part-time warning on the owner's decision card ----
+  await a.viewport(1280, 900);
+  await a.fresh('ko');
+  await ownerOvertimeWarning(a);
+  text = await a.text();
+  check(text.includes('최민호님 이번 주 24시간 → 29시간') && text.includes('최민호님은 이번 주 계약보다 13시간 더 일하게 돼요.')
+    && await a.evaluate(`!!document.querySelector('.decision-card .notice-warn') && !document.querySelector('[data-approve]').disabled`),
+    "S10 the owner's decision card shows Minho 24 → 29 h and the BR-15 warning (13 h beyond contract); 승인하기 stays enabled", text.slice(0, 400));
 
   // ---- Done criterion 7 ----
   const problemsBefore = page.problems.length;

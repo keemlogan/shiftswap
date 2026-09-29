@@ -19,12 +19,16 @@ title UC-06 Approve or reject substitution — decision (FR-12, BR-04; includes 
 
 actor "A2 Owner" as Owner
 boundary "approvals.js" as UI
+control "shared.js\n(gateway, shared mode)" as GW
 control "SubstituteService" as Svc
 control "LaborRules" as Rules
-database "db.js" as DB
+database "db.js\n(working copy)" as DB
+database "Supabase PostgreSQL\n(app_commit, row triggers)" as Srv
 
 Owner -> UI : Approve
-UI -> Svc : decideRequest(requestId, 'APPROVED')
+UI -> GW : ctx.run(decideRequest(requestId, 'APPROVED'))
+activate GW
+GW -> Svc : decideRequest(requestId, 'APPROVED')
 activate Svc
 Svc -> DB : tx(fn) begin
 activate DB
@@ -32,7 +36,8 @@ Svc -> DB : get SubRequest+Shift (requestWithShift)
 
 alt r.status !== 'ACCEPTED' (BR-04)
   Svc -> DB : rollback (throw ServiceError('NOT_ACCEPTED'))
-  Svc --> UI : error "only an accepted request\ncan be approved or rejected"
+  Svc --> GW : error "only an accepted request\ncan be approved or rejected"
+  GW --> UI : same error (no change to send)
 else r.status === 'ACCEPTED'
   Svc -> DB : UPDATE Shift SET workerId = acceptor,\noriginalWorkerId = COALESCE(originalWorkerId, shiftWorkerId)
   Svc -> DB : UPDATE SubRequest SET status='APPROVED', decidedAt=now
@@ -48,19 +53,30 @@ else r.status === 'ACCEPTED'
   deactivate Svc
 
   Svc -> DB : insert Notification(REQUEST_APPROVED)\nto requester, acceptor
-  Svc -> DB : commit + persist
+  Svc -> DB : commit (working copy;\nlocal mode: also persist)
   deactivate DB
-  Svc --> UI : {status: 'APPROVED'}
+  Svc --> GW : {status: 'APPROVED'}
+  deactivate Svc
+  GW -> Srv : RPC app_commit(store, base_rev,\nchanges: Shift, SubRequest, WeeklySummary, Notification)
+  activate Srv
+  Srv -> Srv : lock store row; row triggers check\nACCEPTED -> APPROVED, deadline and shift start\nagainst server time
+  Srv --> GW : {rev + 1, now}
+  deactivate Srv
+  GW --> UI : {status: 'APPROVED'}
   UI --> Owner : show updated shift & weekly summaries (FR-11)
 end
-deactivate Svc
+deactivate GW
 
 alt Owner rejects instead
   Owner -> UI : Reject
-  UI -> Svc : decideRequest(requestId, 'REJECTED')
+  UI -> GW : ctx.run(decideRequest(requestId, 'REJECTED'))
+  GW -> Svc : decideRequest(requestId, 'REJECTED')
   Svc -> DB : tx: UPDATE SubRequest SET status='REJECTED',\ndecidedAt=now (Shift unchanged, BR-04)
   Svc -> DB : insert Notification(REQUEST_REJECTED)\nto requester, acceptor
-  Svc --> UI : {status: 'REJECTED'}
+  Svc --> GW : {status: 'REJECTED'}
+  GW -> Srv : RPC app_commit(store, base_rev, changes)
+  Srv --> GW : {rev + 1, now}
+  GW --> UI : {status: 'REJECTED'}
   UI --> Owner : shift unchanged
 end
 @enduml

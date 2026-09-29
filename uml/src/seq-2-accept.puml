@@ -15,100 +15,113 @@ skinparam sequence {
   BoxBorderColor #1C2230
 }
 
-title UC-05 Respond to substitute request - accept / can't (FR-09, FR-22, BR-02, BR-13, NFR-04)
+title UC-05 Respond to substitute request - accept / can't (FR-09, FR-22, BR-02, BR-13, NFR-04, NFR-14)\nShared mode: two candidates answer at the same time
 
 actor "A1 Worker\n(candidate 1)" as W1
 actor "A1 Worker\n(candidate 2)" as W2
-boundary "inbox.js" as UI
-control "SubstituteService" as Svc
-database "db.js\n(SQLite / localStorage)" as DB
+box "Browser of the answering candidate (own working copy)" #FFFFFF
+  boundary "requests.js" as UI
+  control "shared.js\n(gateway)" as GW
+  control "SubstituteService" as Svc
+  database "db.js\n(sql.js working copy)" as DB
+end box
+database "Supabase PostgreSQL\n(app_commit, row triggers)" as Srv
 
 note over W1, W2 : both candidates see the same PENDING\nSubRequestTarget in their inbox (BR-01)
 
-note over Svc, DB
-  real code (services.js respondToRequest): SQLite has no SELECT ... FOR UPDATE.
-  "first acceptance wins" is enforced by a conditional UPDATE whose WHERE clause
-  re-checks status, plus db.getRowsModified() (returned here as changes) to see
-  whether this call's UPDATE actually won the row.
+note over Svc, Srv
+  both working copies were loaded by app_snapshot at revision r;
+  the conditional UPDATE guards only its own working copy.
+  Across browsers the server decides: app_commit locks the
+  store row and accepts a change set only if its base
+  revision is still the current one (NFR-04, NFR-14).
 end note
 
-par candidate 1 accepts
+par candidate 1 accepts (browser 1)
   W1 -> UI : Accept (requestId=R, workerId=W1)
-  UI -> Svc : respondToRequest(R, W1, 'ACCEPTED')
+  UI -> GW : ctx.run(command)
+  activate GW
+  GW -> Svc : respondToRequest(R, W1, 'ACCEPTED')
   activate Svc
-  Svc -> DB : tx(fn) begin
+  Svc -> DB : tx(fn): get SubRequest+Shift,\nget SubRequestTarget(R, W1)
   activate DB
-  Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R, W1)
-  DB --> Svc : r.status = 'REQUESTED', target.response = 'PENDING'
-  Svc -> DB : UPDATE SubRequest SET status='ACCEPTED', acceptorId=W1\nWHERE id=R AND status='REQUESTED'
+  DB --> Svc : r.status = 'REQUESTED',\ntarget.response = 'PENDING'
+  Svc -> DB : UPDATE SubRequest SET status='ACCEPTED',\nacceptorId=W1 WHERE id=R AND status='REQUESTED'
   DB --> Svc : changes = 1
-  Svc -> DB : UPDATE target(W1).response = 'ACCEPTED'
-  Svc -> DB : UPDATE other PENDING targets -> 'CLOSED'
-  Svc -> DB : insert Notification(REQUEST_ACCEPTED) to requester, owner
-  Svc -> DB : insert Notification(TARGET_CLOSED) to other candidates
-  Svc -> DB : commit + persist
+  Svc -> DB : UPDATE target(W1) = 'ACCEPTED',\nother PENDING targets -> 'CLOSED'
+  Svc -> DB : insert Notification(REQUEST_ACCEPTED,\nTARGET_CLOSED)
+  Svc -> DB : commit (working copy only)
   deactivate DB
-  Svc --> UI : {status: 'ACCEPTED'}
+  Svc --> GW : {status: 'ACCEPTED'}
   deactivate Svc
+  GW -> GW : change set = rows changed\nsince the last sync
+  GW -> Srv : RPC app_commit(store, base_rev = r, changes)
+  activate Srv
+  Srv -> Srv : lock store row (FOR UPDATE);\nbase_rev = r = current revision
+  Srv -> Srv : apply rows; row triggers check\nREQUESTED -> ACCEPTED only, deadline and\nshift start against server time
+  Srv --> GW : {rev: r + 1, now}
+  deactivate Srv
+  GW --> UI : {status: 'ACCEPTED'}
+  deactivate GW
   UI --> W1 : "You accepted the shift"
-else candidate 2 accepts (near-simultaneous)
+else candidate 2 accepts at the same time (browser 2, revision r)
   W2 -> UI : Accept (requestId=R, workerId=W2)
-  UI -> Svc : respondToRequest(R, W2, 'ACCEPTED')
+  UI -> GW : ctx.run(command)
+  activate GW
+  GW -> Svc : respondToRequest(R, W2, 'ACCEPTED')
   activate Svc
-  Svc -> DB : tx(fn) begin
-  activate DB
-  Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R, W2)
-  DB --> Svc : r.status still read as 'REQUESTED'
-  Svc -> DB : UPDATE SubRequest SET status='ACCEPTED', acceptorId=W2\nWHERE id=R AND status='REQUESTED'
-  DB --> Svc : changes = 0 (row no longer has status='REQUESTED')
-  alt updated.changes !== 1 (BR-02, NFR-04)
-    Svc -> DB : rollback (ServiceError thrown inside tx())
-    deactivate DB
-    Svc --> UI : throw ServiceError('ALREADY_TAKEN',\n"Someone else accepted first.")
-    deactivate Svc
-    UI --> W2 : show "Someone else accepted first."
-  end
+  Svc -> DB : same steps on this working copy:\nstatus 'REQUESTED', UPDATE changes = 1
+  Svc --> GW : {status: 'ACCEPTED'}
+  deactivate Svc
+  GW -> Srv : RPC app_commit(store, base_rev = r, changes)
+  activate Srv
+  Srv -> Srv : lock store row (FOR UPDATE);\ncurrent revision is r + 1, not r
+  Srv --> GW : error STALE (nothing applied)
+  deactivate Srv
+  GW -> Srv : RPC app_snapshot(store)
+  Srv --> GW : {rev: r + 1, now, tables}
+  GW -> DB : loadTables(tables):\nreplace the working copy,\nuse server time
+  GW -> Svc : run the command again\n(at most 3 times)
+  activate Svc
+  Svc -> DB : get SubRequest,\nget SubRequestTarget(R, W2)
+  DB --> Svc : r.status = 'ACCEPTED' by candidate 1 (Choi Minho),\ntarget.response = 'CLOSED'
+  Svc --> GW : throw ServiceError('ALREADY_TAKEN',\n"Already taken by Choi Minho.")
+  deactivate Svc
+  GW --> UI : ALREADY_TAKEN\n(no change to save)
+  deactivate GW
+  UI --> W2 : show "Choi Minho was faster.\nNothing to do."
 end
-
-note over DB
-  the WHERE status='REQUESTED' clause and the changes
-  check happen inside the same transaction as the update,
-  so only one of the two UPDATEs can affect a row - the
-  other always affects 0 rows and is refused (BR-02).
-  (a request already fully settled before this call even
-  starts is instead caught earlier as ALREADY_TAKEN /
-  REQUEST_CLOSED, by the initial status read above)
-end note
 
 == Later: last remaining candidate answers can't (BR-13, FR-22) ==
 
 W1 -> UI : Can't (requestId=R2, workerId=W1)
-UI -> Svc : respondToRequest(R2, W1, 'DECLINED')
+UI -> GW : ctx.run(command)
+activate GW
+GW -> Svc : respondToRequest(R2, W1, 'DECLINED')
 activate Svc
-Svc -> DB : tx(fn) begin
+Svc -> DB : tx(fn): get SubRequest+Shift,\nget SubRequestTarget(R2, W1)
 activate DB
-Svc -> DB : get SubRequest+Shift, get SubRequestTarget(R2, W1)
-DB --> Svc : r.status = 'REQUESTED', target.response = 'PENDING'
-Svc -> DB : UPDATE target(W1).response = 'DECLINED', respondedAt = now
-Svc -> DB : SELECT response FROM SubRequestTarget WHERE subRequestId=R2
+DB --> Svc : r.status = 'REQUESTED',\ntarget.response = 'PENDING'
+Svc -> DB : UPDATE target(W1).response = 'DECLINED',\nrespondedAt = now
+Svc -> DB : SELECT response FROM SubRequestTarget\nWHERE subRequestId=R2
 DB --> Svc : all other targets already DECLINED
 
 alt every target now DECLINED (BR-13)
   Svc -> DB : UPDATE SubRequest SET status='FAILED'\nWHERE id=R2 AND status='REQUESTED' (failRequest)
   Svc -> DB : insert Notification(REQUEST_FAILED) to requester\n("no co-worker can take it - contact the owner")
   Svc -> DB : insert Notification(REQUEST_FAILED) to owner\n(acknowledge only)
-  Svc -> DB : commit + persist
-  deactivate DB
-  Svc --> UI : {status: 'FAILED'}
-  deactivate Svc
-  UI --> W1 : "You can't take this shift"\n(request closed - no one could take it)
-else at least one target still PENDING
-  Svc -> DB : commit + persist
-  deactivate DB
-  Svc --> UI : {status: 'REQUESTED'}
-  deactivate Svc
-  UI --> W1 : "You can't take this shift"
 end
+Svc -> DB : commit (working copy only)
+deactivate DB
+Svc --> GW : {status: 'FAILED'} or {status: 'REQUESTED'}
+deactivate Svc
+GW -> Srv : RPC app_commit(store, base_rev, changes)
+activate Srv
+Srv --> GW : {rev + 1, now}\n(if FAILED: a trigger allows REQUESTED -> FAILED)
+deactivate Srv
+GW --> UI : {status}
+deactivate GW
+UI --> W1 : "You can't take this shift"\n(FAILED: the request is closed - no one could take it)
 
 note over Svc, DB
   a single can't (DECLINED) notifies no one; only the
