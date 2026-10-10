@@ -1,0 +1,28 @@
+@startuml state-payroll
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  StartColor #1C2230
+  EndColor #1C2230
+}
+
+title Payroll state machine
+
+[*] --> DRAFT : generate_payroll (owner)\nor the System Clock's\nautomatic draft (BR-14)
+
+DRAFT : acknowledge_min_wage / warning acknowledged
+DRAFT --> DRAFT : generate_payroll\n/ draft replaced,\nacknowledgements reset
+DRAFT --> CONFIRMED : confirm_payroll\n[every minimum-wage\nwarning acknowledged]
+
+CONFIRMED : read-only
+CONFIRMED --> [*]
+@enduml

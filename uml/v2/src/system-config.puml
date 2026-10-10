@@ -1,0 +1,46 @@
+@startuml system-config
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam actor {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam database {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle<<app>> {
+  BorderColor #E9A23B
+}
+hide <<app>> stereotype
+
+title ShiftSwap — System configuration
+
+left to right direction
+
+actor "Owner\n<&laptop> laptop or <&phone> phone\n(web browser)" as Owner
+actor "Workers\n<&phone> phones\n(web browser)" as Workers
+
+rectangle "<b>ShiftSwap</b>\nweb application\n\npages per role:\nworker and owner" <<app>> as App
+
+database "<b>Database</b>\nPostgreSQL\n\ntables and rules as\ndatabase functions" as DB
+
+rectangle "<&clock> <b>System Clock</b>\nruns with every\nscreen load" as Clock
+
+Owner --> App : approvals,\nschedule changes,\nattendance confirmation,\npayroll
+Owner <-- App : notifications,\nschedules, pay
+Workers --> App : substitute requests,\nanswers, attendance
+Workers <-- App : notifications,\nschedules
+App --> DB : function calls\n(one per user action)
+App <-- DB : results
+Clock --> DB : expire overdue requests,\nprepare payroll drafts
+@enduml

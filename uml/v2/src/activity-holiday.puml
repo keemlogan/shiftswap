@@ -1,0 +1,63 @@
+@startuml activity-holiday
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #1C2230
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+title AD-1 Holiday-allowance determination (BR-06, BR-07)\nfor worker W and one ISO week (Monday to Sunday)
+
+start
+:C := sum of W's fixed-schedule hours;
+note right
+  Substitute shifts that W takes
+  do not change C.
+end note
+if (C ≥ 15?) then (no)
+  :not eligible
+  (holiday pay 0);
+  stop
+else (yes)
+endif
+:attendance := unbroken;
+while (next shift of the week\noriginally assigned to W?) is (yes)
+  if (W gave it away by an\napproved substitution?) then (yes)
+    if (policy is ABSENT?\n(default: EXCUSED)) then (yes)
+      :attendance := broken;
+    else (no)
+    endif
+  else (no)
+    if (shift marked\nABSENT?) then (yes)
+      :attendance := broken;
+    else (no)
+    endif
+  endif
+endwhile (no more shifts)
+floating note right
+  A past shift that the owner
+  has not marked ABSENT
+  counts as worked.
+end note
+if (attendance broken?) then (yes)
+  :not eligible
+  (holiday pay 0);
+else (no)
+  :eligible
+  hours := min(C, 40) / 40 × 8 (2 decimals)
+  holiday pay := floor(hours × hourly wage);
+endif
+stop
+@enduml

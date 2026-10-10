@@ -1,0 +1,56 @@
+@startuml activity-candidates
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #1C2230
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+title AD-2 Find eligible candidates (BR-01)
+
+start
+:S := the shift to be covered;
+:candidates := empty;
+while (next worker W of the workplace?) is (yes)
+  if (W is an active WORKER?) then (yes)
+    if (W is not the requester?) then (yes)
+      if (date of S within\nW's contract period?) then (yes)
+        if (no shift of W overlaps S\non the time line?) then (yes)
+          :add W to candidates;
+          floating note right
+            Overlap is checked on the time line,
+            so a shift of W that ends after
+            midnight on the previous day counts.
+          end note
+        else (no)
+        endif
+      else (no)
+      endif
+    else (no)
+    endif
+  else (no)
+  endif
+endwhile (no more workers)
+if (candidates empty?) then (yes)
+  #FFFFFF:request status := FAILED (BR-13);
+  :notify the requester and the owner
+  (REQUEST_FAILED);
+else (no)
+  :create one target per candidate;
+  :notify each candidate
+  (REQUEST_RECEIVED);
+endif
+stop
+@enduml

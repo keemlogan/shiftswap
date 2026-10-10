@@ -227,3 +227,23 @@ Independent review after iteration 8 (correctness and security, diff since the p
 | 11 | Hub: the style filter misses `image-set()` and CSS escapes; the per-document caps allow about 520 MB of anonymous saves a day | the filter refuses backslashes, `image-set` and `src()` in styles and SVG attributes; a daily budget of 60 MB over all saves, restores and translations (`doc_bytes_today`, `db/hub-collab.sql` re-applied) | `tools/collab-check.mjs` 37/37 (sanitizer probe extended); budget refused in a rolled-back probe (DAILY_BYTES) |
 
 Not changed: the limits of NFR-14 are per store and shared by all visitors, so one visitor can use up the day's changes or resets of the demo store; this follows from the absence of accounts (spec §8, trust boundary), and the team can reset the store at any time through the owner connection.
+
+## Iteration 9 — instructor's feedback on the proposal; database functions; Lovable as the reproduction target
+
+Source: the instructor's feedback on the proposal (feasibility high, external-API risk low, no commercial package; priority requests: increment-1 dependencies, server-side atomicity and expiry, a stronger differentiator and earlier test cases), the team's review of the interim draft (10-07, 10-09), the team's review of the prototype (findings E1–E13 of the review report of 2026-10-10) and the decision that the instructor re-runs the final prompt in Lovable while the team develops with Claude Code.
+
+| # | Feedback / finding | Specification (v9) | Implementation | Check |
+|---|---|---|---|---|
+| 1 | "First acceptance" through client calls is not atomic; use one database function | §9.3, §9.5, BR-02, NFR-04: one function per use-case step; acceptance is one conditional `UPDATE … WHERE status = 'REQUESTED'` | `db/shiftswap.sql` `accept_sub_request`, `decide_sub_request`, `cancel_sub_request`, `decline_sub_request` | TC-051…055; `tools/db-concurrency.mjs` on the deployed database: one acceptance, the other ALREADY_TAKEN after the commit |
+| 2 | Expiry executor undetermined (pg_cron or query time) | A3, BR-12, FR-18: `run_system_clock()` on every screen load; accept/decide check the deadline themselves | `run_system_clock`, `expire_overdue_requests` | TC-121…124 |
+| 3 | Vibe-coding tool undetermined | §0, NFR-08, §9.8: Claude Code for development; the final prompt targets Lovable (Lovable Cloud = Supabase PostgreSQL) | SQL runs unchanged on Supabase and Lovable Cloud | Lovable trial planned for Week 9 |
+| 4 | Supabase + sql.js dual implementation | §9.1: no data copy in the browser; the front end calls only database functions | prototype's working copy, change sets and local mode are not part of the system | — |
+| 5 | UC-08 (Must) needs UC-07/UC-10 (Should) | §3.1, BR-06 default (unmarked past shift = worked), FR-25 (UC-03, Must), seeded settings; UC-14 → Should | `mark_absent`, `week_summary` | TC-01B, TC-085, TC-086 |
+| 6 | EXCUSED makes "eligibility change" always "no change" | FR-11, BR-16 swap cost estimate | `approval_preview` | TC-171…173 (S3 −900, S7 −33,024, S8 +30,960 premium) |
+| 7 | Night 22–06 vs fixed shifts and the week boundary | BR-05 time line, BR-08 (iii), BR-17 | `ss_` time-line helpers, `record_attendance` | TC-011…016, TC-092, TC-181…183 |
+| 8 | UC-13 / NFR-11 only screen-level on a public URL | FR-20, NFR-11: fictional data stated, privacy screen-level | sign-in notice | — |
+| 9 | Test cases before Week 9 | §11, §14: 84 function tests written before the user interface | `tests/db/*.test.mjs` (PGlite) | `npm run test:db` 84/84 |
+| 10 | E1: in the prototype's shared mode, a store without payroll completed its history with CONFIRMED inserts, which the server refuses since the review fix of iteration 8 (#10); the whole change set was rolled back, so expiry and the monthly draft were never saved (the live store had no payroll and an overdue open request). The fake server of the tests had no triggers. | — (prototype) | `completeSharedSeed` saves drafts first and confirms on the next run; the fake server applies the payroll rule | TC-168, TC-16C; live store healed (history confirmed, September drafted, overdue requests expired) |
+| 11 | E2: a no-show could not be marked absent (only from recorded attendance) | FR-25 | prototype: 결근 처리 in the owner's shift sheet; v9: `mark_absent` | check S11; TC-01B |
+
+Result: specification v9 (spec v8 kept as `prompts/spec-v8.md`); `db/shiftswap.sql` (11 tables, 41 API functions incl. 10 read functions, 36 helpers, RLS read-only, seed) deployed to the Supabase project; 84 function tests pass; the concurrency test passes on the deployed database. The final prompt for Lovable is drafted from the same specification (`prompts/final-prompt.md`, v9 draft) and will be tried in Week 9.

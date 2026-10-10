@@ -1,0 +1,18 @@
+TC-05x with two concurrent connections (NFR-04) — record of the run on the deployed database
+Date: 2026-10-10 (KST), after db/shiftswap.sql was applied to the Supabase project shiftswap (PostgreSQL 17.6)
+Command: DATABASE_URL=postgres://postgres.<ref>:***@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=no-verify \
+         PG_MODULE_DIR=<directory with pg@8> node tools/db-concurrency.mjs --allow-remote
+Output:
+
+ok   seed request 1 is REQUESTED without an acceptor
+first:  Choi Minho → {"id":1,"status":"ACCEPTED","acceptor_id":3,"acceptor_name":"Choi Minho"}
+second: Kang Doyun → ALREADY_TAKEN {"request_id": 1, "acceptor_id": 3, "acceptor_name": "Choi Minho"} (answered after the first transaction committed)
+ok   exactly one acceptance succeeded
+ok   the other acceptance was refused with ALREADY_TAKEN
+ok   the refusal names the first acceptor (Choi Minho; hint: "Choi Minho accepted first.")
+ok   request 1 is ACCEPTED by Choi Minho
+ok   one target ACCEPTED, two CLOSED (3:ACCEPTED, 4:CLOSED, 5:CLOSED)
+ok   REQUEST_ACCEPTED was sent once each to the requester and the owner
+TC-05x two connections: passed
+
+The script resets the demo data before and after the run (reset_demo_data).

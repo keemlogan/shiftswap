@@ -1,7 +1,7 @@
 // 과제 설명서(TermProjectDescription-SE_2026_2)의 요구사항을 빠짐없이 나열하고,
 // 각 요구사항을 충족하는 결과물 위치를 연결한다. 요구사항 문구는 한글 번역본 기준.
 
-export const TODAY = "2026-09-29";
+export const TODAY = "2026-10-10";
 
 export const GROUPS = [
   { id: "topic", week: null, due: null, label: "주제 조건", note: "제안서 단계에서 지켜야 하는 주제 제약" },
@@ -73,23 +73,23 @@ export const ITEMS = [
 
   // 7주차 중간
   { id: "I-1", group: "w7", title: "문제 설명", quote: "문제 설명",
-    answer: "현재 업무 방식, 문제 P1~P3, 관련 법 기준.",
+    answer: "현재 업무 방식, 문제 P1~P3, 관련 법 기준과 강의 8장 양식의 시스템 환경(구성도·HW/네트워크·SW 구성). v2에서 교수님 피드백 반영표(1.1)와 제안서 이후 변경표(1.2)를 추가했다.",
     evidence: [doc("중간 보고서 · 문제 설명", I + "#problem"), pdf("중간 보고서 PDF", "docs/interim.pdf")] },
   { id: "I-2", group: "w7", title: "기능 요구사항 명세", quote: "기능 요구사항 명세",
-    answer: "FR-01~FR-21, FR-24(8차 반복)와 유스케이스 13개의 구조화된 명세(사전조건, 기본·대안·예외 흐름, 사후조건).",
+    answer: "FR 24개(번호·이름·분류·설명, FR-03 결번), 증분 1 의존성 표, 업무 규칙 BR-01~BR-17, 유스케이스 13개의 구조화된 명세(사전조건, 기본·대안·예외 흐름, 사후조건).",
     evidence: [doc("중간 보고서 · 기능 요구사항", I + "#functional")] },
   { id: "I-3", group: "w7", title: "비기능 요구사항 명세", quote: "비기능 요구사항 명세",
-    answer: "NFR-01~NFR-12와 8차 반복의 NFR-14~NFR-16(공유 데이터베이스)을 강의 8장 분류(Product / Organisational / External)대로 정리하고, 요구사항마다 검증 방법을 적었다. 최종 보고서에는 UX 요구사항 NFR-13도 있다.",
+    answer: "NFR-01~NFR-16을 강의 8장 양식(번호·유형·이름·명세)과 분류(Product / Organisational / External)대로 정리하고, 요구사항마다 검증 방법을 적었다.",
     evidence: [doc("중간 보고서 · 비기능 요구사항", I + "#nonfunctional")] },
   { id: "I-4", group: "w7", title: "시나리오", quote: "시나리오",
-    answer: "시드 데이터의 실제 인물·날짜로 쓴 시나리오: 중간고사 대타 요청, 동시 수락, 승인, 마감 만료, 월말 정산, 단시간 근로자 초과근로 경고.",
+    answer: "강의 8장 양식(제목·행위자·시작/종료 조건·예외·절차)의 시나리오 S1~S11: 대타 요청, 동시 수락, 비용을 보고 승인, 마감 만료, 아무도 못 할 때, 월말 정산, 결근 정책, 단시간 초과근로, 자정 넘는 근무, 자동 급여 초안, 무단결근 처리. 금액은 DB 함수 테스트와 같다.",
     evidence: [doc("중간 보고서 · 시나리오", I + "#scenarios")] },
   { id: "I-5", group: "w7", title: "요구사항 분석을 위한 UML 다이어그램", quote: "요구사항 분석을 위한 UML 다이어그램",
-    answer: "유스케이스, 활동(후보 선정·주휴 판정), 상태(대타 요청·근무·정산), 분석 클래스 다이어그램.",
-    evidence: [doc("중간 보고서 · UML", I + "#uml"), img("상태: 대타 요청", "uml/state-subrequest.svg"), img("활동: 주휴 판정", "uml/activity-holiday.svg")] },
+    answer: "유스케이스(패키지 4개), 활동(주휴 판정·후보 선정), 상태(대타 요청·근무·정산), 분석 클래스(엔티티·컨트롤), 동시 수락 분석 시퀀스 다이어그램.",
+    evidence: [doc("중간 보고서 · UML", I + "#uml"), img("상태: 대타 요청", "uml/v2/state-subrequest.svg"), img("활동: 주휴 판정", "uml/v2/activity-holiday.svg")] },
   { id: "I-6", group: "w7", title: "주요 사용자 인터페이스 화면", quote: "주요 사용자 인터페이스 화면",
-    answer: "실제 배포된 앱의 화면 캡처 11장(데스크톱·모바일).",
-    evidence: [doc("중간 보고서 · UI 화면", I + "#ui"), app("앱에서 직접 보기", "app/")] },
+    answer: "9차 반복 시스템(React + DB 함수)의 화면 캡처 14장(데스크톱·모바일, 한국어 1장). 화면의 금액은 시나리오와 같다.",
+    evidence: [doc("중간 보고서 · UI 화면", I + "#ui"), app("새 시스템에서 직접 보기", "system/"), app("이전 프로토타입(v8)", "app/")] },
 
   // 14주차 최종
   { id: "F-1", group: "w14", title: "제목", quote: "제목",

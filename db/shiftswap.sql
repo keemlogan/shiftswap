@@ -369,12 +369,13 @@ language sql stable security definer set search_path = '' as $$
   select m.hourly from public.minimum_wage m where m.year <= p_year order by m.year desc limit 1
 $$;
 
--- BR-10: the probation reduction applies on p_date.
+-- BR-10: the probation reduction applies on p_date. A contract of at least one year: the last contract day is on or
+-- after the day before the first anniversary (2026-09-01 to 2027-08-31 is one year), or the contract is open-ended.
 create or replace function public.ss_probation(p_worker_id int, p_date date) returns boolean
 language sql stable security definer set search_path = '' as $$
   select coalesce((
     select w.probation_end is not null and w.contract_start is not null and not w.simple_labor
-       and (w.contract_end is null or w.contract_end - w.contract_start >= 365)
+       and (w.contract_end is null or w.contract_end + 1 >= (w.contract_start + interval '1 year')::date)
        and p_date >= w.contract_start
        and p_date < (w.contract_start + interval '3 months')::date
        and p_date <= w.probation_end
@@ -884,6 +885,9 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_expired int;
 begin
+  -- Two screens loaded at the same moment run the System Clock one after the other (the second finds nothing left to
+  -- do), so two drafts of the same month can never collide on unique (worker_id, year_month).
+  perform pg_catalog.pg_advisory_xact_lock(7140812);
   v_expired := public.expire_overdue_requests();
   return jsonb_build_object('expired', v_expired, 'drafted_months', public.ss_prepare_drafts());
 end $$;
@@ -1728,7 +1732,8 @@ begin
     sub_attendance_policy = p_policy
   where id = (select wp.id from public.workplace wp order by wp.id limit 1);
   if p_minimum_wages is not null then
-    delete from public.minimum_wage;
+    -- Supabase refuses a DELETE without WHERE from the API roles' sessions (safeupdate), hence "where true".
+    delete from public.minimum_wage where true;
     insert into public.minimum_wage (year, hourly)
     select (e->>'year')::int, (e->>'hourly')::int from jsonb_array_elements(p_minimum_wages) as e
     order by (e->>'year')::int;

@@ -1,0 +1,78 @@
+@startuml seq-accept
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam sequenceArrowThickness 1
+skinparam sequenceMessageAlign left
+skinparam sequence {
+  LifeLineBorderColor #1C2230
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBorderColor #1C2230
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #1C2230
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #1C2230
+  GroupBackgroundColor #FFFFFF
+  DividerBorderColor #1C2230
+}
+skinparam boundary {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam control {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam entity {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+hide footbox
+
+title Concurrent acceptance (UC-05, BR-02)
+
+actor "Minho\n(candidate)" as Minho
+actor "Doyun\n(candidate)" as Doyun
+boundary "Home page" as Home
+control "accept_sub_request\n(database function)" as Fn
+entity "SubRequest\n(request 1)" as SR
+
+par Minho and Doyun press Accept at the same moment
+  Minho -> Home : Accept
+  Home -> Fn : accept_sub_request(1, Minho)
+  Fn -> Fn : begin transaction T1
+else
+  Doyun -> Home : Accept
+  Home -> Fn : accept_sub_request(1, Doyun)
+  Fn -> Fn : begin transaction T2
+end
+
+Fn -> SR : T1: UPDATE … SET status = ACCEPTED,\nacceptor = Minho\nWHERE id = 1 AND status = REQUESTED
+SR --> Fn : T1: 1 row (row locked until T1 ends)
+Fn -> SR : T2: UPDATE … SET status = ACCEPTED,\nacceptor = Doyun\nWHERE id = 1 AND status = REQUESTED
+note left of SR
+  T2 waits for the row lock
+end note
+Fn -> Fn : T1: close the other targets,\nnotify requester and owner
+Fn -> SR : T1: commit (lock released)
+Fn --> Home : T1: ACCEPTED
+Home --> Minho : request accepted
+SR --> Fn : T2: WHERE clause re-evaluated:\nstatus is ACCEPTED, so 0 rows
+Fn --> Home : T2: raise ALREADY_TAKEN
+Home --> Doyun : "Choi Minho accepted first"
+
+note over Fn, SR
+  PostgreSQL, READ COMMITTED: a second UPDATE of the
+  same row waits until the first transaction commits,
+  then re-checks its WHERE clause on the committed row.
+  Exactly one acceptance changes the row.
+end note
+@enduml

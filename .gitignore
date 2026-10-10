@@ -3,3 +3,6 @@ node_modules/
 .omc/
 **/.omc/
 uml/tools/
+web/node_modules/
+피드백/
+__pycache__/

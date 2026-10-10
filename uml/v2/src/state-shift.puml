@@ -1,0 +1,30 @@
+@startuml state-shift
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  StartColor #1C2230
+  EndColor #1C2230
+}
+
+title Shift state machine
+
+[*] --> SCHEDULED : generate_week\nor add_shift
+
+SCHEDULED -[#E9A23B]-> SCHEDULED : approved substitution\n(decide_sub_request)\n/ worker := acceptor,\noriginal worker kept
+SCHEDULED --> WORKED : confirm_attendance\n[attendance recorded]
+SCHEDULED --> ABSENT : mark_absent\n[shift started]\n(owner; also a no-show\nwithout attendance)
+
+state endW <<end>>
+state endA <<end>>
+WORKED --> endW
+ABSENT --> endA
+@enduml

@@ -246,7 +246,7 @@ test('TC-101 S6: September draft at 2026-10-01: Doyun\'s warning, Hana\'s probat
   assert.ok(confirmed.rows.every((r) => r.status === 'CONFIRMED'));
 });
 
-test('TC-102 probation applies only when all BR-10 conditions hold (one-year contract, first 3 months, until probation_end, not simple labour)', async () => {
+test('TC-102 probation applies only when all BR-10 conditions hold (one-year contract incl. 2026-09-01 to 2027-08-31, first 3 months, until probation_end, not simple labour) (BR-10)', async () => {
   const probation = (date) => db.value('select public.ss_probation(4, $1) as r', [date]);
   const hana = (changes) => {
     const w = { end: null, probationEnd: '2026-11-30', simple: false, ...changes };
@@ -259,7 +259,9 @@ test('TC-102 probation applies only when all BR-10 conditions hold (one-year con
   await hana({ probationEnd: '2026-10-15' });
   assert.deepEqual([await probation('2026-10-15'), await probation('2026-10-16')], [true, false]);
   await hana({ end: '2027-08-30' });
-  assert.equal(await probation('2026-09-15'), false, 'contract shorter than 365 days');
+  assert.equal(await probation('2026-09-15'), false, 'one day short of one year');
+  await hana({ end: '2027-08-31' });
+  assert.equal(await probation('2026-09-15'), true, '2026-09-01 to 2027-08-31 is a one-year contract');
   await hana({ end: '2027-09-01' });
   assert.equal(await probation('2026-09-15'), true);
   await hana({ simple: true });
@@ -287,13 +289,17 @@ test('TC-103 the probation floor is exactly 9,288; a regenerated draft needs a n
 
 // ---- TC-11x monthly payroll -----------------------------------------------------------------------------------------------
 
-test('TC-111 September payroll of Choi Minho: 64 h worked + 5 h scheduled (estimated), four holiday weeks, total (BR-11)', async () => {
+test('TC-111 S6 September draft: Seoyeon 472,500, Minho 844,176 (64 h worked + 5 h scheduled, four holiday weeks), Hana 495,360, Doyun 480,000 with warning, total 2,292,036 (BR-11)', async () => {
   const sep = await db.fn('generate_payroll', '2026-09');
   assert.deepEqual(sep.rows.map((r) => r.worker_id), [2, 3, 4, 5]);
   const minho = rowOf(sep, 3);
   assert.deepEqual([minho.base_minutes, minho.base_hours, minho.base_pay, minho.holiday_pay, minho.premium_pay, minho.total, minho.estimated],
     [69 * 60, 69, 712080, 132096, 0, 844176, true]);
   assert.deepEqual([rowOf(sep, 4).base_hours, rowOf(sep, 4).total, rowOf(sep, 4).estimated], [48, 495360, false]);
+  // S6 (interim report, Table of the September draft): every row and the total.
+  assert.deepEqual([rowOf(sep, 2).base_hours, rowOf(sep, 2).total, rowOf(sep, 2).estimated], [45, 472500, true]);
+  assert.deepEqual([rowOf(sep, 5).base_hours, rowOf(sep, 5).total, rowOf(sep, 5).min_wage_warning], [48, 480000, true]);
+  assert.equal(sep.rows.reduce((sum, r) => sum + r.total, 0), 2292036);
   assert.deepEqual(await db.one("select base_hours::float8 as h, base_pay, holiday_pay, total, status, estimated from public.payroll where year_month = '2026-09' and worker_id = 3"),
     { h: 69, base_pay: 712080, holiday_pay: 132096, total: 844176, status: 'DRAFT', estimated: true });
 });

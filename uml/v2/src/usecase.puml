@@ -1,0 +1,113 @@
+@startuml usecase
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+}
+skinparam actor {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam rectangle {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam package {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+
+' layout only: $nb(n) returns n non-breaking spaces, used to move a label
+' beside its vertical arrow instead of across it
+!function $nb($n)
+  !$s = ""
+  !$i = 0
+  !while $i < $n
+    !$s = $s + %chr(160)
+    !$i = $i + 1
+  !endwhile
+  !return $s
+!endfunction
+
+title ShiftSwap — Use case diagram
+
+left to right direction
+
+actor "A1 Worker" as A1
+actor "A3 System Clock" as A3
+
+rectangle "ShiftSwap" as Sys {
+  package "Administration" as PkAdmin {
+    usecase "UC-13 Sign in by role\n(demo account selection,\nno password)" as UC13
+    usecase "UC-10 Manage workplace\nsettings and minimum\nwage table" as UC10
+  }
+  package "Schedule" as PkSchedule {
+    usecase "UC-01 Register worker\nand fixed schedule" as UC01
+    usecase "UC-03 Manage\nweekly schedule" as UC03
+  }
+  package "Substitution" as PkSub #FFFFFF;line:E9A23B {
+    usecase "UC-05 Respond to\nsubstitute request" as UC05
+    usecase "UC-12 Cancel own\nsubstitute request" as UC12
+    usecase UC04 as "UC-04 Request substitute
+--
+extension points
+deadline reached
+requester withdraws"
+    usecase "UC-11 Expire overdue\nsubstitute request" as UC11
+    usecase "Find eligible\ncandidates" as FEC
+    usecase "UC-06 Approve or\nreject substitution" as UC06
+  }
+  package "Attendance and pay" as PkPay {
+    usecase "UC-14 Prepare past payroll\ndrafts automatically" as UC14
+    usecase "UC-07 Record and\nconfirm attendance" as UC07
+    usecase "UC-08 Compute weekly hours\nand holiday allowance" as UC08
+    usecase "UC-09 Generate and confirm\nmonthly payroll" as UC09
+  }
+}
+
+actor "A2 Owner" as A2
+
+' actor associations (link length only sets the left / right lane)
+A1 --- UC13
+A1 -- UC05
+A1 -- UC12
+A1 -- UC04
+A1 -- UC07
+A1 -- UC03
+A3 -- UC11
+A3 -- UC14
+
+UC10 -- A2
+UC01 -- A2
+UC03 -- A2
+UC06 -- A2
+UC08 -- A2
+UC09 -- A2
+UC13 -- A2
+UC07 --- A2
+
+' include and extend
+UC04 <. UC12 : %chr(8203)$nb(50)<<extend>>$nb(20)\n$nb(50)(requester withdraws)
+UC11 .> UC04 : %chr(8203)$nb(45)<<extend>>$nb(15)\n$nb(45)(deadline reached)
+UC04 ..> FEC : <<include>>
+UC08 <. UC06 : <<include>>$nb(14)
+UC09 .> UC08 : <<include>>$nb(14)
+UC14 ..> UC09 : <<include>>
+
+' layout only: keeps UC-06 in the owner lane, level with UC-11
+UC11 -[hidden]- UC06
+
+note "Every use case except UC-11,\nUC-13 and UC-14 requires\na signed-in user (UC-13)." as N1
+Sys -[hidden]- N1
+@enduml

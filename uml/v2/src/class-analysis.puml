@@ -1,0 +1,230 @@
+@startuml class-analysis
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  StereotypeFontColor #1C2230
+}
+skinparam class<<sub>> {
+  BorderColor #E9A23B
+}
+hide circle
+hide empty members
+hide <<sub>> stereotype
+
+title ShiftSwap — Analysis class diagram
+
+' ===== control classes =====
+class AdminControl <<control>> {
+  signIn()
+  updateSettings()
+  setDemoClock()
+  resetDemoData()
+}
+class ScheduleControl <<control>> {
+  registerWorker()
+  saveFixedSchedule()
+  generateWeek()
+  editShift()
+  markAbsent()
+}
+class SubstituteControl <<control>> <<sub>> {
+  findCandidates()
+  createRequest()
+  accept()
+  decline()
+  previewApproval()
+  decide()
+  cancel()
+  expireOverdue()
+}
+class AttendanceControl <<control>> {
+  recordAttendance()
+  confirmAttendance()
+}
+class PayControl <<control>> {
+  computeWeek()
+  generatePayroll()
+  acknowledgeMinWage()
+  confirmPayroll()
+  prepareMissingDrafts()
+}
+
+' ===== entity classes =====
+class Workplace <<entity>> {
+  name
+  regularEmployees
+  subAttendancePolicy :\n   SubAttendancePolicy
+  demoClock
+}
+class MinimumWage <<entity>> {
+  year
+  hourly
+}
+class Worker <<entity>> {
+  role : Role
+  name
+  phone
+  hourlyWage
+  contractStart
+  contractEnd
+  probationEnd
+  simpleLabor
+  active
+}
+class FixedSchedule <<entity>> {
+  weekday
+  startTime
+  endTime
+}
+class Shift <<entity>> {
+  workDate
+  startTime
+  endTime
+  status : ShiftStatus
+}
+class SubRequest <<entity>> <<sub>> {
+  reason
+  deadline
+  status :\n   SubRequestStatus
+  createdAt
+  decidedAt
+}
+class SubRequestTarget <<entity>> <<sub>> {
+  response :\n   TargetResponse
+  respondedAt
+}
+class Attendance <<entity>> {
+  clockIn
+  clockOut
+  confirmed
+}
+class WeeklySummary <<entity>> {
+  weekStart
+  contractHours
+  scheduledHours
+  actualHours
+  perfectAttendance
+  holidayEligible
+  holidayHours
+  holidayPay
+}
+class Payroll <<entity>> {
+  yearMonth
+  baseHours
+  basePay
+  holidayPay
+  premiumPay
+  total
+  minWageWarning
+  minWageAck
+  estimated
+  status : PayrollStatus
+}
+class Notification <<entity>> {
+  kind :\n   NotificationKind
+  params
+  createdAt
+  readAt
+}
+
+' ===== enumerations =====
+enum Role <<enumeration>> {
+  OWNER
+  WORKER
+}
+enum SubAttendancePolicy <<enumeration>> {
+  EXCUSED
+  ABSENT
+}
+enum ShiftStatus <<enumeration>> {
+  SCHEDULED
+  WORKED
+  ABSENT
+}
+enum SubRequestStatus <<enumeration>> {
+  REQUESTED
+  ACCEPTED
+  APPROVED
+  REJECTED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+enum TargetResponse <<enumeration>> {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CLOSED
+}
+enum PayrollStatus <<enumeration>> {
+  DRAFT
+  CONFIRMED
+}
+enum NotificationKind <<enumeration>> {
+  REQUEST_RECEIVED
+  REQUEST_ACCEPTED
+  TARGET_CLOSED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_EXPIRED
+  REQUEST_CANCELLED
+  REQUEST_FAILED
+  PAYROLL_DRAFT_READY
+}
+
+' ===== associations =====
+Workplace "1" -- "*" Worker
+FixedSchedule "*" -- "1" Worker
+WeeklySummary "*" -- "1" Worker
+Payroll "*" -- "1" Worker
+FixedSchedule "0..1" -- "*" Shift : generated from
+Worker "1" -- "*" Shift : current worker
+Worker "0..1" -- "*" Shift : original worker
+Shift "1" - "*" SubRequest
+Worker "1" -- "*" SubRequest : requests
+Worker "0..1" -- "*" SubRequest : accepts
+SubRequest "1" -- "*" SubRequestTarget
+Worker "1" -- "*" SubRequestTarget
+Shift "1" -- "0..1" Attendance
+Worker "1" -- "*" Notification
+SubRequest "0..1" - "*" Notification
+
+' ===== dependencies: control -> entities it changes =====
+AdminControl ..> Workplace
+AdminControl ..> MinimumWage
+ScheduleControl ..> FixedSchedule
+ScheduleControl ..> Worker
+ScheduleControl ..> Shift
+ScheduleControl .> PayControl : computeWeek
+PayControl ..> WeeklySummary
+PayControl ..> Payroll
+PayControl ..> Notification
+AttendanceControl ..> Shift
+AttendanceControl ..> Attendance
+SubstituteControl ..> Shift
+SubstituteControl ..> SubRequest
+SubstituteControl ..> SubRequestTarget
+SubstituteControl ..> Notification
+PayControl <.. SubstituteControl : computeWeek
+PayControl <.. AttendanceControl : computeWeek
+
+' ===== layout only: AdminControl beside ScheduleControl, AttendanceControl kept on the left, enumerations in one row at the bottom =====
+AdminControl -[hidden]> ScheduleControl
+AttendanceControl -[hidden]> AdminControl
+Attendance -[hidden]- SubAttendancePolicy
+Attendance -[hidden]- Role
+Attendance -[hidden]- ShiftStatus
+SubRequestTarget -[hidden]- SubRequestStatus
+SubRequestTarget -[hidden]- TargetResponse
+SubRequestTarget -[hidden]- NotificationKind
+SubRequestTarget -[hidden]- PayrollStatus
+@enduml

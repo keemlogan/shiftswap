@@ -1,0 +1,58 @@
+@startuml state-subrequest
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam state {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  ArrowColor #1C2230
+  StartColor #1C2230
+  EndColor #1C2230
+}
+skinparam note {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+title SubRequest state machine
+
+state c <<choice>>
+
+[*] --> c : create_sub_request
+c --> REQUESTED : [candidates exist]
+c --> FAILED : [no candidate]
+
+state "open" as Open #FFFFFF;line:E9A23B {
+  state REQUESTED
+  state ACCEPTED
+  REQUESTED --> ACCEPTED : accept_sub_request\n[first acceptance,\nbefore deadline]
+  note on link
+    A second accept_sub_request finds
+    the status no longer REQUESTED and
+    changes no row (ALREADY_TAKEN).
+  end note
+}
+
+REQUESTED --> FAILED : decline_sub_request\n[every target\nanswered can't]
+ACCEPTED --> APPROVED : decide_sub_request(APPROVE)\n[before deadline\nand shift start]
+ACCEPTED --> REJECTED : decide_sub_request(REJECT)\n[before deadline\nand shift start]
+Open --> EXPIRED : expire_overdue_requests\n[deadline or\nshift start ≤ now]
+Open --> CANCELLED : cancel_sub_request\n[by requester]
+
+state endA <<end>>
+state endR <<end>>
+state endF <<end>>
+state endE <<end>>
+state endC <<end>>
+APPROVED --> endA
+REJECTED --> endR
+FAILED --> endF
+EXPIRED --> endE
+CANCELLED --> endC
+
+@enduml

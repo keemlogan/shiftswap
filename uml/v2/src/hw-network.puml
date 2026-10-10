@@ -1,0 +1,65 @@
+@startuml hw-network
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam node {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+  FontStyle plain
+}
+skinparam cloud {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam component {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam artifact {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam database {
+  BorderColor #1C2230
+  BackgroundColor #FFFFFF
+}
+skinparam legend {
+  BackgroundColor #FFFEF2
+  BorderColor #1C2230
+}
+
+title ShiftSwap — Hardware and network configuration
+
+node "<&phone> <b>Smartphone</b>" <<device>> as Phone {
+  node "Web browser" <<execution environment>> as B1
+}
+node "<&laptop> <b>PC</b> (laptop or desktop)" <<device>> as PC {
+  node "Web browser" <<execution environment>> as B2
+}
+
+cloud "Internet" as Net
+
+node "<b>Web hosting</b>\nteam's deployment: static files on GitHub Pages\nreproduction run: Lovable hosting (server-rendered app)" as Host {
+  artifact "ShiftSwap web front end\n(React)" as WebApp
+}
+
+node "<b>Managed PostgreSQL service</b>\nteam's deployment: Supabase\nreproduction run: Lovable Cloud\n(built on Supabase)" as Cloud {
+  component "REST API\n(PostgREST)" as API
+  database "PostgreSQL\ntables and rules as\ndatabase functions" as PG
+}
+
+B1 -- Net : HTTPS
+B2 -- Net : HTTPS
+Net -- Host : HTTPS\n(load the pages)
+Net -- Cloud : HTTPS\n(REST calls)
+API -- PG : SQL
+
+legend bottom
+  Each server node is shown with its two alternatives:
+  the team's deployment and the reproduction run.
+endlegend
+@enduml

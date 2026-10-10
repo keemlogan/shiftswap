@@ -1,0 +1,108 @@
+@startuml class-controls
+!pragma layout smetana
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #1C2230
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #1C2230
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1C2230
+  FontColor #1C2230
+  StereotypeFontColor #1C2230
+}
+skinparam class<<sub>> {
+  BorderColor #E9A23B
+}
+hide circle
+hide empty members
+hide <<sub>> stereotype
+
+' layout only: $nb(n) returns n non-breaking spaces, used to move a label
+' beside its vertical arrow instead of across it
+!function $nb($n)
+  !$s = ""
+  !$i = 0
+  !while $i < $n
+    !$s = $s + %chr(160)
+    !$i = $i + 1
+  !endwhile
+  !return $s
+!endfunction
+
+title ShiftSwap — Analysis class diagram: control classes
+
+left to right direction
+
+' ===== control classes =====
+class AdminControl <<control>> {
+  signIn()
+  updateSettings()
+  setDemoClock()
+  resetDemoData()
+}
+class ScheduleControl <<control>> {
+  registerWorker()
+  saveFixedSchedule()
+  generateWeek()
+  editShift()
+  markAbsent()
+}
+class PayControl <<control>> {
+  computeWeek()
+  generatePayroll()
+  acknowledgeMinWage()
+  confirmPayroll()
+  prepareMissingDrafts()
+}
+class SubstituteControl <<control>> <<sub>> {
+  findCandidates()
+  createRequest()
+  accept()
+  decline()
+  previewApproval()
+  decide()
+  cancel()
+  expireOverdue()
+}
+class AttendanceControl <<control>> {
+  recordAttendance()
+  confirmAttendance()
+}
+
+' ===== entity classes (name only; attributes in the entity diagram) =====
+class Workplace <<entity>>
+class MinimumWage <<entity>>
+class Worker <<entity>>
+class FixedSchedule <<entity>>
+class Shift <<entity>>
+class SubRequest <<entity>> <<sub>>
+class SubRequestTarget <<entity>> <<sub>>
+class Attendance <<entity>>
+class WeeklySummary <<entity>>
+class Payroll <<entity>>
+class Notification <<entity>>
+
+' ===== control -> control: uses computeWeek =====
+PayControl <. ScheduleControl : %chr(8203)$nb(26)computeWeek
+SubstituteControl .> PayControl : computeWeek$nb(22)
+PayControl <. AttendanceControl : computeWeek$nb(22)
+
+' ===== control -> entities it changes =====
+AdminControl ..> Workplace
+AdminControl ..> MinimumWage
+ScheduleControl ..> Worker
+ScheduleControl ..> FixedSchedule
+ScheduleControl ..> Shift
+PayControl ..> WeeklySummary
+PayControl ..> Payroll
+PayControl ..> Notification
+SubstituteControl ..> SubRequest
+SubstituteControl ..> SubRequestTarget
+SubstituteControl ..> Shift
+SubstituteControl ..> Notification
+AttendanceControl ..> Attendance
+AttendanceControl ..> Shift
+@enduml
