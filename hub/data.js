@@ -1,7 +1,7 @@
 // 과제 설명서(TermProjectDescription-SE_2026_2)의 요구사항을 빠짐없이 나열하고,
 // 각 요구사항을 충족하는 결과물 위치를 연결한다. 요구사항 문구는 한글 번역본 기준.
 
-export const TODAY = "2026-10-10";
+export const TODAY = "2026-10-11";
 
 export const GROUPS = [
   { id: "topic", week: null, due: null, label: "주제 조건", note: "제안서 단계에서 지켜야 하는 주제 제약" },
@@ -73,7 +73,7 @@ export const ITEMS = [
 
   // 7주차 중간
   { id: "I-1", group: "w7", title: "문제 설명", quote: "문제 설명",
-    answer: "현재 업무 방식, 문제 P1~P3, 관련 법 기준과 강의 8장 양식의 시스템 환경(구성도·HW/네트워크·SW 구성). v2에서 교수님 피드백 반영표(1.1)와 제안서 이후 변경표(1.2)를 추가했다.",
+    answer: "현재 업무 방식, 문제 P1~P3, 관련 법 기준과 강의 8장 양식의 시스템 환경(구성도·HW/네트워크·SW 구성). v2에서 교수님 피드백 반영표(1.1)와 제안서 이후 변경표(1.2)를 추가했고, v3에서 인터뷰 대신 법령·고용노동부 행정해석으로 요구사항 질문을 정리(3장 표 7, 위험 R8)하고 Lovable 시험 결과(R3)를 반영했다.",
     evidence: [doc("중간 보고서 · 문제 설명", I + "#problem"), pdf("중간 보고서 PDF", "docs/interim.pdf")] },
   { id: "I-2", group: "w7", title: "기능 요구사항 명세", quote: "기능 요구사항 명세",
     answer: "FR 24개(번호·이름·분류·설명, FR-03 결번), 증분 1 의존성 표, 업무 규칙 BR-01~BR-17, 유스케이스 13개의 구조화된 명세(사전조건, 기본·대안·예외 흐름, 사후조건).",
@@ -86,7 +86,7 @@ export const ITEMS = [
     evidence: [doc("중간 보고서 · 시나리오", I + "#scenarios")] },
   { id: "I-5", group: "w7", title: "요구사항 분석을 위한 UML 다이어그램", quote: "요구사항 분석을 위한 UML 다이어그램",
     answer: "유스케이스(패키지 4개), 활동(주휴 판정·후보 선정), 상태(대타 요청·근무·정산), 분석 클래스(엔티티·컨트롤), 동시 수락 분석 시퀀스 다이어그램.",
-    evidence: [doc("중간 보고서 · UML", I + "#uml"), img("상태: 대타 요청", "uml/v2/state-subrequest.svg"), img("활동: 주휴 판정", "uml/v2/activity-holiday.svg")] },
+    evidence: [doc("중간 보고서 · UML", I + "#uml"), img("상태: 대타 요청", "uml/v2/state-subrequest.svg"), img("활동: 주휴 판정", "uml/v3/activity-holiday.svg")] },
   { id: "I-6", group: "w7", title: "주요 사용자 인터페이스 화면", quote: "주요 사용자 인터페이스 화면",
     answer: "9차 반복 시스템(React + DB 함수)의 화면 캡처 14장(데스크톱·모바일, 한국어 1장). 화면의 금액은 시나리오와 같다.",
     evidence: [doc("중간 보고서 · UI 화면", I + "#ui"), app("새 시스템에서 직접 보기", "system/"), app("이전 프로토타입(v8)", "app/")] },
