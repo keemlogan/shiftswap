@@ -27,7 +27,7 @@ export interface Shift {
 }
 
 export interface Reason {
-  code: 'CONTRACT_BELOW_15' | 'ABSENT' | 'GAVE_AWAY';
+  code: 'CONTRACT_BELOW_15' | 'ABSENT' | 'GAVE_AWAY' | 'NO_DAY_WORKED';
   date?: string;
 }
 

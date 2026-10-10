@@ -32,12 +32,12 @@ top of it without changing it.</p>
 Lovable Cloud.</p>
 <p>The attached file <code>shiftswap.sql</code> is the complete database
 of the app: 11 tables with row-level security (read-only for the app),
-41 database functions that contain every business rule, and the demo
-data. Apply it <strong>exactly as it is, as one migration</strong>: do
-not rename, rewrite, split, remove or add anything, and do not create
-other tables. The file ends with
-<code>select public.reset_demo_data();</code>, which inserts the demo
-data.</p>
+77 database functions that contain every business rule (41 that the app
+calls and 36 internal helpers), and the demo data. Apply it
+<strong>exactly as it is, as one migration</strong>: do not rename,
+rewrite, split, remove or add anything, and do not create other tables.
+The file ends with <code>select public.reset_demo_data();</code>, which
+inserts the demo data.</p>
 <p>Do not build any page yet. When the migration has run, call
 <code>select public.demo_accounts();</code> and show me the result. It
 must list five accounts: Park Jiyoung (OWNER) and the workers Lee
@@ -248,16 +248,16 @@ the start means "ends next day"); "Add worker".</li>
 eligibility for the holiday allowance, the amount, the hours (contract,
 scheduled, worked) and the reason when not eligible (contract under 15
 h; absent on 9/29; gave the shift away under the "count as absence"
-policy); a note on the store's policy. <strong>Monthly</strong>
-(<code>payroll_months</code>, <code>payroll_month</code>,
-<code>generate_payroll</code>, <code>acknowledge_min_wage</code>,
-<code>confirm_payroll</code>): month navigation; one row per worker with
-hours, base pay, holiday pay, premium, total and chips (Draft,
-Confirmed, Estimated, Probation minimum 90 %, Below minimum wage);
-"Acknowledge" on a minimum-wage warning; the totals;
-<strong>Confirm</strong> (primary) disabled with the reason until every
-warning is acknowledged; "Generate draft" / "Rebuild draft" for a month
-that is not confirmed.</li>
+policy; no day worked in the week); a note on the store's policy.
+<strong>Monthly</strong> (<code>payroll_months</code>,
+<code>payroll_month</code>, <code>generate_payroll</code>,
+<code>acknowledge_min_wage</code>, <code>confirm_payroll</code>): month
+navigation; one row per worker with hours, base pay, holiday pay,
+premium, total and chips (Draft, Confirmed, Estimated, Probation minimum
+90 %, Below minimum wage); "Acknowledge" on a minimum-wage warning; the
+totals; <strong>Confirm</strong> (primary) disabled with the reason
+until every warning is acknowledged; "Generate draft" / "Rebuild draft"
+for a month that is not confirmed.</li>
 <li><strong>Settings</strong> (<code>get_settings</code>,
 <code>update_settings</code>, <code>set_demo_clock</code>,
 <code>reset_demo_data</code>): store name; number of regular employees

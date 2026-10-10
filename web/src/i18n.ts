@@ -111,9 +111,11 @@ const ko = {
   'holiday.noContract': '계약이 주 15시간 미만이라 주휴수당이 없어요 (주 {h})',
   'holiday.noAbsent': '{day} 결근으로 이번 주 주휴수당이 없어요',
   'holiday.noGaveAway': '{day} 근무를 넘겨서 이번 주 주휴수당이 없어요',
+  'holiday.noWorkDay': '이번 주에 일한 날이 없어서 주휴수당이 없어요',
   'reason.contract': '계약 주 {h}',
   'reason.absent': '{day} 결근',
   'reason.gaveAway': '{day} 근무 넘김',
+  'reason.noWorkDay': '이번 주 일한 날 없음',
   'track.label': '진행 상태',
   'track.REQUESTED': '요청',
   'track.ACCEPTED': '수락',
@@ -590,9 +592,11 @@ const en: Record<TextKey, string> = {
   'holiday.noContract': 'No holiday allowance: your contract is under 15 h a week ({h} a week)',
   'holiday.noAbsent': 'No holiday allowance this week: absent on {day}',
   'holiday.noGaveAway': 'No holiday allowance this week: shift on {day} handed over',
+  'holiday.noWorkDay': 'No holiday allowance this week: no day worked',
   'reason.contract': 'contract {h} a week',
   'reason.absent': 'absent on {day}',
   'reason.gaveAway': 'handed over {day}',
+  'reason.noWorkDay': 'no day worked this week',
   'track.label': 'Progress',
   'track.REQUESTED': 'Requested',
   'track.ACCEPTED': 'Accepted',
@@ -1100,6 +1104,7 @@ export function createI18n(lang: Lang) {
       if (r.code === 'CONTRACT_BELOW_15') parts.push(t('reason.contract', { h: hours(contractHours) }));
       if (r.code === 'ABSENT' && r.date) parts.push(t('reason.absent', { day: dateShort(r.date) }));
       if (r.code === 'GAVE_AWAY' && r.date) parts.push(t('reason.gaveAway', { day: dateShort(r.date) }));
+      if (r.code === 'NO_DAY_WORKED') parts.push(t('reason.noWorkDay'));
     }
     return parts.join(t('common.sep'));
   };

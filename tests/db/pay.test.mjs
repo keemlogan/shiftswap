@@ -143,6 +143,33 @@ test('TC-088 monthly holiday pay is the sum over the weeks whose Sunday falls in
   assert.equal(rowOf(oct, 3).holiday_pay, 33024, 'the week of 09-28 ends on Sunday 10-04');
 });
 
+test('TC-089 a week in which the worker works on no day has no holiday allowance, even when attendance is unbroken (EXCUSED): Minho hands over all three shifts (BR-06 c, BR-16)', async () => {
+  const swap = async (date, acceptor, deadline) => {
+    const r = await db.fn('create_sub_request', await db.shift(3, date), 3, null, deadline);
+    await db.fn('accept_sub_request', r.id, acceptor);
+    return r.id;
+  };
+  await db.fn('decide_sub_request', await swap('2026-09-29', 2, '2026-09-29 12:00'), 'APPROVE');
+  await db.fn('decide_sub_request', await swap('2026-10-01', 2, '2026-09-30 12:00'), 'APPROVE');
+  let minho = await summaryOf('2026-09-28', 3);
+  assert.deepEqual([minho.scheduled_hours, minho.holiday_eligible, minho.holiday_pay, minho.reasons], [6, true, 33024, []],
+    'one shift left (Sat): he still works on a day');
+  // The preview of the last swap already shows the loss.
+  const last = await swap('2026-10-03', 4, '2026-10-02 12:00');
+  const p = await db.fn('approval_preview', last);
+  assert.deepEqual([p.requester.before.holiday_pay, p.requester.after.holiday_pay, p.requester.after.reasons, p.requester.eligibility_changed],
+    [33024, 0, [{ code: 'NO_DAY_WORKED' }], true]);
+  await db.fn('decide_sub_request', last, 'APPROVE');
+  minho = await summaryOf('2026-09-28', 3);
+  assert.deepEqual([minho.scheduled_hours, minho.perfect_attendance, minho.holiday_eligible, minho.holiday_pay, minho.reasons],
+    [0, true, false, 0, [{ code: 'NO_DAY_WORKED' }]]);
+  assert.equal(await db.value("select holiday_pay from public.weekly_summary where worker_id = 3 and week_start = '2026-09-28'"), 0);
+  // Under ABSENT the handed-over days themselves are the reasons; NO_DAY_WORKED is reported only when attendance holds.
+  await db.fn('update_settings', 'Dalbit Café', 4, 'ABSENT', null);
+  minho = await summaryOf('2026-09-28', 3);
+  assert.deepEqual(minho.reasons.map((r) => r.code), ['GAVE_AWAY', 'GAVE_AWAY', 'GAVE_AWAY']);
+});
+
 // ---- TC-09x premium pay --------------------------------------------------------------------------------------------------
 
 test('TC-091 premium is zero below five regular employees and paid from five (BR-08)', async () => {

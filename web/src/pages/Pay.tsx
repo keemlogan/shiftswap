@@ -67,8 +67,9 @@ function PayWeek({ week }: { week: string }) {
                   ) : (
                     <p className="reason" data-reason>{r.reasons.map((x) => (x.code === 'CONTRACT_BELOW_15'
                       ? i18n.t('pay.reasonContract', { h: i18n.hours(r.contract_hours) })
-                      : x.code === 'ABSENT' ? i18n.t('reason.absent', { day: i18n.dateShort(x.date!) })
-                        : i18n.t('reason.gaveAway', { day: i18n.dateShort(x.date!) }))).join(i18n.t('common.sep'))}</p>
+                      : x.code === 'ABSENT' && x.date ? i18n.t('reason.absent', { day: i18n.dateShort(x.date) })
+                        : x.code === 'GAVE_AWAY' && x.date ? i18n.t('reason.gaveAway', { day: i18n.dateShort(x.date) })
+                          : x.code === 'NO_DAY_WORKED' ? i18n.t('reason.noWorkDay') : '')).filter(Boolean).join(i18n.t('common.sep'))}</p>
                   )}
                   <p className="muted num">{i18n.t('pay.contractLine', { s: i18n.hours(r.scheduled_hours), a: i18n.hours(r.actual_hours) })}</p>
                 </article>

@@ -1460,4 +1460,78 @@ pass; the concurrency test passes on the deployed database. The final
 prompt for Lovable is drafted from the same specification
 (<code>prompts/final-prompt.md</code>, v9 draft) and will be tried in
 Week 9.</p>
+<h3
+id="iteration-9-addendum-2026-10-11--legal-review-in-place-of-the-interviews-first-lovable-trial">Iteration
+9, addendum (2026-10-11) — legal review in place of the interviews;
+first Lovable trial</h3>
+<p>Source: team decision of 2026-10-11 not to conduct the owner and
+co-worker interviews of the proposal; the rule questions are answered
+from the law and the interpretations of the Ministry of Employment and
+Labor (spec §13 source 14, quoted in its 1350 consultation answer of
+2025-10-22).</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Specification (v9)</th>
+<th>Implementation</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12</td>
+<td>The ministry holds that no weekly paid holiday is owed for a week
+without a day of actual work (근로조건지도과-3102, 2008-08-08); the
+system paid the holiday allowance to a worker who had handed over every
+shift of the week under EXCUSED</td>
+<td>BR-06 (c), reason <code>NO_DAY_WORKED</code> (reported only when
+attendance otherwise holds); legal basis of EXCUSED and (c) added to
+BR-06; §11 TC-08x</td>
+<td><code>ss_week_calc</code> (<code>db/shiftswap.sql</code>); front
+end: reason text 이번 주 일한 날 없음 / no day worked this week
+(<code>web/src/i18n.ts</code>, <code>Home.tsx</code>,
+<code>Pay.tsx</code>, <code>types.ts</code>; unknown reason codes no
+longer fall through to "handed over")</td>
+<td>TC-089 (fails on the previous SQL, passes now);
+<code>npm run test:db</code> 85/85; <code>tools/check-system.mjs</code>
+scenario BR-06c</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Message 1 counted "41 database functions"; the file has 77 (41 that
+the app calls and 36 internal helpers)</td>
+<td>—</td>
+<td>Message 1 states both numbers</td>
+<td>—</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Message 4 (Pay, Weekly) listed three reasons for no holiday
+allowance</td>
+<td>—</td>
+<td>"no day worked in the week" added</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>First Lovable trial (2026-10-11, free workspace, Message 1 only,
+record <code>중간보고서_v2_작업/lovable-trial/RESULT.md</code> outside
+the repository): the <code>.sql</code> attachment was accepted and
+Lovable Cloud was enabled without a question; after about six minutes
+Lovable proposed exactly the attached file as one migration
+(<code>shiftswap</code>; the SQL in its approval card has the same
+SHA-256 as the file), so it neither rewrote nor split the script. The
+message used all 10 credits the workspace showed for the day (the
+documentation states five daily build credits on the free plan) before
+the migration was approved; "Allow migration" then opened an upgrade
+dialog, which was cancelled, so the migration was not applied and the
+database stayed empty (verify queries: 0 tables, 0 functions). The SQL
+editor of Lovable Cloud (More → Cloud → SQL editor) works on the free
+plan without credits. Consequence for the final prompt: delivering the
+134 kB script through a build message costs more than a free day's
+credits; the delivery route (a smaller script, the SQL editor as a
+manual step, or a paid plan) is decided before the re-run of Week
+13.</p>
 </main></body></html>

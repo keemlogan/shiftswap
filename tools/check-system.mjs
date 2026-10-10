@@ -2,7 +2,8 @@
 //   (cd web && npm run build) && node tools/check-system.mjs
 // It serves the repository root, opens <server>/system/ in headless Chrome and
 //   1. resets the demo data (reset_demo_data over REST with the publishable key of web/src/config.ts),
-//   2. walks through the scenarios S1–S11 of spec §10 in the UI and checks the numbers on the screens,
+//   2. walks through the scenarios S1–S11 of spec §10 and a week without a day worked (BR-06 c) in the UI and checks
+//      the numbers on the screens,
 //   3. audits every page at 1280 and 360 px in Korean and English (NFR-02, NFR-13): exactly one filled primary button,
 //      every disabled button with a visible reason, touch targets of at least 44 × 44 px, no horizontal scroll,
 //   4. checks that no console error or exception occurred, and
@@ -528,6 +529,25 @@ try {
       "S11 Minho's week of 2026-09-28 loses perfect attendance and its holiday allowance (33,024 → 0)", `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
     await a.as(3, '#/home', 'home');
     check((await a.text('[data-week-card]')).includes('9월 29일(화) 결근으로 이번 주 주휴수당이 없어요'), "S11 Minho's Home explains the lost holiday allowance");
+  });
+
+  // ---- BR-06 (c): a week without a day worked (TC-089 on the screens) ---------------------------------------------
+  await scenario('BR-06c', async () => {
+    await reset();
+    // Minho hands over all three shifts of the week of 09-28 (Tue and Thu to Seoyeon, Sat to Hana); the owner approves.
+    const shifts = (await rest('requestable_shifts', { p_worker_id: 3 }))
+      .filter((s) => ['2026-09-29', '2026-10-01', '2026-10-03'].includes(s.work_date));
+    for (const s of shifts) {
+      const r = await rest('create_sub_request', { p_shift_id: s.id, p_requester_id: 3, p_reason: null, p_deadline: s.default_deadline });
+      await rest('accept_sub_request', { p_request_id: r.id, p_worker_id: s.work_date === '2026-10-03' ? 4 : 2 });
+      await rest('decide_sub_request', { p_request_id: r.id, p_decision: 'APPROVE' });
+    }
+    await a.as(1, '#/pay/week/2026-09-28', 'pay-week');
+    const row = await a.evaluate(`(() => { const r = document.querySelector('[data-week-row="3"]'); return r ? { eligible: r.dataset.eligible, pay: Number(r.dataset.holidayPay), text: r.innerText } : null; })()`);
+    check(shifts.length === 3 && row && row.eligible === 'false' && row.pay === 0 && row.text.includes('이번 주 일한 날 없음'),
+      "BR-06 (c): after handing over all three shifts (EXCUSED) Minho's week of 2026-09-28 has no holiday allowance, reason 이번 주 일한 날 없음", `${shifts.length} ${JSON.stringify(row)}`);
+    await a.as(3, '#/home', 'home');
+    check((await a.text('[data-week-card]')).includes('이번 주에 일한 날이 없어서 주휴수당이 없어요'), "BR-06 (c): Minho's Home explains why there is no holiday allowance");
   });
 
   // ---- Role-based access (spec §19) -----------------------------------------------------------------------------

@@ -33,8 +33,9 @@ function WeekCard({ week }: { week: WeekCalc }) {
   else if (week.reasons.some((r) => r.code === 'CONTRACT_BELOW_15')) text = i18n.t('holiday.noContract', { h: i18n.hours(week.contract_hours) });
   else {
     const r = week.reasons.find((x) => x.code === 'ABSENT') ?? week.reasons.find((x) => x.code === 'GAVE_AWAY');
-    text = r && r.code === 'ABSENT' ? i18n.t('holiday.noAbsent', { day: i18n.date(r.date!) })
-      : i18n.t('holiday.noGaveAway', { day: r?.date ? i18n.date(r.date) : '' });
+    text = r?.code === 'ABSENT' && r.date ? i18n.t('holiday.noAbsent', { day: i18n.date(r.date) })
+      : r?.code === 'GAVE_AWAY' && r.date ? i18n.t('holiday.noGaveAway', { day: i18n.date(r.date) })
+        : i18n.t('holiday.noWorkDay');
   }
   return (
     <section className="card" aria-labelledby="week-title" data-week-card>

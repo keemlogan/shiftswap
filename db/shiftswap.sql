@@ -473,6 +473,7 @@ declare
   v_actual int := 0;
   v_paid int := 0;
   v_perfect boolean := true;
+  v_worked_day boolean := false;
   v_reasons jsonb := '[]'::jsonb;
   v_intervals jsonb := '[]'::jsonb;
   v_eligible boolean;
@@ -507,6 +508,7 @@ begin
           v_row.work_date, v_row.start_time, v_row.end_time, v_row.clock_in, v_row.clock_out));
       end if;
       if v_row.status <> 'ABSENT' then
+        v_worked_day := true;
         v_paid := v_paid + v_minutes;
         v_intervals := v_intervals || jsonb_build_array(jsonb_build_object(
           'work_date', v_row.work_date, 'start', v_row.work_date + v_row.start_time,
@@ -520,7 +522,11 @@ begin
       v_reasons := v_reasons || jsonb_build_array(jsonb_build_object('code', 'GAVE_AWAY', 'date', v_row.work_date));
     end if;
   end loop;
-  v_eligible := v_contract_hours >= 15 and v_perfect;
+  -- BR-06 (c): a week in which W works on no day (every shift handed over, or none held) has no holiday allowance.
+  if not v_worked_day and v_perfect then
+    v_reasons := v_reasons || jsonb_build_array(jsonb_build_object('code', 'NO_DAY_WORKED'));
+  end if;
+  v_eligible := v_contract_hours >= 15 and v_perfect and v_worked_day;
   v_holiday_hours := case when v_eligible then public.ss_holiday_hours(v_contract_hours) else 0.00 end;
   v_holiday_pay := floor(v_holiday_hours * v_wage);
   v_base_pay := floor(v_paid::numeric * v_wage / 60);
