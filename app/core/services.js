@@ -1129,9 +1129,9 @@ export function seedWorkHistory(lastDate = '2026-09-20', lastMonth = '2026-08') 
 
 /**
  * Spec §10: the payroll of every month from the first contract month to `lastMonth` generated, acknowledged (BR-09)
- * and confirmed with the payroll services.
+ * and, unless `confirm` is false, confirmed with the payroll services.
  */
-export function seedPayrollHistory(lastMonth) {
+export function seedPayrollHistory(lastMonth, { confirm = true } = {}) {
   return tx(() => {
     const first = firstContractMonth();
     if (!first) return;
@@ -1139,20 +1139,28 @@ export function seedPayrollHistory(lastMonth) {
       const rows = generatePayroll(month);
       if (!rows.length) continue;
       for (const p of rows) if (p.minWageWarning) acknowledgeMinWage(month, p.workerId);
-      confirmPayroll(month);
+      if (confirm) confirmPayroll(month);
     }
   });
 }
 
 /**
- * Spec §10, shared-mode seed: the template of the shared database has no Payroll rows. When a store has none, confirm
- * the payroll of every month up to two months before `today` as the local seed does; BR-14 then prepares the previous
- * month's draft. Returns true when the history was added.
+ * Spec §10, shared-mode seed: the template of the shared database has no Payroll rows. The server accepts a payroll
+ * row only as a DRAFT and lets it be confirmed afterwards (NFR-14), so the history is completed in two saves:
+ * on a store without any Payroll row the payroll of every month up to two months before `today` is generated and
+ * acknowledged ('drafted'); on the next run, while the store has no confirmed payroll yet, those months are confirmed
+ * ('confirmed'). BR-14 prepares the previous month's draft, which stays a draft. Returns false when nothing was done.
  */
 export function completeSharedSeed(today = now()) {
   return tx(() => {
-    if (get('SELECT id FROM Payroll LIMIT 1')) return false;
-    seedPayrollHistory(addMonths(today.slice(0, 7), -2));
-    return true;
+    const last = addMonths(today.slice(0, 7), -2);
+    if (!get('SELECT id FROM Payroll LIMIT 1')) {
+      seedPayrollHistory(last, { confirm: false });
+      return 'drafted';
+    }
+    if (get("SELECT id FROM Payroll WHERE status = 'CONFIRMED' LIMIT 1")) return false;
+    const months = all("SELECT DISTINCT yearMonth FROM Payroll WHERE status = 'DRAFT' AND yearMonth <= ? ORDER BY yearMonth", [last]);
+    for (const { yearMonth } of months) confirmPayroll(yearMonth);
+    return months.length ? 'confirmed' : false;
   });
 }

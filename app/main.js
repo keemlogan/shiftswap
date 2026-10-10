@@ -109,26 +109,37 @@ function markTour(step) {
   local.setItem(TOUR_KEY, JSON.stringify({ ...tourState(), [step]: true }));
 }
 
-/** System Clock duties before drawing; in shared mode they are paused for a minute after the server refused them. */
+/**
+ * System Clock duties before drawing; in shared mode they are paused for a minute after the server refused them.
+ * Returns the step of the shared seed ('drafted', 'confirmed' or false).
+ */
 function systemDuties() {
-  if (shared && !gateway.systemAllowed()) return;
+  if (shared && !gateway.systemAllowed()) return false;
+  let seedStep = false;
   try {
-    if (shared) svc.completeSharedSeed();
+    if (shared) seedStep = svc.completeSharedSeed();
     svc.expireOverdue();
     svc.prepareMonthlyPayroll();
   } catch (err) {
     console.error(err);
   }
+  return seedStep;
 }
 
 function render() {
   pendingRender = false;
   edited = false;
   closeSheet();
-  systemDuties();
+  const seedStep = systemDuties();
   draw();
   // Shared mode: save what the System Clock and the screens changed while drawing (a no-op when nothing changed).
-  if (shared) gateway.settle();
+  // The payroll history is saved as drafts first; once they are saved, draw again so that they are confirmed.
+  if (shared) gateway.settle().then((saved) => {
+    if (saved && seedStep === 'drafted') {
+      pendingRender = true;
+      setTimeout(renderIfIdle, 0);
+    }
+  });
 }
 
 function draw() {

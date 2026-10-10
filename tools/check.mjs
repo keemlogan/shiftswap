@@ -143,6 +143,22 @@ try {
     && await a.evaluate(`!!document.querySelector('.decision-card .notice-warn') && !document.querySelector('[data-approve]').disabled`),
     "S10 the owner's decision card shows Minho 24 → 29 h and the BR-15 warning (13 h beyond contract); 승인하기 stays enabled", text.slice(0, 400));
 
+  // ---- S11 (FR-13, BR-06): the owner marks a no-show absent from the shift sheet, without any attendance record ----
+  await a.viewport(1280, 900);
+  await a.fresh('ko');
+  await a.signIn(1, '#/schedule/2026-09-28');
+  await setClock(a, '2026-09-29T23:30');
+  await a.go('#/schedule/2026-09-28');
+  const tueMinho = await a.evaluate(`(() => { const b = [...document.querySelectorAll('[data-shift]')].find((x) => x.getAttribute('aria-label').includes('최민호') && x.getAttribute('aria-label').includes('9월 29일')); return b ? b.dataset.shift : null; })()`);
+  await a.click(`[data-shift="${tueMinho}"]`);
+  check(await a.evaluate('!!document.querySelector("#act-absent")'), "S11 the owner's sheet of Minho's started Tue 09-29 shift offers 결근 처리 (no attendance recorded)");
+  await a.click('#act-absent');
+  const absentToast = await a.evaluate(`document.getElementById('toast-root').innerText`);
+  await a.go('#/pay/week/2026-09-28');
+  text = await a.text();
+  check(absentToast.includes('결근으로 처리했어요') && text.includes('9/29(화) 결근'),
+    "S11 결근 처리 marks the no-show ABSENT and Minho loses this week's holiday allowance", `${absentToast} | ${text.slice(0, 400)}`);
+
   // ---- Done criterion 7 ----
   const problemsBefore = page.problems.length;
   for (const name of Object.keys(SCENES)) {

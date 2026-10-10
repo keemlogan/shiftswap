@@ -183,8 +183,12 @@ function openDetail(ctx, shiftId, week) {
   if (ownFuture) {
     actions = `<p class="muted">${esc(t('detail.ownFuture'))}</p>${button({ label: t('schedule.findCover'), kind: 'primary', block: true, href: `#/swaps/new/1/${d.id}` })}`;
   } else if (isOwner) {
+    // A shift that has started and is still SCHEDULED can be marked absent here, with or without a recorded attendance
+    // (FR-13; a no-show has no attendance record, so the attendance cards cannot reach it).
+    const started = d.status === 'SCHEDULED' && `${d.workDate}T${d.startTime}` <= ctx.now;
     actions = `
       <div class="stack-tight">
+        ${started ? button({ label: t('owner.absent'), kind: 'secondary', block: true, id: 'act-absent' }) : ''}
         ${button({ label: t('detail.changeTime'), kind: 'primary', block: true, id: 'act-time', disabled: !!d.openRequestId, reason: t('err.SHIFT_OPEN_REQUEST') })}
         ${button({ label: t('detail.changeWorker'), kind: 'secondary', block: true, id: 'act-worker', disabled: !!d.openRequestId, reason: t('err.SHIFT_OPEN_REQUEST') })}
         ${button({ label: t('detail.delete'), kind: 'danger', block: true, id: 'act-delete', disabled: !d.canDelete, reason: t('detail.deleteBlocked') })}
@@ -250,6 +254,17 @@ function openDetail(ctx, shiftId, week) {
           }
         });
         form.workerId.focus();
+      });
+      const absent = panel.querySelector('#act-absent');
+      if (absent) absent.addEventListener('click', async () => {
+        try {
+          await ctx.run(() => svc.markAbsent(d.id));
+          close();
+          ctx.toast(t('owner.markedAbsent'));
+          ctx.refresh();
+        } catch (err) {
+          ctx.fail(err);
+        }
       });
       const del = panel.querySelector('#act-delete');
       if (del && !del.disabled) del.addEventListener('click', async () => {

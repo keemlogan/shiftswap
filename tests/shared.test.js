@@ -62,6 +62,13 @@ function fakeServer(tables, { serverNow = SERVER_NOW } = {}) {
       assert.equal(name, 'app_commit');
       if (server.failures.length) throw server.failures.shift();
       if (args.p_base_rev !== server.rev) throw Object.assign(new Error('stale'), { status: 400, serverMessage: `STALE: the store is at revision ${server.rev}` });
+      // The payroll rule of the shared database (app_check_payroll): rows are created as DRAFT, confirmed rows are read-only.
+      for (const c of args.p_changes) {
+        if (c.t !== 'Payroll') continue;
+        const old = state.Payroll.get(c.row[keyOf('Payroll')]);
+        if (c.op !== 'insert' && old?.status === 'CONFIRMED') throw refused('RULE: confirmed payroll is read-only');
+        if (c.op === 'insert' && c.row.status === 'CONFIRMED') throw refused('RULE: a payroll row is created as DRAFT and confirmed afterwards');
+      }
       server.commits.push(args.p_changes);
       server.apply(args.p_changes);
       return { rev: server.rev, now: server.serverNow };
@@ -205,11 +212,15 @@ test('TC-167 offline: nothing is saved and the replica goes back to the last sav
 test('TC-168 System Clock duties are saved after drawing; a refusal pauses them for a minute', async () => {
   const server = fakeServer(seedTables({ payroll: false }), { serverNow: Date.parse('2026-10-01T00:00:00Z') });
   const { gateway, reloads } = await open(server);
-  assert.equal(svc.completeSharedSeed(), true);
+  // The server takes payroll rows only as drafts (NFR-14), so the history is drafted first and confirmed on the next run.
+  assert.equal(svc.completeSharedSeed(), 'drafted');
   svc.expireOverdue();
   const { yearMonth, created } = svc.prepareMonthlyPayroll();
   assert.equal(yearMonth, '2026-09');
   assert.ok(created > 0);
+  assert.equal(await gateway.settle(), true);
+  assert.deepEqual(all('SELECT DISTINCT status FROM Payroll'), [{ status: 'DRAFT' }]);
+  assert.equal(svc.completeSharedSeed(), 'confirmed');
   assert.equal(await gateway.settle(), true);
   const months = all("SELECT yearMonth, MIN(status) AS status FROM Payroll GROUP BY yearMonth ORDER BY yearMonth");
   assert.deepEqual(months.at(-1), { yearMonth: '2026-09', status: 'DRAFT' });
@@ -223,6 +234,22 @@ test('TC-168 System Clock duties are saved after drawing; a refusal pauses them 
   assert.equal(gateway.systemAllowed(), false);
   assert.equal(reloads.length, 1);
   assert.deepEqual(server.state(), seedTablesFromReplica());
+});
+
+test('TC-16C a store without payroll: the server refuses confirmed payroll inserts, and expiry is still saved', async () => {
+  // Regression: completing the history in one save sent CONFIRMED inserts, the server refused the whole change set and
+  // the expiry and the monthly draft of the same pass were lost (open requests stayed REQUESTED after their deadline).
+  const server = fakeServer(seedTables({ payroll: false }), { serverNow: Date.parse('2026-10-01T00:00:00Z') });
+  const { gateway } = await open(server);
+  await assert.rejects(gateway.command(() => { svc.generatePayroll('2026-03'); svc.confirmPayroll('2026-03'); }),
+    (err) => err.code === 'SHARED_REFUSED');
+  assert.equal(svc.completeSharedSeed(), 'drafted');
+  assert.equal(svc.expireOverdue(), 1);
+  assert.equal(await gateway.settle(), true);
+  assert.equal(server.state().SubRequest.find((r) => r.id === 1).status, 'EXPIRED');
+  assert.equal(svc.completeSharedSeed(), 'confirmed');
+  assert.equal(await gateway.settle(), true);
+  assert.ok(server.state().Payroll.filter((p) => p.year_month <= '2026-08').every((p) => p.status === 'CONFIRMED'));
 });
 
 test('TC-169 polling reloads another person\'s change; reset for everyone reloads the seed', async () => {
