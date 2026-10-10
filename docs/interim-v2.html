@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ShiftSwap Interim Report</title>
+<link rel="stylesheet" href="report.css">
+<style>
+  table.ucd { font-size: 9pt; margin-bottom: 8pt; }
+  table.ucd th { width: 19%; }
+  table.ucd th, table.ucd td { padding: 2.5pt 5pt; }
+  table.ucd ol { margin: 0; padding-left: 16pt; }
+  table.ucd li { margin-bottom: 1pt; }
+  td.num, th.num { text-align: right; }
+  td.num { white-space: nowrap; }
+  .scenario h3 { margin-top: 10pt; }
+  figure.shot img { max-height: 3.4in; }
+  /* Major sections continue on the same page to keep the report within about 30 pages. */
+  h1 { break-before: auto; margin-top: 22pt; }
+  .title-page h1 { margin-top: 0; }
+  nav.toc { break-after: auto; }
+  figure img { max-height: 4.5in; }
+  table.interview tr { break-inside: auto; }
+  table.interview ol { margin: 0; padding-left: 16pt; }
+  table.interview li { margin-bottom: 1pt; }
+  .pair { display: flex; gap: 12pt; align-items: flex-start; break-inside: avoid; }
+  .pair > div { min-width: 0; }
+  .pair figure { margin: 6pt 0 10pt; }
+  .pair figure.shot img { max-height: 3.3in; }
+  .phones { display: flex; gap: 10pt; align-items: flex-start; break-inside: avoid; }
+  .phones > div { flex: 1 1 0; min-width: 0; }
+  .phones figure { margin: 6pt 0 10pt; }
+  .phones figure.shot img { max-height: 4in; }
+  .phones figcaption { font-size: 8.5pt; line-height: 1.25; text-align: left; }
+  /* Version 2 additions (the rules above are shared with version 1 and stay unchanged). */
+  figure.tall img { max-height: 8.6in; }
+  figure.shot.wide img { max-height: 5.2in; }
+  figure.shot.phone img { max-height: 7.2in; }
+  .figrow figure.shot img { max-height: 6.4in; }
+  h1, h2, h3 { break-after: avoid; }
+  table.page-start { break-before: page; }
+  table.ucd caption { font-size: 10.5pt; }
+  .figrow { display: flex; gap: 12pt; align-items: flex-start; break-inside: avoid; }
+  .figrow > figure { flex: 1 1 0; min-width: 0; margin: 6pt 0 10pt; }
+  .figrow figcaption { font-size: 9.5pt; line-height: 1.3; text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <div class="kicker">Software Engineering (2026 Fall) &middot; Term Project Interim Report &middot; Week 7</div>
+  <h1>ShiftSwap: A Shift Schedule and Substitute Management System for Small Part-Time Workplaces</h1>
+  <p class="subtitle">Requirements specification and analysis models</p>
+  <table>
+    <caption>Table 1. Team 7</caption>
+    <thead><tr><th>Name</th><th>Student ID</th><th>Affiliation</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Hyewon Kim (김혜원)</td><td>24102028</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>Requirements lead</td></tr>
+      <tr><td>Hyoungdo Kim (김형도)</td><td>18102075</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>Project manager and design/implementation lead</td></tr>
+      <tr><td>Mingyeong Kim (김민경)</td><td>23102004</td><td>Dept. of Industrial Engineering, ITM Program, SeoulTech</td><td>UI and quality lead</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Course: Software Engineering, Seoul National University of Science and Technology (SeoulTech)<br>
+  Submitted to: jihjim@gmail.com<br>
+  Date: 16 October 2026</p>
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#s1">1. Introduction</a>
+      <ol>
+        <li><a href="#s1-1">1.1 Response to the proposal feedback</a></li>
+        <li><a href="#s1-2">1.2 Changes since the proposal</a></li>
+      </ol></li>
+    <li><a href="#s2">2. Problem description and system environment</a>
+      <ol>
+        <li><a href="#s2-1">2.1 Background and current process</a></li>
+        <li><a href="#s2-2">2.2 Problems P1–P3</a></li>
+        <li><a href="#s2-3">2.3 Proposed solution</a></li>
+        <li><a href="#s2-4">2.4 System environment</a></li>
+        <li><a href="#s2-5">2.5 Demo store</a></li>
+        <li><a href="#s2-6">2.6 Actors</a></li>
+      </ol></li>
+    <li><a href="#s3">3. Requirements elicitation</a></li>
+    <li><a href="#s4">4. Functional requirements specification</a>
+      <ol>
+        <li><a href="#s4-1">4.1 Functional requirements</a></li>
+        <li><a href="#s4-2">4.2 Dependencies of increment 1</a></li>
+        <li><a href="#s4-3">4.3 Business rules</a></li>
+        <li><a href="#s4-4">4.4 Use-case descriptions</a></li>
+      </ol></li>
+    <li><a href="#s5">5. Non-functional requirements specification</a></li>
+    <li><a href="#s6">6. Scenarios</a></li>
+    <li><a href="#s7">7. UML diagrams for requirements analysis</a>
+      <ol>
+        <li><a href="#s7-1">7.1 Use case diagram</a></li>
+        <li><a href="#s7-2">7.2 Activity diagrams</a></li>
+        <li><a href="#s7-3">7.3 State machine diagrams</a></li>
+        <li><a href="#s7-4">7.4 Analysis class diagrams</a></li>
+        <li><a href="#s7-5">7.5 Analysis sequence diagram</a></li>
+      </ol></li>
+    <li><a href="#s8">8. Main user interface screens</a></li>
+    <li><a href="#s9">9. Requirements validation</a></li>
+    <li><a href="#s10">10. Progress, risks and next steps</a></li>
+    <li><a href="#appA">Appendix A. Test cases</a></li>
+    <li><a href="#appB">Appendix B. Pages and role-based access</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+</nav>
+
+<h1 id="s1">1. Introduction</h1>
+<p>This interim report specifies the requirements of ShiftSwap and presents the UML models used to analyse them. ShiftSwap is a web application for a small store with part-time workers. It manages the weekly shift schedule, finds substitutes when a worker cannot work a shift, and computes weekly holiday allowance and monthly pay under Korean labour law.</p>
+<p>The proposal (Week 5) defined the problem, the goals, the nine main functions and the project plan. This report refines them: problem and system environment (Section 2), elicitation (3), functional and non-functional requirements (4, 5), scenarios (6), analysis models (7), main screens (8), validation (9) and progress (10). Appendix A lists the test cases, which are fixed before implementation, and Appendix B the pages and the role-based access. The team follows the incremental model with prototyping of the user interface (Chapter 1) [6, 7]: increment 1 delivers the <em>Must</em> use cases and increment 2 the <em>Should</em> use cases. All identifiers (UC, FR, NFR, BR, TC) come from one project specification that the team uses as the single source of truth; the same identifiers appear in the models, the database functions and the tests. Identifiers are never renumbered: a requirement that was removed keeps its number unused.</p>
+
+<h2 id="s1-1">1.1 Response to the proposal feedback</h2>
+<p>The instructor's feedback on the proposal rated the feasibility as high, the risk from external APIs as low and the need for commercial packages as none, and asked for three priority improvements: the dependencies of increment 1 on the <em>Should</em> use cases, server-side atomicity and the expiry method, and a stronger differentiator together with earlier test cases. Table 2 lists each point of the feedback, the change made in response and where it is described.</p>
+<table>
+  <caption>Table 2. Response to the proposal feedback</caption>
+  <thead><tr><th>Feedback</th><th>Change</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>&ldquo;First acceptance wins&rdquo; is not atomic when a static site calls the database in several steps; it must be one database function (RPC).</td><td>Every user action is one call of a database function, run as one transaction. Acceptance is one conditional <code>UPDATE … WHERE status = 'REQUESTED'</code> inside <code>accept_sub_request</code>; a concurrent second acceptance changes no row and is refused.</td><td>2.4, BR-02, NFR-04, S2, Figure 11</td></tr>
+    <tr><td>The executor of expiry (UC-11, System Clock) is not determined (pg_cron or evaluation at query time).</td><td>Evaluation at query time: the database function <code>run_system_clock()</code> runs whenever a screen is loaded, and the functions that answer, decide or cancel a request check the deadline again inside their own transaction.</td><td>2.6 (A3), FR-18, BR-12, UC-11, S4</td></tr>
+    <tr><td>The vibe-coding tool is not determined.</td><td>The system is developed and verified with Claude Code. The final prompt is written for Lovable, the tool with which the instructor re-runs it; a first trial in Lovable is planned for Week 9 and a full re-run in Week 13.</td><td>2.4.3, NFR-08, Section 10</td></tr>
+    <tr><td>Notifications are in-app only, so a request is seen only when the app is opened; this limits the quick answers of the proposal's goals G1 and G2 and should be stated as a risk.</td><td>New risk R7 with mitigations: unread count in the header, the reply deadline on every request card, screens refreshed every 10 seconds and when the window regains focus.</td><td>Section 10 (Table 45), NFR-15</td></tr>
+    <tr><td>The dual implementation with Supabase and sql.js should be limited to a fallback for demonstrations.</td><td>The browser keeps no copy of the data and there is no second data mode: one PostgreSQL database holds the data and the rules. The scheduled keep-alive read, which the feedback found adequate, stays.</td><td>2.4, NFR-05, NFR-08, NFR-16</td></tr>
+    <tr><td>UC-08 (Must) needs &ldquo;every shift WORKED&rdquo; (BR-06), but attendance (UC-07) and settings (UC-10) are <em>Should</em>: increment 1 alone cannot decide eligibility.</td><td>BR-06 now counts a past shift as worked unless the owner marked it ABSENT. Marking a no-show absent is FR-25 of UC-03 (<em>Must</em>). The settings have seeded defaults. UC-14, which reuses the payroll of UC-09, moves to <em>Should</em>.</td><td>4.2 (Table 9), BR-06, FR-25, UC-03</td></tr>
+    <tr><td>Under the default policy EXCUSED a swap never changes either worker's eligibility, so the differentiator &ldquo;eligibility change at approval&rdquo; always shows &ldquo;no change&rdquo;; substantive information such as a premium estimate is needed.</td><td>The approval preview now shows each worker's hours, holiday allowance and pay change for the week, the premium change in a workplace with five or more regular employees, and the change in the store's labour cost (BR-16).</td><td>2.2, FR-11, BR-16, S3, S7, S8</td></tr>
+    <tr><td>Night hours 22:00–06:00 (BR-08), fixed shifts given as weekday, start and end, and the week ending Sunday 24:00 do not fit together: a shift past midnight cannot be expressed.</td><td>A time-line rule: an end time not later than the start time means the next day; the shift belongs to the date and week on which it starts; night hours and overlaps are computed on the time line; clock times are checked for plausibility.</td><td>FR-02, BR-05, BR-08, BR-17, S9</td></tr>
+    <tr><td>UC-13 (role choice without password) and NFR-11 (others' wages not shown) are only screen-level on a public URL; state that only fictional data are used.</td><td>The sign-in screen and the requirements state that all data are fictional demo data and that privacy is screen-level only.</td><td>FR-20, NFR-11, UC-13</td></tr>
+    <tr><td>Move the test cases before Week 9.</td><td>The test cases with their boundary values are listed in Appendix A and fixed in Week 8; the database functions are already tested against them.</td><td>9.3, Appendix A, Section 10</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s1-2">1.2 Changes since the proposal</h2>
+<p>Besides the response to the feedback, the team's internal review of the prototype changed three requirements of the proposal. Table 3 lists every change with its reason.</p>
+<table>
+  <caption>Table 3. Changes since the proposal</caption>
+  <thead><tr><th>Change</th><th>Reason</th><th>Identifiers</th></tr></thead>
+  <tbody>
+    <tr><td>Availability is no longer collected (use case UC-02 Register availability and the availability condition of the candidate rule are removed); every co-worker without an overlapping shift is asked.</td><td>In the team's internal review of the prototype, a request whose shift matched nobody's availability only told the owner that no candidate existed, which left the owner with nothing to act on; workers also had to keep their availability up to date.</td><td>UC-02, FR-03 (removed), BR-01</td></tr>
+    <tr><td>A request that nobody can take ends as FAILED; candidates can answer &ldquo;can't&rdquo;.</td><td>Follows from the change above: the requester learns at once to contact the owner, and the owner acknowledges the case.</td><td>FR-08, FR-22, BR-13</td></tr>
+    <tr><td>Past payroll drafts are prepared automatically (<em>Should</em>).</td><td>Found in the team's internal review of the payroll prototype: the owner should start from a draft on the first day of the month.</td><td>UC-14, FR-23, BR-14</td></tr>
+    <tr><td>UC-03 is renamed &ldquo;Manage weekly schedule&rdquo; and includes marking a no-show absent.</td><td>Feedback on increment 1 (Section 1.1).</td><td>UC-03, FR-25</td></tr>
+    <tr><td>The approval preview shows money; overnight shifts and plausible clock times are specified.</td><td>Feedback (Section 1.1).</td><td>FR-11, BR-05, BR-08, BR-16, BR-17</td></tr>
+    <tr><td>Rules are database functions; the browser keeps no data copy; the tools are named.</td><td>Feedback (Section 1.1).</td><td>NFR-04, NFR-05, NFR-08, NFR-14</td></tr>
+  </tbody>
+</table>
+
+<a id="problem"></a>
+<h1 id="s2">2. Problem description and system environment</h1>
+<h2 id="s2-1">2.1 Background and current process</h2>
+<p>In small stores (caf&eacute;s, convenience stores, restaurants) with fewer than ten part-time workers, each worker has fixed weekly shifts, for example every Monday 18:00&ndash;23:00. When a worker cannot come, the owner phones or messages other workers one by one to find a substitute. The owner then edits a spreadsheet by hand. At month end the owner must re-check each worker's weekly hours to decide whether the weekly holiday allowance (주휴수당) is owed.</p>
+<p>Our reference store is the workplace of team member Hyewon Kim. The owner also acts as the manager. There, finding a substitute typically takes 3 to 5 contacts per request. The current process has four manual steps: (1) the worker informs the owner; (2) the owner contacts other workers one at a time; (3) the owner edits the spreadsheet and informs both workers; (4) at month end the owner re-counts hours and computes pay. None of these steps is recorded except the final spreadsheet.</p>
+<p>Korean law adds rules that depend on these hours. A worker whose weekly contractual hours are 15 or more and who worked every scheduled day of the week is entitled to a paid weekly holiday (Labor Standards Act Art. 55 &#9312;, Art. 18 &#9314;, Enforcement Decree Art. 30 &#9312;) [3, 4]. The 2026 minimum hourly wage is KRW 10,320 [1, 2]. Overtime and night premiums apply only in workplaces with five or more regular employees (Art. 11, 56) [3]. In such workplaces a part-time worker may work beyond the contractual hours only with the worker's consent and for at most 12 hours a week, and these hours earn a premium of at least 50&nbsp;% (Fixed-term and Part-time Employees Act Art. 6) [20]; accepting a substitute shift usually creates such hours. The minimum wage may be reduced to 90&nbsp;% during probation only if several conditions hold (Minimum Wage Act Art. 5 &#9313;, Enforcement Decree Art. 3) [5].</p>
+
+<h2 id="s2-2">2.2 Problems P1&ndash;P3</h2>
+<div class="box">
+  <p><span class="req-id">P1</span> Finding a substitute costs the owner repeated one-to-one contacts (reference store: typically 3&ndash;5 contacts per request).</p>
+  <p><span class="req-id">P2</span> The schedule, weekly hours, pay and holiday-allowance eligibility of <em>two</em> workers change with every swap, and all recalculation is manual.</p>
+  <p style="margin-bottom:0"><span class="req-id">P3</span> Legal pay rules (minimum wage, holiday allowance, 5-employee threshold for premiums, overtime of part-time workers beyond contractual hours, probation reduction) are applied from memory, so errors are not caught before payday.</p>
+</div>
+<p>Scheduling products abroad already support a substitute workflow between co-workers. In Deputy a worker can offer a shift to co-workers who are qualified and available, and swaps can be set to require the manager's approval [10]. When I Work lets a worker offer a shift to all or selected eligible co-workers, subject by default to a manager's approval, and with its Find Replacement function a manager offers a shift to eligible workers, the first of whom to pick it up takes it [11, 12]. In Homebase a worker asks all or selected co-workers to cover a shift, and a manager gives final approval after one of them accepts [13]. Deputy's employee app is available in Korean, but managers who build schedules on its web interface must work in English [14], and in the help centres of all three products we found no mention of the Korean weekly holiday allowance.</p>
+<p>Korean products follow a different workflow, in which the manager edits the schedule or an employee sends a change request to the manager. Shiftee lets an employee request a new or changed shift and computes the weekly holiday allowance automatically [15, 16]; its help centre states that the allowance is recognised only when every contractual working day is worked [16]. Shopl lets employees request schedule changes that the manager approves or rejects [17]. Albami and Gig let the owner manage schedules and the holiday allowance [18, 19]. The public feature descriptions of these four products do not include a substitute request between co-workers. We found no product that combines the co-worker substitute request with the Korean pay rules at the moment of approval, that is, one that shows the owner before the decision what a swap does to both workers' hours, holiday allowance and pay, to the store's labour cost and, in a workplace with five or more regular employees, to premiums and the 12-hour limit for part-time workers.</p>
+
+<h2 id="s2-3">2.3 Proposed solution</h2>
+<p>ShiftSwap replaces steps (2) to (4). A worker creates a substitute request for one of their shifts. The system asks every co-worker who could work at that time, in one step, through the in-app inbox. The first colleague to accept becomes the acceptor; if every colleague answers &ldquo;can't&rdquo;, the requester is told at once to contact the owner. Before deciding, the owner sees what the swap does to both workers in that week &mdash; hours, holiday allowance and pay &mdash; and to the store's labour cost. On approval the schedule and both weekly summaries are updated. At month end the system prepares a payroll draft and flags minimum-wage problems before payday.</p>
+
+<h2 id="s2-4">2.4 System environment</h2>
+<p>This section follows the three parts of the system environment in Chapter 8: the system configuration, the hardware and network configuration and the software configuration.</p>
+<h3 id="s2-4-1">2.4.1 System configuration</h3>
+<figure>
+  <img src="../uml/v2/system-config.svg" alt="System configuration: the owner and the workers use ShiftSwap in a web browser; ShiftSwap calls database functions in a PostgreSQL database; the System Clock duties run with every screen load.">
+  <figcaption>Figure 1. System configuration of ShiftSwap</figcaption>
+</figure>
+<p>Figure 1 shows the context of the system. The owner uses ShiftSwap on a laptop or a phone and every worker on their own phone, all in a web browser. The ShiftSwap web application shows the pages of each role and sends every action to the database as one function call. The database (PostgreSQL) stores the eleven tables and carries the business rules as database functions, so that every rule is checked in one place and in one transaction. The System Clock is drawn as an actor because it starts use cases, but it is not a separate process: its duties &mdash; ending overdue requests and preparing past payroll drafts &mdash; are performed by the database function <code>run_system_clock()</code>, which every screen calls first and which calls <code>expire_overdue_requests()</code> and the preparation of the drafts. The system uses no external service; notifications stay inside the application (risk R7, Section 10).</p>
+
+<h3 id="s2-4-2">2.4.2 Hardware and network configuration</h3>
+<figure>
+  <img src="../uml/v2/hw-network.svg" alt="Hardware and network configuration: phone and PC browsers reach static web hosting and a managed PostgreSQL service over HTTPS.">
+  <figcaption>Figure 2. Hardware and network configuration</figcaption>
+</figure>
+<table>
+  <caption>Table 4. Hardware and network configuration</caption>
+  <thead><tr><th>Node</th><th>Team's deployment</th><th>Reproduction run of the final prompt</th><th>Constraint</th></tr></thead>
+  <tbody>
+    <tr><td>Client</td><td colspan="2">Smartphone or PC with a current Chrome, Edge, Safari or Firefox; screens 360&nbsp;px wide or more</td><td>No installation (NFR-06)</td></tr>
+    <tr><td>Network</td><td colspan="2">Internet, HTTPS only; the public (anon) key of the database API is part of the web page by design</td><td>Identity is not verified (NFR-14)</td></tr>
+    <tr><td>Web front end and hosting</td><td>Static build (Vite) of the React front end on GitHub Pages</td><td>Lovable's default React application (TanStack Start, server-rendered) on <code>*.lovable.app</code></td><td>No application server of the team's own for business logic</td></tr>
+    <tr><td>Database</td><td>Supabase, managed PostgreSQL (Seoul region), REST API (PostgREST)</td><td>Lovable Cloud, built on Supabase's open-source foundation</td><td>Free plans pause inactive databases (NFR-16, risk R6)</td></tr>
+  </tbody>
+</table>
+<p>Both runs use the same database script and functions. The script is expected to run unchanged on Lovable Cloud, which is built on Supabase's open-source foundation [24]; the first trial in Week 9 confirms this. The front ends are generated separately from the same prompt &mdash; by Claude Code for the team and by Lovable in a reproduction run &mdash; and may differ in layout, so the acceptance checklist of the scenarios S1&ndash;S11 is run on both. The team keeps its own deployment on GitHub Pages and on the Supabase project that it already uses for its documents, because developing with Claude Code does not consume Lovable credits, of which the free plan grants five a day and at most 30 a month [24].</p>
+
+<h3 id="s2-4-3">2.4.3 Software configuration</h3>
+<table>
+  <caption>Table 5. Software configuration</caption>
+  <thead><tr><th>Part</th><th>Software</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td>Client</td><td>React with TypeScript, Tailwind CSS, supabase-js (team: built with Vite; reproduction run: Lovable's TanStack Start application)</td><td>Pages per role; one database function per action; no business rule in the client</td></tr>
+    <tr><td>Server</td><td>PostgreSQL 15 or later; PL/pgSQL functions (<code>SECURITY DEFINER</code>); row-level security; PostgREST</td><td>Eleven tables; every rule and state change in a function; tables read-only for the API roles</td></tr>
+    <tr><td>Vibe-coding tools</td><td>Claude Code (Anthropic); Lovable</td><td>Claude Code builds and verifies the system from the final prompt; Lovable is the target of the final prompt, with which the instructor re-runs it</td></tr>
+    <tr><td>Models and tests</td><td>PlantUML; Node.js test runner with PGlite (PostgreSQL embedded in the test process); headless Chrome</td><td>UML 2.5 diagrams; tests of the database functions (Appendix A); screen checks at 360 and 1280&nbsp;px</td></tr>
+  </tbody>
+</table>
+<p>Three decisions shape this configuration. First, every user action is one database function call, so that each action is one transaction; the state of a substitute request changes only by a conditional <code>UPDATE</code>, which under PostgreSQL's default isolation makes a concurrent second change find the row already changed [9] (NFR-04). Second, the API roles may only read the tables, and every change passes through a function that checks its input and the state transition [23] (NFR-14). Third, sign-in is a choice of demo account without a password, because password authentication is outside the scope of the project, as the proposal states; the database guarantees the integrity of the data, not the identity of a user, so all stored data are fictional demo data (NFR-11).</p>
+
+<h2 id="s2-5">2.5 Demo store</h2>
+<p>The demo data describe Dalbit Caf&eacute; (달빛카페), a fictional store with four regular employees and the default substitution-attendance policy EXCUSED. They are used in all scenarios, screens and tests of this report.</p>
+<table>
+  <caption>Table 6. Demo store: owner and workers</caption>
+  <thead><tr><th>ID</th><th>Name</th><th class="num">Wage (KRW/h)</th><th>Contract</th><th>Fixed shifts (contract hours per week)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Park Jiyoung (owner)</td><td class="num">&ndash;</td><td>&ndash;</td><td>&ndash;</td></tr>
+    <tr><td>2</td><td>Lee Seoyeon</td><td class="num">10,500</td><td>2026-03-02 to 2027-02-28</td><td>Mon, Wed 18:00&ndash;23:00 (10)</td></tr>
+    <tr><td>3</td><td>Choi Minho</td><td class="num">10,320</td><td>2026-06-01 to 2026-12-31</td><td>Tue, Thu 18:00&ndash;23:00; Sat 12:00&ndash;18:00 (16)</td></tr>
+    <tr><td>4</td><td>Jung Hana</td><td class="num">10,320</td><td>2026-09-01, open-ended; probation to 2026-11-30; not simple labour</td><td>Fri 17:00&ndash;23:00; Sun 10:00&ndash;16:00 (12)</td></tr>
+    <tr><td>5</td><td>Kang Doyun</td><td class="num">10,000</td><td>2026-08-15 to 2026-11-15; simple labour</td><td>Sat 10:00&ndash;16:00; Sun 16:00&ndash;22:00 (12)</td></tr>
+  </tbody>
+</table>
+<p>The minimum wage table holds 2025: KRW 10,030 and 2026: KRW 10,320. The work history runs from each contract start to 2026-09-20 with confirmed attendance, and the payroll of March to August 2026 is confirmed. The weeks starting 2026-09-21 and 2026-09-28 are generated, and all shifts of the week of 2026-09-21 have confirmed attendance. One open request exists: Lee Seoyeon's request for Wednesday 2026-09-30 18:00&ndash;23:00 (S1). The demo clock stands at Monday 2026-09-28 09:00; it is kept in the database, so the demo data behave the same whenever the system is opened, and the owner's Demo tools move it forward or switch to the real time.</p>
+
+<h2 id="s2-6">2.6 Actors</h2>
+<p>The system has three actors. <strong>A1 Worker</strong> (primary, human) is a part-time employee who views their own schedule, requests substitutes, accepts or answers &ldquo;can't&rdquo; to requests from co-workers and records attendance. <strong>A2 Owner</strong> (primary, human) is the store owner, who also acts as manager: the owner registers workers and fixed schedules, edits shifts and marks no-shows absent, approves or rejects substitutions, confirms attendance, reviews weekly summaries, confirms monthly payroll and edits settings. <strong>A3 System Clock</strong> (secondary, system) is a time-triggered actor. It ends open requests at their deadline (UC-11) and prepares the drafts of past months that have no payroll yet (UC-14). It has no process of its own: the database function <code>run_system_clock()</code> performs its duties whenever a screen is loaded, and the functions that answer, decide or cancel a request check the deadline themselves, so that no late action can succeed even when no screen was loaded. Its time is the demo clock while it is set, otherwise the database server time in Korea Standard Time.</p>
+
+
+<h1 id="s3">3. Requirements elicitation</h1>
+<p>Chapter 8 [7] describes requirements elicitation as work with the stakeholders to find out about the application domain, the services the system should provide and its constraints. Our stakeholders are the store owner, the part-time workers and, indirectly, the labour law that fixes the pay rules. We use four sources.</p>
+<ol>
+  <li><strong>Domain experience.</strong> Hyewon Kim works part-time in the reference store. Her experience gave the problem statement and the figure of typically 3&ndash;5 contacts per substitute request.</li>
+  <li><strong>Interviews.</strong> Semi-structured interviews with the owner of the reference store and two of Hyewon's co-workers, planned for Week 8. Hyewon Kim will lead each interview and a second member will take notes. Each interview is planned for about 30 minutes.</li>
+  <li><strong>Document analysis.</strong> The owner's schedule spreadsheet (structure only; no personal data is copied) and the legal sources on minimum wage, weekly holiday, probation and the work of part-time workers beyond their contractual hours [1&ndash;5, 20].</li>
+  <li><strong>Prototype sessions.</strong> The owner and the co-workers will be shown the system of Section 8 and asked to perform one task each (Section 9.2; planned for Week 10).</li>
+</ol>
+<table class="interview">
+  <caption>Table 7. Interview plan</caption>
+  <tbody>
+    <tr><th>Owner of the reference store &mdash; current process, decisions the owner makes, pay calculation</th></tr>
+    <tr><td><ol>
+        <li>How do you learn that a worker cannot come? How far in advance?</li>
+        <li>Whom do you contact first, and how do you decide? How many contacts does one request take?</li>
+        <li>What do you check before you agree to a swap?</li>
+        <li>Where do you record the change? Who else needs to know?</li>
+        <li>How do you decide at month end whether weekly holiday allowance is owed?</li>
+        <li>If a worker hands over a shift by agreement, do you count that week as full attendance?</li>
+        <li>How many regular employees does the store have? Do you pay night or overtime premiums?</li>
+        <li>Do any workers have a probation period or a reduced wage?</li>
+        <li>Which step of the current process costs you the most time?</li>
+        <li>What should the system never do without your approval?</li>
+      </ol></td></tr>
+    <tr><th>Two co-workers &mdash; the worker's view of requesting and taking substitute shifts</th></tr>
+    <tr><td><ol>
+        <li>How often do you need a substitute? For what reasons?</li>
+        <li>How do you find out that a colleague needs a substitute?</li>
+        <li>What makes you accept or decline a request?</li>
+        <li>Has it happened that two people agreed to take the same shift?</li>
+        <li>When would you like the request to stop being open (deadline)?</li>
+        <li>How soon do you usually see and answer a message from a colleague? Would you open an app to check for requests?</li>
+        <li>Which information about you should colleagues not see?</li>
+        <li>How do you check your own hours and pay today?</li>
+      </ol></td></tr>
+  </tbody>
+</table>
+<p>The questions were derived from P1&ndash;P3 and from the open points in the business rules. Question 6 to the owner addresses the only rule where the law leaves room for interpretation (BR-06): its answer decides the default policy for the reference store, and the system keeps both options as a setting in any case. Question 4 to the workers addresses the concurrency requirement (BR-02, NFR-04), question 6 the answer delay behind risk R7, and question 7 privacy (NFR-11). The interviews have not taken place yet; they are planned for Week 8, and their answers will be recorded together with every requirement they change. Until then EXCUSED is a design default that the owner has not yet confirmed.</p>
+
+<a id="functional"></a>
+<h1 id="s4">4. Functional requirements specification</h1>
+<h2 id="s4-1">4.1 Functional requirements</h2>
+<p>Table 8 lists the 24 functional requirements in the format of Chapter 8: requirement number, name, category and description. The name of a requirement is the name of its use case and the category is the package of the use case diagram (Figure 3), so that functional requirements, use cases and scenarios share one vocabulary. The priority is that of the use case except for FR-24, the part-time overtime warning, which has <em>Should</em> priority within the <em>Must</em> use case UC-06, as the proposal specifies for function F6. FR-21, the notification inbox, serves five use cases and is therefore named by its function. FR-03 belonged to the removed use case UC-02 (Section 1.2); its number is not reused.</p>
+<table>
+  <caption>Table 8. Functional requirements</caption>
+  <thead><tr><th>Req. number</th><th>Req. name</th><th>Category</th><th>Description</th><th>Priority</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">FR-01</td><td>Register worker and fixed schedule</td><td>Schedule</td><td>The owner shall register a worker with name, phone, hourly wage (KRW), contract start date, contract end date (optional), probation end date (optional), simple-labour flag and active flag.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-02</td><td>Register worker and fixed schedule</td><td>Schedule</td><td>The owner shall register one or more fixed weekly shifts per worker (weekday, start time, end time); an end time not later than the start time means that the shift ends the next day (BR-05). Fixed shifts of the same worker must not overlap on the weekly time line, including across midnight.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-04</td><td>Manage weekly schedule</td><td>Schedule</td><td>The system shall generate the shifts of a week (Monday to Sunday) from the fixed schedules of active workers, only on dates within each worker's contract period; generating the same week again creates no duplicate.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-05</td><td>Manage weekly schedule</td><td>Schedule</td><td>The owner shall add, move (date, times, worker) or delete a single shift. A shift with a substitute request or an attendance record cannot be deleted, a shift with an open request cannot be changed, and no change may make two shifts of one worker overlap.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-25</td><td>Manage weekly schedule</td><td>Schedule</td><td>The owner shall mark a shift that has started and is still SCHEDULED as ABSENT, whether or not an attendance record exists (a no-show has none).</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-06</td><td>Request substitute</td><td>Substitution</td><td>A worker shall create a substitute request for one of their own future SCHEDULED shifts, with an optional reason and a reply deadline.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-07</td><td>Request substitute</td><td>Substitution</td><td>On creation the system shall compute the eligible candidates (BR-01), create one target per candidate and put a notification in each candidate's inbox, all in one transaction.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-08</td><td>Request substitute</td><td>Substitution</td><td>If no worker is eligible, the request ends at once as FAILED (BR-13): the requester is told that no co-worker can take the shift and to contact the owner, and the owner receives a notification.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-09</td><td>Respond to substitute request</td><td>Substitution</td><td>A candidate shall accept a request or answer &ldquo;can't&rdquo;. The first acceptance makes that candidate the acceptor; it is decided by one database function in one statement (BR-02), so a later acceptance is refused with a message that names the first acceptor.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-10</td><td>Respond to substitute request</td><td>Substitution</td><td>When a request is accepted, the system shall notify the requester and the owner and close all other pending targets.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-22</td><td>Respond to substitute request</td><td>Substitution</td><td>When every target of an open request has answered &ldquo;can't&rdquo;, the request ends as FAILED (BR-13); the requester is told to contact the owner and the owner receives a notification that can only be acknowledged.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-11</td><td>Approve or reject substitution</td><td>Substitution</td><td>Before the decision the approval screen shall show, for the requester and the acceptor, the weekly contractual hours, the scheduled hours of that week before and after the swap, holiday-allowance eligibility and amount before and after (any change highlighted), and the estimated pay change of the week (base pay, and premium pay in a workplace with five or more regular employees), together with the change in the store's labour cost for that week (BR-16).</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-24</td><td>Approve or reject substitution</td><td>Substitution</td><td>In a workplace with five or more regular employees the approval screen shall warn when the swap would leave a part-time acceptor with more than 12 hours beyond the weekly contractual hours in that week (BR-15); the warning does not block the decision.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-12</td><td>Approve or reject substitution</td><td>Substitution</td><td>On approval the system shall reassign the shift to the acceptor (keeping the original worker), recompute both workers' weekly summaries and notify both, in one database function (BR-04). On rejection the shift stays unchanged and both are notified.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-13</td><td>Record and confirm attendance</td><td>Attendance and pay</td><td>After a shift has ended, its worker shall record the actual clock-in and clock-out times, which must be plausible (BR-17); the owner shall confirm the record, which makes the shift WORKED, or mark the shift ABSENT. A WORKED or ABSENT shift cannot change status again.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-14</td><td>Compute weekly hours and holiday allowance</td><td>Attendance and pay</td><td>The system shall compute, per worker and ISO week, contractual, scheduled and actual hours, perfect attendance, holiday-allowance eligibility and holiday hours (BR-05 to BR-07). A week is not recomputed when the month of its Sunday has a confirmed payroll.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-15</td><td>Generate and confirm monthly payroll</td><td>Attendance and pay</td><td>The owner shall generate a monthly payroll draft per worker (base pay, holiday pay, premium pay, total; BR-08 to BR-11) and confirm it; a confirmed payroll is read-only.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-16</td><td>Generate and confirm monthly payroll</td><td>Attendance and pay</td><td>The payroll shall warn when a worker's hourly wage is below the applicable minimum (BR-09), apply the probation minimum only when BR-10 holds, and block confirmation until every warning of the month is acknowledged.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-23</td><td>Prepare past payroll drafts automatically</td><td>Attendance and pay</td><td>When the System Clock runs, every past month without a payroll row gets a DRAFT computed as in FR-15, and the owner receives one notification per month; existing rows are never overwritten and nothing is confirmed automatically (BR-14).</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-17</td><td>Manage workplace settings and minimum wage table</td><td>Administration</td><td>The owner shall edit the store name, the number of regular employees, the substitution-attendance policy (BR-06) and the yearly minimum wage rows.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-18</td><td>Expire overdue substitute request</td><td>Substitution</td><td>A request still open when its deadline or its shift start has passed shall become EXPIRED, its pending targets closed and the requester and the owner notified; this is evaluated whenever a screen is loaded and inside the functions that answer, decide or cancel a request (BR-12).</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-19</td><td>Cancel own substitute request</td><td>Substitution</td><td>A requester shall cancel their own open request; pending targets are closed and every target that was pending or accepted is notified.</td><td>Should</td></tr>
+    <tr><td class="req-id">FR-20</td><td>Sign in by role</td><td>Administration</td><td>Users shall sign in by choosing a demo account without a password (password authentication is out of scope); the screen states that all data are fictional demo data shared by everyone who opens the application, and the interface shows only the menus of the chosen role. The owner's Demo tools set the demo clock and restore the demo data.</td><td>Must</td></tr>
+    <tr><td class="req-id">FR-21</td><td>Notification inbox (UC-04 to UC-06, UC-11, UC-12)</td><td>Substitution</td><td>Every user shall have an in-app notification inbox, newest first, with the unread count in the header.</td><td>Must</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4-2">4.2 Dependencies of increment 1</h2>
+<p>Increment 1 must be a usable system on its own, so no <em>Must</em> use case may need a <em>Should</em> use case. Table 9 lists what each <em>Must</em> use case needs and how increment 1 provides it.</p>
+<table>
+  <caption>Table 9. What the <em>Must</em> use cases need and how increment 1 provides it</caption>
+  <thead><tr><th><em>Must</em> use case</th><th>Needs</th><th>Provided in increment 1 by</th></tr></thead>
+  <tbody>
+    <tr><td>UC-08 Compute weekly hours and holiday allowance</td><td>Whether each past shift was worked (BR-06 b)</td><td>BR-06: a past shift that the owner has not marked ABSENT counts as worked. Marking a no-show absent is FR-25 of UC-03 (<em>Must</em>); recording clock times (UC-07) is not needed.</td></tr>
+    <tr><td>UC-08</td><td>The substitution-attendance policy</td><td>Seeded default EXCUSED; editing it is UC-10 (<em>Should</em>).</td></tr>
+    <tr><td>UC-06 Approve or reject substitution</td><td>Hourly wages, number of regular employees, minimum wages</td><td>Wages from UC-01 (<em>Must</em>); 4 regular employees and the minimum wages of 2025 and 2026 are seeded defaults.</td></tr>
+    <tr><td>UC-11 Expire overdue substitute request</td><td>The current time</td><td>The database function <code>app_now()</code>.</td></tr>
+    <tr><td>UC-04, UC-05</td><td>Notifications</td><td>FR-21 (<em>Must</em>).</td></tr>
+  </tbody>
+</table>
+<p>UC-14, the automatic payroll draft (new since the proposal, Table 3), is <em>Should</em> because it reuses the payroll computation of UC-09, which is <em>Should</em>.</p>
+
+<h2 id="s4-3">4.3 Business rules</h2>
+<p>The business rules are the domain requirements (Chapter 8) that several functional requirements share. They are stated once here and referenced by number; each one is implemented by the database functions and tested by the test group of Appendix A.</p>
+<table>
+  <caption>Table 10. Business rules</caption>
+  <thead><tr><th>ID</th><th>Rule</th></tr></thead>
+  <tbody>
+    <tr><td class="req-id">BR-01</td><td><strong>Eligible candidates.</strong> A worker W is eligible for a request on shift S if and only if W is an active worker, W is not the requester, the date of S lies within W's contract period, and no shift of W overlaps S on the time line of BR-05 (so a shift that ends after midnight on the previous day counts). Every eligible co-worker is asked.</td></tr>
+    <tr><td class="req-id">BR-02</td><td><strong>First acceptance wins.</strong> The accept function changes the request with one statement, <code>UPDATE … SET status = 'ACCEPTED', acceptor = W WHERE id = R AND status = 'REQUESTED' AND deadline &gt; now AND shift start &gt; now</code>. If it changes no row, the acceptance is refused (&ldquo;already taken&rdquo; when another candidate is the acceptor, otherwise &ldquo;request closed&rdquo;). The candidate must hold a pending target and must not have an overlapping shift; the overlap is checked again at approval. On success all other pending targets are closed.</td></tr>
+    <tr><td class="req-id">BR-03</td><td><strong>Request validity.</strong> Only the shift's current worker can request; the shift must be SCHEDULED and start in the future; at most one open (REQUESTED or ACCEPTED) request per shift; the deadline must be after now and not later than the shift start.</td></tr>
+    <tr><td class="req-id">BR-04</td><td><strong>Approval effect.</strong> Approve: the shift's worker becomes the acceptor, the shift keeps its first worker as original worker, and the request becomes APPROVED. Reject: the request becomes REJECTED and the shift is unchanged. Only an ACCEPTED request can be decided, and only before its deadline and shift start.</td></tr>
+    <tr><td class="req-id">BR-05</td><td><strong>Time line and week.</strong> A shift occupies the interval from its date and start time to its end time on the same date, or on the next date when the end time is not later than the start time. A shift lasts between 30 minutes and 16 hours. It belongs to the date and the ISO week (Monday 00:00 to Sunday 24:00) on which it starts, even when it ends after midnight. Two shifts overlap if and only if their intervals overlap; fixed shifts are compared on the weekly time line in the same way (Monday 22:00&ndash;02:00 overlaps Tuesday 01:00&ndash;05:00).</td></tr>
+    <tr><td class="req-id">BR-06</td><td><strong>Holiday-allowance eligibility (주휴).</strong> W is eligible for an ISO week if and only if (a) W's weekly contractual hours C, the sum of W's fixed-schedule hours, are at least 15, and (b) perfect attendance: no shift of the week that W originally held and still holds is ABSENT. A shift that has not been marked ABSENT counts as worked, so the owner only has to mark no-shows; the result for the current week is a projection. A shift that W gave away by an approved substitution counts by the workplace policy: EXCUSED (default; the working day was changed by agreement, so attendance is not broken) or ABSENT (attendance is broken). Shifts W took as a substitute do not change C. (Labor Standards Act Art. 55 &#9312;, Art. 18 &#9314;, Enforcement Decree Art. 30 &#9312; [3, 4]; the law averages 15 hours over four weeks, and the fixed schedule is constant, so the average equals C.)</td></tr>
+    <tr><td class="req-id">BR-07</td><td><strong>Holiday-allowance hours.</strong> Hours = min(C, 40) / 40 &times; 8, rounded to two decimals; weekly holiday pay = hours &times; hourly wage, rounded down to the won.</td></tr>
+    <tr><td class="req-id">BR-08</td><td><strong>Premium pay.</strong> Applies only if the workplace has five or more regular employees (Labor Standards Act Art. 11, 56 [3]; Fixed-term and Part-time Employees Act Art. 3 &#9313;, Art. 6, Enforcement Decree Art. 2 and Annex 1 [20]). Then +50&nbsp;% of the wage for (i) hours of a work date beyond 8, (ii) hours of an ISO week beyond 40 not counted in (i), (iii) night hours, that is the part of a shift's interval between 22:00 and 06:00 of the next day on the time line (a shift 22:00&ndash;02:00 has 4 night hours), and (iv) for a part-time worker, hours beyond the weekly contractual hours not counted in (i) or (ii). The night premium is added to the others.<br>System rules for (iv), design decisions where the law does not fix the method: (a) a worker with 0 &lt; C &lt; 40 is part-time; (b) the test is weekly against C; (c) the hours of a week are taken in time order, and every hour after the first C hours is beyond contract; (d) an hour that meets more than one of (i), (ii) and (iv) counts once; (e) the night premium is separate. In a monthly payroll the days of a week outside the month only decide where the first C (and the first 40) hours end. The worker's consent is outside the system; the 12-hour limit is checked before approval (BR-15).</td></tr>
+    <tr><td class="req-id">BR-09</td><td><strong>Minimum-wage check.</strong> Warn if the hourly wage is below the minimum of the year, multiplied by 0.9 if BR-10 applies. The payroll still uses the worker's wage; the warning blocks confirmation of the month until the owner acknowledges it. Re-generating a draft requires the acknowledgement again.</td></tr>
+    <tr><td class="req-id">BR-10</td><td><strong>Probation reduction.</strong> The minimum may be reduced to 90&nbsp;% only if all hold: a contract of at least one year (2026-09-01 to 2027-08-31 counts as one year) or an open-ended contract, a date within three months of the contract start and not after the probation end, and work that is not simple labour (Minimum Wage Act Art. 5 &#9313;, Enforcement Decree Art. 3 [5]). In a monthly payroll the conditions are evaluated on the first day of the month, or on the contract start if later.</td></tr>
+    <tr><td class="req-id">BR-11</td><td><strong>Monthly payroll.</strong> A worker gets a row for the month if they have a paid shift or holiday pay in it, or if they are active and their contract overlaps the month. Hours are summed in minutes and converted once. Base pay = minutes of the month's shifts &times; wage / 60, rounded down: WORKED shifts with their recorded times, SCHEDULED shifts with their scheduled times (the row is then flagged estimated), ABSENT shifts with zero. Holiday pay = sum of the weekly holiday pay of the weeks whose Sunday falls in the month. Premium pay = premium minutes &times; wage &times; 0.5 / 60, rounded down. Total = base + holiday + premium.</td></tr>
+    <tr><td class="req-id">BR-12</td><td><strong>Expiry.</strong> An open request whose deadline or shift start has passed becomes EXPIRED; pending targets are closed and the requester and the owner are notified. This is evaluated whenever a screen is loaded, and the functions that answer, decide or cancel a request check the deadline themselves, so a late action is refused even if no screen was loaded; the expiry is then stored by the next screen load.</td></tr>
+    <tr><td class="req-id">BR-13</td><td><strong>No taker.</strong> A request ends as FAILED when it has no eligible candidate at creation, or when every target has answered &ldquo;can't&rdquo;. The requester and the owner are notified; the owner's only action is to acknowledge. A FAILED request cannot be accepted.</td></tr>
+    <tr><td class="req-id">BR-14</td><td><strong>Automatic payroll drafts.</strong> When the System Clock runs, every month from the first contract month to the month before now that has no payroll row gets a DRAFT computed as by FR-15, and the owner is notified once per month. No row is overwritten and nothing is confirmed.</td></tr>
+    <tr><td class="req-id">BR-15</td><td><strong>Part-time weekly limit warning.</strong> With five or more regular employees and a part-time acceptor (0 &lt; C &lt; 40), let S be the acceptor's scheduled hours in the week of the shift after the swap. If S &minus; C &gt; 12, the approval screen shows a warning with S &minus; C (&ldquo;13 h beyond contract, limit 12 h&rdquo;); exactly 12 hours gives no warning. The warning does not block the approval (Fixed-term and Part-time Employees Act Art. 6 [20]).</td></tr>
+    <tr><td class="req-id">BR-16</td><td><strong>Swap cost estimate.</strong> For an accepted request on shift S in week W, the approval preview computes, for the requester and the acceptor, the week's pay before and after S moves from the requester to the acceptor: base pay (scheduled minutes of the shifts not marked ABSENT &times; wage / 60), premium pay (BR-08 applied to the same shifts of W, zero below five regular employees) and holiday pay (BR-06 and BR-07 under the workplace policy). The change of each worker is &ldquo;after &minus; before&rdquo; per component, and the change in the store's labour cost is the sum of both workers' changes.</td></tr>
+    <tr><td class="req-id">BR-17</td><td><strong>Attendance plausibility.</strong> Attendance is recorded only after the shift's scheduled end. Clock-in is placed on the day on which it falls within two hours before the scheduled start and four hours after the scheduled end, and clock-out after it (on the next day when it is not later than the clock-in); the recorded interval must lie within that range and last between 30 minutes and 16 hours. A 21:30 clock-in on a 22:00&ndash;02:00 shift is accepted; 23:00 to 18:00 on an 18:00&ndash;23:00 shift is not.</td></tr>
+  </tbody>
+</table>
+
+
+<h2 id="s4-4">4.4 Use-case descriptions</h2>
+<p>Each use case is described in the same structure: actors, preconditions, main flow, alternative and exception flows, postconditions, business rules and related functional requirements. Every use case except UC-11, UC-13 and UC-14 requires a signed-in user (UC-13); this precondition is not repeated. Each step that changes data is one call of the database function named in brackets.</p>
+
+<table class="ucd">
+  <caption>Table 11. UC-01 Register worker and fixed schedule</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner</td></tr>
+    <tr><th>Preconditions</th><td>A worker is hired, or a worker's contract or fixed schedule changes.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Staff</em> and chooses to add a worker.</li>
+      <li>The owner enters name, phone, hourly wage, contract start and end, optional probation end, the simple-labour flag and the &ldquo;currently employed&rdquo; (active) flag.</li>
+      <li>The system validates the input and stores the worker (<code>save_worker</code>).</li>
+      <li>Under &ldquo;Fixed shifts&rdquo; the owner picks weekdays and sets start and end times; an end time not later than the start time means that the shift ends the next day.</li>
+      <li>The system checks that no two fixed shifts of the worker overlap on the weekly time line and stores them (<code>save_fixed_schedule</code>).</li>
+      <li>The system shows the fixed schedule and the weekly contractual hours (&ldquo;Saved contract: 16 h a week&rdquo; for Choi Minho).</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>1a. The owner edits an existing worker or deactivates them; an inactive worker is no longer included in generated weeks or candidate lists.<br>3a. A required field is missing or the wage is not a positive integer: the system names the field and the fix; nothing is stored.<br>5a. Two fixed shifts overlap, also across midnight (Monday 22:00&ndash;02:00 and Tuesday 01:00&ndash;05:00): the system refuses and names the conflicting shift.</td></tr>
+    <tr><th>Postconditions</th><td>The worker and the fixed shifts are stored; the worker is included in the next generated week within the contract period.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-05 (contractual hours feed BR-06) &nbsp;|&nbsp; FR-01, FR-02</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 12. UC-03 Manage weekly schedule</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner (the worker views the week read-only)</td></tr>
+    <tr><th>Preconditions</th><td>At least one active worker with a fixed schedule exists.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Schedule</em> and navigates to a week (Monday to Sunday).</li>
+      <li>If the week has no shifts yet, the system generates it (<code>generate_week</code>): one SCHEDULED shift per fixed shift of every active worker, on dates within the worker's contract period, skipping slots that already produced a shift.</li>
+      <li>The system shows the week with seven day columns, shifts ordered by start time; a shift that ends after midnight is shown on the day it starts.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>1a. A worker opens <em>Schedule</em>: the week is read-only, the worker's own shifts are highlighted, and <em>Find a substitute</em> is offered on an own future shift.<br>2a. The week is already generated: nothing is created twice.<br>3a. The owner adds, moves or deletes a single shift (<code>add_shift</code>, <code>update_shift</code>, <code>delete_shift</code>): the system refuses a change that makes two shifts of one worker overlap, a change of a shift with an open request, and the deletion of a shift with a request or attendance history.<br>3b. A shift has started and the worker did not come: the owner opens the shift and chooses <em>Mark absent</em> (<code>mark_absent</code>); the shift becomes ABSENT, with or without an attendance record, and the worker's week is recomputed (BR-06).</td></tr>
+    <tr><th>Postconditions</th><td>The shifts of the week exist exactly once per fixed shift; edited and absent shifts are stored.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-05, BR-06 &nbsp;|&nbsp; FR-04, FR-05, FR-25</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 13. UC-04 Request substitute</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Worker (requester); System (candidate selection)</td></tr>
+    <tr><th>Preconditions</th><td>The worker is the current worker of a SCHEDULED shift that starts in the future and has no open request.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The worker chooses <em>Find a substitute</em> (on <em>Schedule</em>, on <em>Swaps</em>, or on the next-shift card of <em>Home</em>).</li>
+      <li>The system leads the worker through three steps: the shift, an optional reason, and the reply deadline, pre-filled with the earlier of now + 24 h and the shift start.</li>
+      <li>The system finds the eligible candidates &laquo;include&raquo; <em>Find eligible candidates</em> (BR-01) and shows them on the last step (&ldquo;Check the deadline and send&rdquo;).</li>
+      <li>The worker chooses <em>Send swap request</em>.</li>
+      <li>In one function call (<code>create_sub_request</code>) the system checks BR-03 and stores the request as REQUESTED, one PENDING target per candidate and one notification per candidate.</li>
+      <li>The request appears on <em>Swaps</em> under &ldquo;Your requests&rdquo; at the step &ldquo;Requested&rdquo;; on <em>Schedule</em> the shift is marked &ldquo;Looking for cover&rdquo;.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. A shift that already has an open request, or has started, is not offered (BR-03).<br>5a. BR-03 fails at sending time (for example the deadline is no longer valid): the system names the cause and the fix; nothing is stored.<br>5b. No co-worker is eligible: the request ends at once as FAILED; the requester is told to contact the owner, and the owner receives a notification to acknowledge (BR-13).<br>Extension points: deadline reached (UC-11); requester withdraws (UC-12).</td></tr>
+    <tr><th>Postconditions</th><td>The request is REQUESTED with one PENDING target and one unread notification per candidate, or FAILED.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-01, BR-03, BR-13 &nbsp;|&nbsp; FR-06, FR-07, FR-08, FR-21</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 14. UC-05 Respond to substitute request</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Worker (candidate)</td></tr>
+    <tr><th>Preconditions</th><td>The candidate has a PENDING target on a REQUESTED request.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The candidate opens <em>Home</em>; the card under &ldquo;Swap requests for you&rdquo; shows the requester, the shift, the reason, the reply deadline and the effect on the candidate's own week, with <em>Accept</em> and <em>Can't</em>.</li>
+      <li>The candidate chooses <em>Accept</em>.</li>
+      <li>One function call (<code>accept_sub_request</code>) first checks that the deadline and the shift start have not passed (BR-12), then changes the request with one conditional statement from REQUESTED to ACCEPTED with this candidate as acceptor, sets the candidate's target to ACCEPTED and closes all other pending targets (BR-02).</li>
+      <li>The system notifies the requester and the owner, and the closed candidates.</li>
+      <li>On the requester's <em>Swaps</em> screen the request moves to the step &ldquo;Accepted&rdquo;.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The candidate chooses <em>Can't</em> (<code>decline_sub_request</code>): the target becomes DECLINED and nobody is notified; the request stays open for the others.<br>2b. This was the last pending target and every target answered &ldquo;can't&rdquo;: the request ends as FAILED (BR-13).<br>3a. Another candidate accepted first: the conditional statement changes no row and the acceptance is refused with a message that names the first acceptor (FR-09).<br>3b. The request has expired, failed or been cancelled: the acceptance is refused with that reason.<br>3c. The candidate meanwhile has an overlapping shift: the acceptance is refused.</td></tr>
+    <tr><th>Postconditions</th><td>At most one acceptor per request; no PENDING target remains once the request is ACCEPTED.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-02, BR-12, BR-13 &nbsp;|&nbsp; FR-09, FR-10, FR-22, FR-21</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 15. UC-06 Approve or reject substitution</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner</td></tr>
+    <tr><th>Preconditions</th><td>A request is ACCEPTED.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Home</em>; the section &ldquo;Swaps waiting for approval&rdquo; lists every ACCEPTED request as a card.</li>
+      <li>For the requester and the acceptor the system computes the preview (<code>approval_preview</code>): contractual hours, scheduled hours of the week before and after, holiday-allowance eligibility and amount before and after, and the pay change of the week; and the change in the store's labour cost (FR-11, BR-16).</li>
+      <li>The card shows one line per worker with these changes and highlights any change of eligibility. In a workplace with five or more regular employees it also shows the premium change and, for a part-time acceptor beyond 12 hours over contract, the warning of BR-15 (FR-24).</li>
+      <li>The owner chooses <em>Approve</em>.</li>
+      <li>One function call (<code>decide_sub_request</code>) first checks that the deadline and the shift start have not passed, then sets the shift's worker to the acceptor, keeps the original worker, sets the request to APPROVED, recomputes both workers' weeks &laquo;include&raquo; UC-08, and notifies both workers.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>3a. The warning of BR-15 is shown: it does not block the decision, because the worker's consent and the owner's decision are outside the system.<br>4a. The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift is unchanged and both workers are notified.<br>5a. The request expired before the decision (BR-12): the decision is refused and the list is refreshed.</td></tr>
+    <tr><th>Postconditions</th><td>Approved: the shift belongs to the acceptor and both weekly summaries are current. Rejected: no schedule change.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-04, BR-06, BR-07, BR-08, BR-15, BR-16 &nbsp;|&nbsp; FR-11, FR-12, FR-24, FR-21</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 16. UC-07 Record and confirm attendance</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Worker, Owner</td></tr>
+    <tr><th>Preconditions</th><td>The shift has ended (worker) or started (owner marking absent).</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The worker opens <em>Me</em>; the &ldquo;Attendance&rdquo; section lists the worker's shifts with their state.</li>
+      <li>For a shift that has ended, the worker enters the actual clock-in and clock-out times (<code>record_attendance</code>).</li>
+      <li>The system checks plausibility (BR-17) and stores the record as unconfirmed.</li>
+      <li>The owner reviews the unconfirmed records on <em>Home</em> and confirms one (<code>confirm_attendance</code>); the shift becomes WORKED.</li>
+      <li>The system recomputes the worker's week (UC-08).</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The shift has not ended yet: recording is refused.<br>3a. The times are implausible (for example 23:00 to 18:00 on a 18:00&ndash;23:00 shift, or a clock-in long before the shift): the system refuses and explains the allowed range; a clock-out after midnight on a shift that ends after midnight is accepted.<br>4a. The worker did not work: the owner marks the shift ABSENT (as in UC-03, 3b).</td></tr>
+    <tr><th>Postconditions</th><td>The shift is WORKED or ABSENT; the weekly summary reflects it.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-06 (input), BR-17 &nbsp;|&nbsp; FR-13</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 17. UC-08 Compute weekly hours and holiday allowance</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner; System (when included by UC-06 or UC-09)</td></tr>
+    <tr><th>Preconditions</th><td>The shifts of the week are generated.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Pay</em>, tab <em>Weekly</em>, and picks a week.</li>
+      <li>For each worker with a shift that week the system computes contractual hours (fixed schedule), scheduled hours (shifts held) and actual hours (confirmed attendance) (<code>week_summary</code>).</li>
+      <li>The system determines perfect attendance: a shift marked ABSENT breaks it; an unmarked past shift counts as worked; a shift given away by approved substitution counts by the policy (EXCUSED or ABSENT).</li>
+      <li>The system determines eligibility (BR-06) and holiday hours and pay (BR-07) and stores one summary row per worker and week.</li>
+      <li>The system shows one card per worker with the eligibility, the holiday pay if eligible, and a short reason if not (for example &ldquo;Contract 10 h a week &middot; under 15 h&rdquo; or &ldquo;absent on 9/29&rdquo;).</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The month of the week's Sunday has a confirmed payroll: the stored rows are shown and not recomputed.<br>2b. The week is not generated: the system says so; the owner generates it in UC-03 first.</td></tr>
+    <tr><th>Postconditions</th><td>The weekly summaries of the week are current (one per worker and week).</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-05, BR-06, BR-07 &nbsp;|&nbsp; FR-14</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 18. UC-09 Generate and confirm monthly payroll</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner</td></tr>
+    <tr><th>Preconditions</th><td>The minimum wage of the month's year exists.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Pay</em>, tab <em>Monthly</em>, and picks a month.</li>
+      <li>The system builds the draft (<code>generate_payroll</code>) after recomputing the weeks whose Sunday falls in the month &laquo;include&raquo; UC-08.</li>
+      <li>For each worker the system computes hours and base pay, holiday pay, premium pay and total (BR-08, BR-11) and checks the minimum wage (BR-09, BR-10).</li>
+      <li>The system shows the rows as DRAFT with status chips (Draft, Estimated, Probation minimum 90&nbsp;%, Below minimum wage).</li>
+      <li>The owner acknowledges each minimum-wage warning (<code>acknowledge_min_wage</code>) and confirms the month (<code>confirm_payroll</code>); the rows become CONFIRMED and read-only.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The month already has DRAFT rows: they are replaced; a confirmed month is not changed.<br>3a. Attendance is missing for some shifts: their scheduled time is used and the row is flagged &ldquo;Estimated&rdquo;.<br>5a. A warning is not acknowledged: confirmation is refused and the screen states how many warnings remain.</td></tr>
+    <tr><th>Postconditions</th><td>One payroll row per worker and month, DRAFT or CONFIRMED.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-08 to BR-11 &nbsp;|&nbsp; FR-15, FR-16</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 19. UC-10 Manage workplace settings and minimum wage table</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Owner</td></tr>
+    <tr><th>Preconditions</th><td>The store's data, its number of regular employees, its policy or the legal minimum wage changed.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The owner opens <em>Settings</em>.</li>
+      <li>The system shows the store name, the number of regular employees, the policy for handed-over shifts (&ldquo;Do not count as absence&rdquo; = EXCUSED, the default, or &ldquo;Count as absence&rdquo; = ABSENT) and the minimum wage by year.</li>
+      <li>The owner edits values, adds or removes minimum-wage rows and saves (<code>update_settings</code>).</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>3a. The number of regular employees is not a non-negative integer, or a year appears twice: the system refuses and explains.</td></tr>
+    <tr><th>Postconditions</th><td>Later weekly summaries use the new policy; later payroll drafts and previews use the new employee count and minimum wages.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-06 (policy), BR-08 (threshold), BR-09 (minimum wage) &nbsp;|&nbsp; FR-17</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 20. UC-11 Expire overdue substitute request</caption>
+  <tbody>
+    <tr><th>Actors</th><td>System Clock</td></tr>
+    <tr><th>Preconditions</th><td>A request is REQUESTED or ACCEPTED.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>A screen is loaded; before it reads its data the application calls <code>run_system_clock()</code>.</li>
+      <li>The function reads the current time (<code>app_now()</code>: the demo clock while it is set, otherwise the server time in Korea).</li>
+      <li>It finds the open requests whose deadline or shift start has passed.</li>
+      <li>For each it sets the request to EXPIRED and closes the pending targets.</li>
+      <li>It notifies the requester and the owner.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>1a. No screen is loaded before somebody answers, decides or cancels: the function that does it checks the deadline itself and refuses the late action (&ldquo;request closed&rdquo;); the expiry is stored by the next screen load.<br>3a. No request is overdue: nothing changes.</td></tr>
+    <tr><th>Postconditions</th><td>No open request has a past deadline when a screen shows it; the shift stays with the requester.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-12 &nbsp;|&nbsp; FR-18, FR-21</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 21. UC-12 Cancel own substitute request</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Worker (requester)</td></tr>
+    <tr><th>Preconditions</th><td>The worker's request is REQUESTED or ACCEPTED.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The worker opens <em>Swaps</em>; under &ldquo;Your requests&rdquo; each request shows its progress (Requested &rarr; Accepted &rarr; Approved).</li>
+      <li>The worker chooses <em>Cancel request</em> on an open request (<code>cancel_sub_request</code>).</li>
+      <li>The system sets the request to CANCELLED and closes all pending targets.</li>
+      <li>The system notifies every candidate that was pending and the acceptor, if any.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. The request is already APPROVED, REJECTED, FAILED, EXPIRED or CANCELLED: no <em>Cancel request</em> button is shown.</td></tr>
+    <tr><th>Postconditions</th><td>The request is CANCELLED; the shift stays with the requester.</td></tr>
+    <tr><th>Business rules / FR</th><td>&ndash; &nbsp;|&nbsp; FR-19, FR-21</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 22. UC-13 Sign in by role (demo account selection, no password)</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Worker, Owner</td></tr>
+    <tr><th>Preconditions</th><td>The application is open in a browser.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>The system shows the demo page: a notice that all data are fictional demo data shared by everyone who opens the application; a three-step tour (see Lee Seoyeon's request, accept as Choi Minho, approve as owner Park Jiyoung); and the list of all accounts (owner and four workers) with their roles. There are no passwords, because password authentication is outside the scope of the project.</li>
+      <li>The user starts the tour or chooses an account.</li>
+      <li>The system keeps the choice for the browser session and shows only the menus of that role: <em>Home, Schedule, Swaps, Me</em> for a worker; <em>Home, Schedule, Staff, Pay, Settings</em> for the owner.</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>3a. The user signs out: the choice is cleared and the demo page is shown.<br>3b. The owner opens <em>Demo tools</em>: moves the demo clock (+1 hour, +1 day, a chosen date) or switches to the real time (<code>set_demo_clock</code>), or restores the demo data and the demo clock (<code>reset_demo_data</code>) after a confirmation.</td></tr>
+    <tr><th>Postconditions</th><td>A signed-in user with role OWNER or WORKER.</td></tr>
+    <tr><th>Business rules / FR</th><td>&ndash; &nbsp;|&nbsp; FR-20 (NFR-11, NFR-14)</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 23. UC-14 Prepare past payroll drafts automatically</caption>
+  <tbody>
+    <tr><th>Actors</th><td>System Clock (the owner receives the notification)</td></tr>
+    <tr><th>Preconditions</th><td>The current month is later than the first contract month.</td></tr>
+    <tr><th>Main flow</th><td><ol>
+      <li>A screen is loaded and <code>run_system_clock()</code> runs (as in UC-11).</li>
+      <li>For every month from the first contract month to the month before now that has no payroll row, the function generates the DRAFT &laquo;include&raquo; UC-09.</li>
+      <li>It notifies the owner once per drafted month (&ldquo;September payroll draft is ready&rdquo;).</li>
+    </ol></td></tr>
+    <tr><th>Alternative / exception flows</th><td>2a. Every past month already has rows: nothing changes; existing rows are never overwritten and nothing is confirmed.</td></tr>
+    <tr><th>Postconditions</th><td>Every past month has payroll rows; the owner reviews, acknowledges and confirms them in UC-09.</td></tr>
+    <tr><th>Business rules / FR</th><td>BR-14 &nbsp;|&nbsp; FR-23</td></tr>
+  </tbody>
+</table>
+
+
+<a id="nonfunctional"></a>
+<h1 id="s5">5. Non-functional requirements specification</h1>
+<p>Non-functional requirements are classified as in Chapter 8 into <em>product</em> requirements (how the delivered system must behave), <em>organisational</em> requirements (which follow from the team's and the course's policies) and <em>external</em> requirements (which come from outside the system and the project, here mainly law). Table 24 uses the format of Chapter 8: requirement number, type, name and specification, with the verification method added. The numbers NFR-01 to NFR-16 are kept from the proposal so that its references remain valid.</p>
+<table>
+  <caption>Table 24. Non-functional requirements</caption>
+  <thead><tr><th>Req. number</th><th>Req. type</th><th>Req. name</th><th>Specification</th><th>Verification</th></tr></thead>
+  <tbody>
+    <tr><td colspan="5"><strong>Product requirements</strong></td></tr>
+    <tr><td class="req-id">NFR-01</td><td>Usability</td><td>Quick answer</td><td>A candidate can accept a request in at most 2 clicks from <em>Home</em> or the inbox.</td><td>UI walkthrough</td></tr>
+    <tr><td class="req-id">NFR-02</td><td>Usability</td><td>Phone and desktop</td><td>All screens are usable at 360&nbsp;px (phone) and 1280&nbsp;px (desktop) width without horizontal scrolling.</td><td>Browser check at both widths</td></tr>
+    <tr><td class="req-id">NFR-03</td><td>Performance</td><td>Response time</td><td>With 20 workers and 12 weeks of shifts, every screen shows its data within 1 second after the database answers; a screen needs at most three database calls.</td><td>Timed load with seeded data</td></tr>
+    <tr><td class="req-id">NFR-04</td><td>Reliability</td><td>First acceptance wins</td><td>Acceptance, decision, cancellation and expiry each run as one database function in one transaction; the state change is one conditional <code>UPDATE … WHERE status = …</code>, so that of two concurrent acceptances exactly one succeeds.</td><td>Function tests TC-05x; test with two connections</td></tr>
+    <tr><td class="req-id">NFR-05</td><td>Reliability</td><td>Persistence and reset</td><td>Data persist in the database; the owner can restore the demo data, which also resets the demo clock.</td><td>Function test TC-19x; manual test</td></tr>
+    <tr><td class="req-id">NFR-06</td><td>Portability</td><td>Browsers</td><td>Runs in current Chrome, Edge, Safari and Firefox without installation.</td><td>Manual test</td></tr>
+    <tr><td class="req-id">NFR-13</td><td>Usability</td><td>Task-first screens</td><td>Each role starts on a <em>Home</em> screen that lists the items waiting for that person with the action on each item; each screen has one primary action; an action that changes hours or pay shows its effect before the user commits; the interface is in Korean with an English alternative.</td><td>Walkthrough; headless check</td></tr>
+    <tr><td class="req-id">NFR-14</td><td>Security</td><td>Writes only through functions</td><td>Row-level security is enabled on every table with read-only policies; the API roles have no right to insert, update or delete; every change goes through a database function that runs with the rights of the database role that owns it (<code>SECURITY DEFINER</code>), with an empty search path, and validates its input and the state transition. Identity is not verified (demo accounts, FR-20).</td><td>Function tests TC-16x; REST test</td></tr>
+    <tr><td class="req-id">NFR-15</td><td>Efficiency</td><td>Fresh screens</td><td>A change made by one user appears on the open screens of the others within 10 seconds (refresh on an interval and when the window regains focus).</td><td>Two-browser check</td></tr>
+    <tr><td class="req-id">NFR-16</td><td>Dependability</td><td>Availability</td><td>Free plans pause inactive databases. The team's database is kept active by a scheduled read every six hours (GitHub Actions); because GitHub disables the schedules of a public repository after 60 days without activity [22], the deployed URL is also checked weekly until grading ends and before every submission (risk R6) [21].</td><td>Workflow log; check log</td></tr>
+    <tr><td colspan="5"><strong>Organisational requirements</strong></td></tr>
+    <tr><td class="req-id">NFR-07</td><td>Delivery</td><td>Deadline</td><td>Working system deployed by Week 14 (2026-12-04).</td><td>Deployed URL</td></tr>
+    <tr><td class="req-id">NFR-08</td><td>Implementation</td><td>Platform and method</td><td>Web front end in React with TypeScript; PostgreSQL with all business rules as database functions; built by vibe coding with Claude Code from the final prompt; the final prompt also builds the system in Lovable, whose Lovable Cloud provides the same PostgreSQL.</td><td>Repository; reproduction run</td></tr>
+    <tr><td class="req-id">NFR-09</td><td>Standards</td><td>Models and names</td><td>Models follow UML 2.5 notation [8]; code identifiers are in English.</td><td>Review</td></tr>
+    <tr><td colspan="5"><strong>External requirements</strong></td></tr>
+    <tr><td class="req-id">NFR-10</td><td>Legislative</td><td>Labour law</td><td>Pay rules follow the Minimum Wage Act (2026 minimum hourly wage KRW 10,320), the Labor Standards Act (Art. 18 &#9314;, Art. 55, Enforcement Decree Art. 30; Art. 11 and 56 for the premium threshold) and the Fixed-term and Part-time Employees Act (Art. 6); where the law leaves the method open, the system's rule is stated as a design decision (BR-06, BR-08, BR-15, BR-16).</td><td>Function tests TC-08x, TC-09x, TC-15x, TC-17x</td></tr>
+    <tr><td class="req-id">NFR-11</td><td>Privacy</td><td>Minimum disclosure on screen</td><td>The screens show a worker's phone number and wage only to the owner and to that worker (principle of minimum disclosure of the Personal Information Protection Act). Because sign-in is a choice of demo account and the database can be read with the public key, this protection is screen-level only; therefore all data are fictional demo data, which the sign-in screen states.</td><td>Role test; design review</td></tr>
+    <tr><td class="req-id">NFR-12</td><td>Ethical</td><td>No location data</td><td>The system collects no location data; attendance is self-reported and owner-confirmed.</td><td>Design review</td></tr>
+  </tbody>
+</table>
+<p>Two of these requirements shape the design directly. NFR-04 means that a candidate's acceptance cannot be handled by reading the request and then writing it in a second step: the status check and the change are one statement in one database function. NFR-14 means that, without an application server of the team's own, the database protects the data itself: the API may only read, and every change passes through a function that checks the rules. Because sign-in remains a choice of demo account (FR-20), NFR-14 guarantees integrity but not identity, and NFR-11 is therefore limited to the screens and to fictional data.</p>
+
+<a id="scenarios"></a>
+<h1 id="s6">6. Scenarios</h1>
+<p>Chapter 8 defines a scenario as a real-life example of how the system is used. Each scenario below is given in the format of Chapter 8 &mdash; title, actors, initial condition, final condition, exceptional case and the process step by step &mdash; with the use cases and rules it exercises. Each alternative sequence is a separate scenario, as Chapter 8 recommends. All scenarios use the demo store of Section 2.5; unless stated otherwise, the demo clock stands at Monday 2026-09-28 09:00 and the policy is EXCUSED. The numbers are those that the database functions compute; the same numbers are expected values of the test cases (Appendix A).</p>
+
+<table class="ucd">
+  <caption>Table 25. Scenario S1 &mdash; Lee Seoyeon requests a substitute for her midterm exam</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Lee Seoyeon (worker, requester)</td></tr>
+    <tr><th>Initial condition</th><td>Seoyeon works Monday and Wednesday 18:00&ndash;23:00. She has a midterm exam on Wednesday 2026-09-30 and cannot work that evening.</td></tr>
+    <tr><th>Final condition</th><td>One open request with three candidates, each with an unread notification. This is the state of the demo data.</td></tr>
+    <tr><th>Exceptional case</th><td>A deadline after the shift start (2026-09-30 18:00) is refused with the explanation that the deadline must not be later than the shift start.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>Seoyeon signs in and opens <em>Schedule</em> for the week of 2026-09-28; her own shifts are highlighted.</li>
+      <li>She chooses <em>Find a substitute</em> and picks her Wednesday 30 September 18:00&ndash;23:00 shift.</li>
+      <li>She enters the reason &ldquo;Midterm exam&rdquo; and the deadline 2026-09-29 21:00.</li>
+      <li>The last step shows the candidates by BR-01: Choi Minho, Jung Hana and Kang Doyun, none of whom has a shift overlapping Wednesday 18:00&ndash;23:00.</li>
+      <li>She sends the request; the system checks BR-03 and stores the request as REQUESTED with three pending targets and three notifications, in one function call.</li>
+      <li>On <em>Schedule</em> her Wednesday shift is marked &ldquo;Looking for cover&rdquo;.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-04 &nbsp;|&nbsp; FR-06, FR-07, FR-21 &nbsp;|&nbsp; BR-01, BR-03</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 26. Scenario S2 &mdash; Choi Minho accepts first; Kang Doyun is refused</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Choi Minho, Kang Doyun (workers, candidates)</td></tr>
+    <tr><th>Initial condition</th><td>The final condition of S1.</td></tr>
+    <tr><th>Final condition</th><td>The request is ACCEPTED with Minho as acceptor; the other targets are closed; the shift still belongs to Seoyeon until the owner decides.</td></tr>
+    <tr><th>Exceptional case</th><td>Doyun presses <em>Accept</em> at almost the same moment as Minho. Both function calls run; the second waits for the first to finish and then finds the status no longer REQUESTED, so its conditional statement changes no row and Doyun sees &ldquo;Choi Minho accepted first&rdquo; (BR-02, NFR-04, Figure 11).</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>Minho signs in; the bell shows one unread notification and <em>Home</em> lists the request under &ldquo;Swap requests for you&rdquo;.</li>
+      <li>The card shows Seoyeon's Wednesday shift, the reason, the reply deadline and the effect on his own week: 16 h &rarr; 21 h, holiday allowance unchanged (KRW 33,024).</li>
+      <li>He chooses <em>Accept</em>, one tap; the request becomes ACCEPTED with Minho as acceptor, and the targets of Hana and Doyun are closed.</li>
+      <li>Seoyeon and the owner are notified that Minho accepted; Hana and Doyun are notified that the request is closed.</li>
+      <li>On Seoyeon's <em>Swaps</em> screen the request moves to the step &ldquo;Accepted&rdquo;.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-05 &nbsp;|&nbsp; FR-09, FR-10 &nbsp;|&nbsp; BR-02</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 27. Scenario S3 &mdash; The owner sees the cost of the swap and approves it</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner)</td></tr>
+    <tr><th>Initial condition</th><td>The final condition of S2. The store has four regular employees, so no premium applies.</td></tr>
+    <tr><th>Final condition</th><td>Minho holds the Wednesday shift; Seoyeon is recorded as its original worker; both weekly summaries are current; the request is APPROVED.</td></tr>
+    <tr><th>Exceptional case</th><td>The owner chooses <em>Reject</em>: the request becomes REJECTED, the shift stays with Seoyeon and both are notified.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner signs in; <em>Home</em> reads &ldquo;1 thing to handle today&rdquo; and lists the swap under &ldquo;Swaps waiting for approval&rdquo;.</li>
+      <li>The card shows the preview of Table 28: Seoyeon's week 10 h &rarr; 5 h, pay &minus;52,500; Minho's week 16 h &rarr; 21 h, pay +51,600, holiday allowance unchanged at 33,024; the store's labour cost for the week &minus;900.</li>
+      <li>She chooses <em>Approve</em>; in one function call the shift's worker becomes Minho, Seoyeon is kept as original worker, the request becomes APPROVED, both weeks are recomputed and both workers are notified.</li>
+      <li>On <em>Schedule</em> the Wednesday shift shows Minho, with Seoyeon struck through beneath.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-06, UC-08 &nbsp;|&nbsp; FR-11, FR-12 &nbsp;|&nbsp; BR-04, BR-06, BR-07, BR-16</td></tr>
+  </tbody>
+</table>
+<table>
+  <caption>Table 28. Approval preview of S3 (week of 2026-09-28, policy EXCUSED, four regular employees)</caption>
+  <thead><tr><th>Worker</th><th class="num">Contract h</th><th class="num">Scheduled h</th><th>Holiday allowance</th><th class="num">Base pay change (KRW)</th><th class="num">Premium change</th><th class="num">Total change</th></tr></thead>
+  <tbody>
+    <tr><td>Lee Seoyeon (requester)</td><td class="num">10</td><td class="num">10 &rarr; 5</td><td>not eligible &rarr; not eligible (contract under 15 h)</td><td class="num">&minus;52,500</td><td class="num">0</td><td class="num">&minus;52,500</td></tr>
+    <tr><td>Choi Minho (acceptor)</td><td class="num">16</td><td class="num">16 &rarr; 21</td><td>eligible &rarr; eligible, 33,024 &rarr; 33,024</td><td class="num">+51,600</td><td class="num">0</td><td class="num">+51,600</td></tr>
+    <tr><td colspan="6"><strong>Store labour cost for the week</strong></td><td class="num"><strong>&minus;900</strong></td></tr>
+  </tbody>
+</table>
+<p>Minho's holiday allowance stays 16 / 40 &times; 8 = 3.2 hours, that is 3.2 &times; 10,320 = KRW 33,024, because a substitute shift does not change contractual hours. Seoyeon's 5 hours cost 5 &times; 10,500 = 52,500 and Minho's 5 &times; 10,320 = 51,600, so the swap saves the store KRW 900 in this week. Under the policy EXCUSED no eligibility changes; S7 shows the same preview under ABSENT, and S8 with five regular employees.</p>
+
+
+<table class="ucd">
+  <caption>Table 29. Scenario S4 &mdash; A request expires at its deadline</caption>
+  <tbody>
+    <tr><th>Actors</th><td>System Clock; Lee Seoyeon and the owner (notified)</td></tr>
+    <tr><th>Initial condition</th><td>The final condition of S1: the request is REQUESTED with deadline 2026-09-29 21:00. In this variant no candidate answers.</td></tr>
+    <tr><th>Final condition</th><td>The request is EXPIRED, its targets are closed, and the Wednesday shift stays with Seoyeon. She may create a new request with a deadline before 2026-09-30 18:00.</td></tr>
+    <tr><th>Exceptional case</th><td>Minho presses <em>Accept</em> on a screen that was opened before the deadline: the accept function checks the deadline itself and refuses the acceptance (&ldquo;request closed&rdquo;). The same holds for an accepted request that the owner has not decided before the deadline.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner moves the demo clock in <em>Demo tools</em> from Monday 09:00 to Tuesday 2026-09-29 21:00.</li>
+      <li>The next screen load runs the System Clock function: the deadline has passed, so the request becomes EXPIRED and the pending targets are closed.</li>
+      <li>Seoyeon and the owner are notified that the request expired; Minho, Hana and Doyun no longer see it.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-11 &nbsp;|&nbsp; FR-18 &nbsp;|&nbsp; BR-12</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 30. Scenario S5 &mdash; Jung Hana asks for a Sunday substitute and nobody can take it</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Jung Hana (requester); Lee Seoyeon, Choi Minho, Kang Doyun (candidates); the owner</td></tr>
+    <tr><th>Initial condition</th><td>Hana cannot work Sunday 2026-10-04 10:00&ndash;16:00.</td></tr>
+    <tr><th>Final condition</th><td>The request is FAILED; Hana knows to contact the owner, and the owner has acknowledged the case.</td></tr>
+    <tr><th>Exceptional case</th><td>One candidate accepts before the last &ldquo;can't&rdquo;: the request becomes ACCEPTED and continues as in S2 and S3.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>Hana requests a substitute for the Sunday shift; the candidates are Seoyeon, Minho and Doyun (Doyun's Sunday 16:00&ndash;22:00 shift does not overlap 10:00&ndash;16:00).</li>
+      <li>Seoyeon, Minho and Doyun each answer <em>Can't</em>; the first two answers notify nobody.</li>
+      <li>With the third answer every target is DECLINED, so the request ends as FAILED (BR-13).</li>
+      <li>Hana sees &ldquo;Every co-worker said they can't cover this shift. Please contact the owner.&rdquo; The owner's <em>Home</em> shows a card whose only action is <em>Got it</em>.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-04, UC-05 &nbsp;|&nbsp; FR-08, FR-22 &nbsp;|&nbsp; BR-13</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 31. Scenario S6 &mdash; September payroll is reviewed and confirmed</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner)</td></tr>
+    <tr><th>Initial condition</th><td>The demo clock stands at 2026-10-01 09:00 and the September draft has been prepared automatically (S10). The store has four regular employees.</td></tr>
+    <tr><th>Final condition</th><td>The September payroll is CONFIRMED and read-only.</td></tr>
+    <tr><th>Exceptional case</th><td>The owner tries to confirm before acknowledging the warning: confirmation is refused with &ldquo;Acknowledge every minimum-wage warning (1) before confirming.&rdquo; Correcting a wage requires changing it in UC-01 and generating the draft again before confirmation.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner opens <em>Pay</em>, tab <em>Monthly</em>, September 2026 (Table 32).</li>
+      <li>Premium pay is 0 for every worker, because the store has fewer than five regular employees (BR-08).</li>
+      <li>Holiday pay counts the four weeks whose Sunday falls in September (Sundays 6, 13, 20 and 27 September). Minho is eligible in each (16 h contract): 4 &times; 33,024 = 132,096. Seoyeon (10 h), Hana (12 h) and Doyun (12 h) are below 15 hours.</li>
+      <li>Doyun's wage of KRW 10,000 is below the 2026 minimum of KRW 10,320. BR-10 does not apply to him, because his contract (2026-08-15 to 2026-11-15) is shorter than one year and his work is simple labour, so his row shows a minimum-wage warning (BR-09).</li>
+      <li>For Hana the probation minimum applies (open-ended contract, September within three months of 2026-09-01 and before the probation end 2026-11-30, not simple labour): 10,320 &times; 0.9 = 9,288; her wage is above it, so there is no warning.</li>
+      <li>The shifts of 28 to 30 September have no recorded attendance yet, so Seoyeon's and Minho's rows are flagged &ldquo;Estimated&rdquo; (BR-11).</li>
+      <li>The owner acknowledges Doyun's warning and confirms; all rows become CONFIRMED.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-09 &nbsp;|&nbsp; FR-15, FR-16 &nbsp;|&nbsp; BR-07, BR-09, BR-10, BR-11</td></tr>
+  </tbody>
+</table>
+<table>
+  <caption>Table 32. September 2026 payroll draft of S6 (KRW)</caption>
+  <thead><tr><th>Worker</th><th class="num">Hours</th><th class="num">Base pay</th><th class="num">Holiday pay</th><th class="num">Premium</th><th class="num">Total</th><th>Flags</th></tr></thead>
+  <tbody>
+    <tr><td>Lee Seoyeon</td><td class="num">45</td><td class="num">472,500</td><td class="num">0</td><td class="num">0</td><td class="num">472,500</td><td>Estimated</td></tr>
+    <tr><td>Choi Minho</td><td class="num">69</td><td class="num">712,080</td><td class="num">132,096</td><td class="num">0</td><td class="num">844,176</td><td>Estimated</td></tr>
+    <tr><td>Jung Hana</td><td class="num">48</td><td class="num">495,360</td><td class="num">0</td><td class="num">0</td><td class="num">495,360</td><td>Probation minimum 9,288</td></tr>
+    <tr><td>Kang Doyun</td><td class="num">48</td><td class="num">480,000</td><td class="num">0</td><td class="num">0</td><td class="num">480,000</td><td>Below minimum wage</td></tr>
+    <tr><td colspan="5"><strong>All workers</strong></td><td class="num"><strong>2,292,036</strong></td><td></td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 33. Scenario S7 &mdash; Policy ABSENT: a handed-over shift costs the holiday allowance</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner); Choi Minho (requester); Jung Hana (acceptor)</td></tr>
+    <tr><th>Initial condition</th><td>The owner changes the policy for handed-over shifts in <em>Settings</em> from &ldquo;Do not count as absence&rdquo; (EXCUSED) to &ldquo;Count as absence&rdquo; (ABSENT). Minho cannot work Saturday 2026-10-03 12:00&ndash;18:00.</td></tr>
+    <tr><th>Final condition</th><td>Depends on the owner's decision. If approved, Hana holds the Saturday shift and Minho loses the holiday allowance of the week of 2026-09-28.</td></tr>
+    <tr><th>Exceptional case</th><td>Under the default policy EXCUSED the same swap leaves Minho eligible, with 3.2 holiday hours (KRW 33,024).</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>Minho requests a substitute; BR-01 selects Lee Seoyeon and Jung Hana; Kang Doyun is not eligible because his Saturday 10:00&ndash;16:00 shift overlaps.</li>
+      <li>Hana accepts.</li>
+      <li>The owner's approval card shows the preview of Table 34: under ABSENT the given-away shift breaks Minho's perfect attendance, so his eligibility changes from eligible to not eligible and is highlighted.</li>
+      <li>The owner decides with this information.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-10, UC-04, UC-05, UC-06 &nbsp;|&nbsp; FR-11, FR-17 &nbsp;|&nbsp; BR-06, BR-16</td></tr>
+  </tbody>
+</table>
+<table>
+  <caption>Table 34. Approval preview of S7 (week of 2026-09-28, policy ABSENT, four regular employees)</caption>
+  <thead><tr><th>Worker</th><th class="num">Contract h</th><th class="num">Scheduled h</th><th>Holiday allowance</th><th class="num">Base pay change (KRW)</th><th class="num">Holiday pay change</th><th class="num">Total change</th></tr></thead>
+  <tbody>
+    <tr><td>Choi Minho (requester)</td><td class="num">16</td><td class="num">16 &rarr; 10</td><td><strong>eligible &rarr; not eligible</strong></td><td class="num">&minus;61,920</td><td class="num">&minus;33,024</td><td class="num">&minus;94,944</td></tr>
+    <tr><td>Jung Hana (acceptor)</td><td class="num">12</td><td class="num">12 &rarr; 18</td><td>not eligible &rarr; not eligible</td><td class="num">+61,920</td><td class="num">0</td><td class="num">+61,920</td></tr>
+    <tr><td colspan="6"><strong>Store labour cost for the week</strong></td><td class="num"><strong>&minus;33,024</strong></td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 35. Scenario S8 &mdash; A swap takes a part-time worker beyond the weekly limit</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner); Choi Minho (acceptor); Lee Seoyeon (requester)</td></tr>
+    <tr><th>Initial condition</th><td>The request of S1 is REQUESTED. The owner sets the number of regular employees to 5 in <em>Settings</em> and adds a shift for Minho on Friday 2026-10-02 10:00&ndash;18:00. Minho's week then has 24 scheduled hours against 16 contractual hours; he is part-time (0 &lt; 16 &lt; 40).</td></tr>
+    <tr><th>Final condition</th><td>If the owner approves, Minho holds 29 scheduled hours in the week, 13 of them beyond contract; his contractual hours and his holiday allowance (3.2 h) are unchanged. If she rejects, the shift stays with Seoyeon.</td></tr>
+    <tr><th>Exceptional case</th><td>With the Friday shift 10:00&ndash;17:00 instead, the preview shows 23 &rarr; 28 hours, exactly 12 hours beyond contract, and no warning. With four regular employees there is neither a warning nor a premium.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>Minho accepts Seoyeon's Wednesday request.</li>
+      <li>The owner's card shows Minho's week going from 24 to 29 hours and the warning &ldquo;13 h beyond contract, limit 12 h&rdquo; (29 &minus; 16 = 13 &gt; 12; BR-15), and the premium estimate of Table 36.</li>
+      <li>The warning does not block the decision; whether Minho consents is outside the system.</li>
+      <li>If the 29 hours are worked as scheduled, BR-08 (iv) takes them in time order: Tuesday 5, Wednesday 5 (the swapped shift), Thursday 5, Friday 8 and Saturday 6. The 16 contractual hours are reached one hour into Friday, so 7 hours on Friday and 6 on Saturday, 13 hours in total, are beyond contract, and October's payroll includes 13 &times; 10,320 &times; 0.5 = KRW 67,080 for them; the night hours are paid separately.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-10, UC-03, UC-05, UC-06 &nbsp;|&nbsp; FR-11, FR-24 &nbsp;|&nbsp; BR-08, BR-15, BR-16</td></tr>
+  </tbody>
+</table>
+<table class="page-start">
+  <caption>Table 36. Approval preview of S8 (week of 2026-09-28, five regular employees)</caption>
+  <thead><tr><th>Worker</th><th class="num">Scheduled h</th><th>Premium hours before &rarr; after</th><th class="num">Base pay change (KRW)</th><th class="num">Premium change</th><th class="num">Total change</th></tr></thead>
+  <tbody>
+    <tr><td>Lee Seoyeon (requester)</td><td class="num">10 &rarr; 5</td><td>night 2 &rarr; 1</td><td class="num">&minus;52,500</td><td class="num">&minus;5,250</td><td class="num">&minus;57,750</td></tr>
+    <tr><td>Choi Minho (acceptor)</td><td class="num">24 &rarr; 29</td><td>beyond contract 8 &rarr; 13, night 2 &rarr; 3</td><td class="num">+51,600</td><td class="num">+30,960</td><td class="num">+82,560</td></tr>
+    <tr><td colspan="5"><strong>Store labour cost for the week</strong></td><td class="num"><strong>+24,810</strong></td></tr>
+  </tbody>
+</table>
+<p>With five regular employees the same swap that saved KRW 900 in S3 costs the store KRW 24,810 more in this week, because Minho's extra hours are beyond his contract (5 &times; 10,320 &times; 0.5 = 25,800) and one of them is a night hour (10,320 &times; 0.5 = 5,160), while Seoyeon loses one night hour (10,500 &times; 0.5 = 5,250). This is the information that the default policy alone could not show.</p>
+
+<table class="ucd">
+  <caption>Table 37. Scenario S9 &mdash; A shift that ends after midnight</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner)</td></tr>
+    <tr><th>Initial condition</th><td>The store needs a closing shift on Friday 2026-10-02 from 22:00 to 02:00.</td></tr>
+    <tr><th>Final condition</th><td>Kang Doyun has a shift on Friday 22:00&ndash;02:00 of 4 hours, in the week of 2026-09-28.</td></tr>
+    <tr><th>Exceptional case</th><td>The owner then tries to add a shift for Doyun on Saturday 2026-10-03 01:00&ndash;05:00: it is refused because it overlaps the Friday shift on the time line (OVERLAP), although the two shifts are on different dates.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner opens <em>Schedule</em>, chooses <em>Add shift</em>, picks Friday 2 October, 22:00 to 02:00 and Kang Doyun.</li>
+      <li>Because the end time is earlier than the start time, the shift ends on Saturday at 02:00; it lasts 4 hours and belongs to Friday and to the week of 2026-09-28 (BR-05).</li>
+      <li>The board shows the shift in Friday's column, marked as ending the next day.</li>
+      <li>In a workplace with five regular employees all 4 hours are night hours (BR-08 (iii)); with four there is no premium.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-03 &nbsp;|&nbsp; FR-05 &nbsp;|&nbsp; BR-05, BR-08</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 38. Scenario S10 &mdash; The September payroll draft is prepared automatically</caption>
+  <tbody>
+    <tr><th>Actors</th><td>System Clock; Park Jiyoung (owner, notified)</td></tr>
+    <tr><th>Initial condition</th><td>The demo data: payroll is confirmed up to August 2026, and September has no payroll row.</td></tr>
+    <tr><th>Final condition</th><td>September 2026 has a DRAFT row per worker and the owner is notified that the draft is ready.</td></tr>
+    <tr><th>Exceptional case</th><td>The demo clock is moved further, to 2026-12-02: the drafts of September, October and November are all prepared, one notification each; rows that already exist are not changed.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner moves the demo clock to 2026-10-01 09:00.</li>
+      <li>The next screen load runs the System Clock function; September has no payroll row, so its draft is generated as in UC-09.</li>
+      <li>The owner's <em>Home</em> shows &ldquo;September payroll draft is ready&rdquo; with <em>Review payroll</em>, which opens the draft of S6.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-14 &nbsp;|&nbsp; FR-23 &nbsp;|&nbsp; BR-14</td></tr>
+  </tbody>
+</table>
+
+<table class="ucd">
+  <caption>Table 39. Scenario S11 &mdash; The owner marks a no-show absent</caption>
+  <tbody>
+    <tr><th>Actors</th><td>Park Jiyoung (owner)</td></tr>
+    <tr><th>Initial condition</th><td>The demo clock stands at Tuesday 2026-09-29 23:30. Choi Minho did not come to his Tuesday 18:00&ndash;23:00 shift and recorded nothing.</td></tr>
+    <tr><th>Final condition</th><td>The shift is ABSENT; Minho's week of 2026-09-28 has no perfect attendance and no holiday allowance (33,024 &rarr; 0).</td></tr>
+    <tr><th>Exceptional case</th><td>The owner opens a shift that has not started yet: <em>Mark absent</em> is not offered.</td></tr>
+    <tr><th>Process</th><td><ol>
+      <li>The owner opens <em>Schedule</em>, week of 2026-09-28, and taps Minho's Tuesday shift.</li>
+      <li>The shift has started and is still SCHEDULED, so the sheet offers <em>Mark absent</em>; she chooses it.</li>
+      <li>The shift becomes ABSENT and Minho's week is recomputed: &ldquo;No holiday allowance this week: absent on 9/29&rdquo;.</li>
+    </ol></td></tr>
+    <tr><th>Related</th><td>UC-03, UC-08 &nbsp;|&nbsp; FR-25, FR-14 &nbsp;|&nbsp; BR-06</td></tr>
+  </tbody>
+</table>
+<p>The eleven scenarios exercise nine of the thirteen use cases; UC-01, UC-07, UC-12 and UC-13 have no scenario of their own. Table 40 shows where each use case is exercised, in a scenario or in a test case of Appendix A.</p>
+<table>
+  <caption>Table 40. Use cases, scenarios and test cases</caption>
+  <thead><tr><th>Use case</th><th>Scenarios</th><th>Test cases (Appendix A)</th></tr></thead>
+  <tbody>
+    <tr><td>UC-01 Register worker and fixed schedule</td><td>(setting for S8, S9)</td><td>TC-013, TC-19C</td></tr>
+    <tr><td>UC-03 Manage weekly schedule</td><td>S8, S9, S11</td><td>TC-011, TC-012, TC-018, TC-019, TC-01A, TC-01B, TC-01C</td></tr>
+    <tr><td>UC-04 Request substitute</td><td>S1, S5, S7</td><td>TC-014, TC-021&ndash;TC-023, TC-132</td></tr>
+    <tr><td>UC-05 Respond to substitute request</td><td>S2, S5</td><td>TC-051&ndash;TC-055, TC-131</td></tr>
+    <tr><td>UC-06 Approve or reject substitution</td><td>S3, S7, S8</td><td>TC-061&ndash;TC-063, TC-151&ndash;TC-153, TC-171&ndash;TC-173</td></tr>
+    <tr><td>UC-07 Record and confirm attendance</td><td>&ndash;</td><td>TC-181&ndash;TC-185 (including a clock-out after midnight)</td></tr>
+    <tr><td>UC-08 Compute weekly hours and holiday allowance</td><td>S3, S7, S11</td><td>TC-081&ndash;TC-088</td></tr>
+    <tr><td>UC-09 Generate and confirm monthly payroll</td><td>S6</td><td>TC-101&ndash;TC-103, TC-111&ndash;TC-114</td></tr>
+    <tr><td>UC-10 Manage workplace settings and minimum wage table</td><td>S7, S8</td><td>TC-19B, TC-163</td></tr>
+    <tr><td>UC-11 Expire overdue substitute request</td><td>S4</td><td>TC-121&ndash;TC-124</td></tr>
+    <tr><td>UC-12 Cancel own substitute request</td><td>&ndash;</td><td>TC-125</td></tr>
+    <tr><td>UC-13 Sign in by role</td><td>(every scenario starts with it)</td><td>TC-19A</td></tr>
+    <tr><td>UC-14 Prepare past payroll drafts automatically</td><td>S10</td><td>TC-141, TC-142</td></tr>
+  </tbody>
+</table>
+
+
+<a id="uml"></a>
+<h1 id="s7">7. UML diagrams for requirements analysis</h1>
+<p>This section presents the analysis models, drawn in UML 2.5 notation [8]. Following Chapter 2 and the object-oriented analysis of the course, they show the system from several perspectives: the external perspective (use case diagram), the behavioural perspective (activity, state machine and one analysis sequence diagram) and the structural perspective (analysis class diagram with entity and control classes). The design class diagram and the remaining sequence diagrams belong to the design and are given in the final report.</p>
+
+<h2 id="s7-1">7.1 Use case diagram</h2>
+<figure class="tall">
+  <img src="../uml/v2/usecase.svg" alt="Use case diagram of ShiftSwap with the actors Worker, Owner and System Clock and the use cases in four packages.">
+  <figcaption>Figure 3. Use case diagram of ShiftSwap</figcaption>
+</figure>
+<p>Figure 3 shows the three actors and the thirteen use cases in four packages, which are also the categories of the functional requirements (Table 8). The Worker and the Owner are primary actors; the System Clock is a secondary actor that starts UC-11 and UC-14. UC-04 includes <em>Find eligible candidates</em>, the place of rule BR-01. UC-06 and UC-09 include UC-08, because every approval recomputes two workers' weeks and every payroll uses the weekly holiday allowance; UC-14 includes UC-09. UC-11 extends UC-04 at the extension point &ldquo;deadline reached&rdquo; and UC-12 at &ldquo;requester withdraws&rdquo;. Every use case except UC-11, UC-13 and UC-14 requires a signed-in user (UC-13), which the diagram states in a note. The nine main functions of the proposal were UC-01 to UC-09; with UC-02 removed (Section 1.2), eight remain. The Worker is associated with UC-03 because workers view the week, read-only.</p>
+
+<h2 id="s7-2">7.2 Activity diagrams</h2>
+<figure class="tall">
+  <img src="../uml/v2/activity-holiday.svg" alt="Activity diagram AD-1: holiday-allowance determination for one worker and week.">
+  <figcaption>Figure 4. Activity diagram AD-1: holiday-allowance determination (BR-06, BR-07)</figcaption>
+</figure>
+<p>Figure 4 shows the weekly holiday-allowance decision for one worker. The first decision is the 15-hour test on contractual hours. The second is perfect attendance: a shift the worker still holds breaks it only if it is marked ABSENT &mdash; a past shift without a mark counts as worked, which is what lets increment 1 decide eligibility without attendance records (Table 9). A shift the worker gave away by an approved substitution follows the workplace policy. If the worker is eligible, the holiday hours are min(C, 40) / 40 &times; 8. The diagram makes the policy variant of S7 and the no-show of S11 visible, and it shows why a substitute shift never enters the 15-hour test.</p>
+<figure class="tall">
+  <img src="../uml/v2/activity-candidates.svg" alt="Activity diagram AD-2: selection of the eligible candidates for a substitute request.">
+  <figcaption>Figure 5. Activity diagram AD-2: candidate selection (BR-01, BR-13)</figcaption>
+</figure>
+<p>Figure 5 shows how candidates are selected when a request is created. For each worker the system tests the four conditions of BR-01 in order: active worker, not the requester, the date within the contract period, and no shift overlapping the requested shift on the time line. A worker who fails a test is skipped. After the loop the diagram branches on the number of candidates: with one or more, one target and one notification per candidate are created; with none, the request ends as FAILED and the requester and the owner are notified. Scenario S1 follows the first branch with three candidates, S7 shows the overlap test rejecting Kang Doyun, and S5 reaches FAILED through the answers instead (BR-13).</p>
+
+<h2 id="s7-3">7.3 State machine diagrams</h2>
+<p>Chapter 8 requires that states in a requirements model are domain-significant, that all sequences from the scenarios are allowed and that prohibited sequences are not. The three diagrams below are read against scenarios S1 to S11 with these rules. Each transition is labelled with the database function that makes it; no other path changes the state. Expiry is made by <code>expire_overdue_requests()</code>, which the System Clock function <code>run_system_clock()</code> calls whenever a screen is loaded.</p>
+<figure class="tall">
+  <img src="../uml/v2/state-subrequest.svg" alt="State machine diagram of a substitute request.">
+  <figcaption>Figure 6. State machine diagram of SubRequest</figcaption>
+</figure>
+<p>Figure 6 shows the life of a substitute request. It starts as REQUESTED, or ends at once as FAILED when there is no candidate. The first acceptance moves it to ACCEPTED (UC-05); when every candidate answers &ldquo;can't&rdquo; it becomes FAILED. The owner's decision moves an accepted request to APPROVED or REJECTED (UC-06). From REQUESTED or ACCEPTED it can also become EXPIRED (UC-11) or CANCELLED (UC-12). The seven states include five final states. The diagram also shows what is prohibited: there is no transition from REQUESTED directly to APPROVED, so the owner cannot approve a request nobody accepted (BR-04), and there is no transition out of ACCEPTED on a second acceptance, which is the state-machine form of BR-02. Scenarios S1&ndash;S5 each follow one path of this diagram.</p>
+<figure>
+  <img src="../uml/v2/state-shift.svg" alt="State machine diagram of a shift.">
+  <figcaption>Figure 7. State machine diagram of Shift</figcaption>
+</figure>
+<p>Figure 7 shows that a shift is SCHEDULED when generated or added and becomes WORKED when the owner confirms its attendance (UC-07) or ABSENT when the owner marks it so (UC-03 or UC-07) &mdash; the latter also without an attendance record, as in S11. Reassignment on approval (BR-04) is a self-transition on SCHEDULED: the worker changes, the state does not. A shift that is WORKED or ABSENT can no longer be requested, because BR-03 requires a SCHEDULED shift in the future.</p>
+<figure>
+  <img src="../uml/v2/state-payroll.svg" alt="State machine diagram of a payroll row.">
+  <figcaption>Figure 8. State machine diagram of Payroll</figcaption>
+</figure>
+<p>Figure 8 shows the two payroll states. A generated row &mdash; by the owner or automatically by the System Clock (UC-14) &mdash; is DRAFT. Generating the month again replaces DRAFT rows. Confirmation is guarded: it is possible only when every minimum-wage warning of the month has been acknowledged (BR-09). A CONFIRMED row is final and read-only (FR-15), which S6 ends with.</p>
+
+<h2 id="s7-4">7.4 Analysis class diagrams</h2>
+<p>The analysis model uses the two kinds of classes of the course's object-oriented analysis: entity classes for the data of the domain and control classes for the use cases. To keep the diagrams readable, the entity classes and the control classes are drawn in two figures; the boundary classes are the pages of Section 8.</p>
+<figure class="tall">
+  <img src="../uml/v2/class-entities.svg" alt="Analysis class diagram with the eleven entity classes, their associations and the enumerations.">
+  <figcaption>Figure 9. Analysis class diagram: entity classes</figcaption>
+</figure>
+<p>Figure 9 shows the eleven entity classes and their associations: a Workplace has Workers; a Worker has FixedSchedule entries, which define the contractual hours; Shifts are generated from FixedSchedule entries and refer to their current worker and, after a swap, to their original worker; a SubRequest belongs to one Shift, has one requester, at most one acceptor and one SubRequestTarget per candidate; Attendance is at most one per Shift; WeeklySummary and Payroll are derived records per worker and week or month; MinimumWage holds one row per year; a Notification belongs to one recipient and optionally to one request. The enumerations give the states of Section 7.3. Each entity class corresponds to one database table, so the system has eleven tables, above the course minimum of four.</p>
+<figure class="tall">
+  <img src="../uml/v2/class-controls.svg" alt="Analysis class diagram with the five control classes and the entities they change.">
+  <figcaption>Figure 10. Analysis class diagram: control classes</figcaption>
+</figure>
+<p>Figure 10 shows the five control classes, which group the steps of the use cases: ScheduleControl (UC-01, UC-03), SubstituteControl (UC-04 to UC-06, UC-11, UC-12), AttendanceControl (UC-07), PayControl (UC-08, UC-09, UC-14) and AdminControl (UC-10, UC-13). The dependencies show which entities each one changes; ScheduleControl, SubstituteControl and AttendanceControl use PayControl to recompute a week after marking a shift absent, approving a swap or confirming attendance (UC-06 &laquo;include&raquo; UC-08). In the design each control operation becomes one database function, so the pages never change an entity directly.</p>
+<h2 id="s7-5">7.5 Analysis sequence diagram</h2>
+<figure class="tall">
+  <img src="../uml/v2/seq-accept.svg" alt="Sequence diagram of two candidates accepting the same request at the same time.">
+  <figcaption>Figure 11. Concurrent acceptance of one request (UC-05, BR-02)</figcaption>
+</figure>
+<p>Figure 11 shows the case that the proposal feedback asked about: two candidates press <em>Accept</em> on the same request at the same moment. Each press is one call of the accept function and one transaction. The first call changes the request with its conditional statement, closes the other targets, notifies the requester and the owner, and commits. The second call waits for the row until the first transaction ends; PostgreSQL then evaluates its condition again on the changed row [9], finds the status no longer REQUESTED, changes no row and refuses with &ldquo;Choi Minho accepted first&rdquo;. No step runs in the browser between reading and writing the request, so two acceptances can never both succeed (NFR-04).</p>
+
+
+<a id="ui"></a>
+<h1 id="s8">8. Main user interface screens</h1>
+<p>The screens below were captured from the system described in Section 2.4: the React front end running against the deployed database, with the demo data of Section 2.5 and the demo clock at Monday 2026-09-28 09:00 unless a caption says otherwise. Each screen calls only the database functions listed in Appendix B. A worker has four pages &mdash; <em>Home, Schedule, Swaps</em> and <em>Me</em> &mdash; and the owner five &mdash; <em>Home, Schedule, Staff, Pay</em> and <em>Settings</em>; on a desktop they are listed in a left navigation and on a phone they become a bottom tab bar. The header shows the store, the demo clock, the notification bell with its unread count and the signed-in user. Colour is used sparingly: blue marks the signed-in worker's own shifts and the single primary button of each page, and amber is reserved for substitution (a dashed outline for an open request, an amber edge and stripes for a handed-over shift). Status chips carry text, not only colour. The screens are shown in English; the interface is in Korean by default (Figure 25).</p>
+<p>The earlier prototype, whose screens the proposal and the team's review in Section 1.2 used, kept its data in the browser; it is replaced by this system and is not shown here.</p>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-01-signin.png" alt="Sign-in page with the fictional-data notice, the three-step tour and the five demo accounts.">
+  <figcaption>Figure 12. Sign-in (UC-13, FR-20). The notice states that all data are fictional demo data shared by everyone who opens the app; the three-step tour leads from Lee Seoyeon's request to Choi Minho's acceptance and the owner's approval; below, all accounts: the owner (with the number of workers) and the four workers with their weekly hours. There are no passwords.</figcaption>
+</figure>
+
+<div class="figrow">
+  <figure class="shot">
+    <img src="img/interim-v2/ui2-02-worker-home.png" alt="Choi Minho's Home on a phone with Lee Seoyeon's request card.">
+    <figcaption>Figure 13. Home of Choi Minho on a phone (UC-05, NFR-01, NFR-13). The card under &ldquo;Swap requests for you&rdquo; shows Seoyeon's Wednesday shift, the reason, the reply deadline and the effect on his week (16 h &rarr; 21 h, holiday allowance unchanged), with <em>Accept</em> as the page's only primary button and <em>Can't</em>.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="img/interim-v2/ui2-03-request-step3.png" alt="Step 3 of the request flow with the deadline and the co-workers who will be asked.">
+    <figcaption>Figure 14. Request flow, step 3 of 3 (UC-04, BR-01, BR-03), Choi Minho for Saturday 10/3 12:00&ndash;18:00: the reply deadline pre-filled with the earlier of now + 24 h and the shift start, and the co-workers who will be asked &mdash; Lee Seoyeon and Jung Hana; Kang Doyun is not asked because his Saturday shift overlaps.</figcaption>
+  </figure>
+</div>
+
+<div class="figrow">
+  <figure class="shot">
+    <img src="img/interim-v2/ui2-07-swaps-accepted.png" alt="Lee Seoyeon's Swaps page with the progress tracker at the step Accepted.">
+    <figcaption>Figure 15. Swaps of Lee Seoyeon after Minho accepted (UC-05, UC-12): the progress Requested &rarr; Accepted &rarr; Approved at step 2, &ldquo;waiting for the owner's approval&rdquo;, and <em>Cancel request</em> while the request is open.</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="img/interim-v2/ui2-04-me.png" alt="Lee Seoyeon's Me page with contract, wage, phone and attendance.">
+    <figcaption>Figure 16. Me of Lee Seoyeon (UC-07, NFR-11): contract, fixed shifts, hourly wage and phone with the note that, on screen, only she and the owner see them and that the data are fictional, and her attendance of last week and this week; a shift can be recorded only after it has ended (BR-17).</figcaption>
+  </figure>
+</div>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-08-owner-decision.png" alt="The owner's Home with the decision card showing the cost of the swap.">
+  <figcaption>Figure 17. Home of the owner with the decision of S3 (UC-06, FR-11, BR-16). One line per worker: Seoyeon this week 10 h &rarr; 5 h, no holiday allowance (contract 10 h a week), pay &minus;KRW&nbsp;52,500; Minho 16 h &rarr; 21 h, holiday allowance unchanged (KRW&nbsp;33,024), pay +KRW&nbsp;51,600; the store's labour cost this week &minus;KRW&nbsp;900. <em>Approve</em>, <em>Reject</em> and <em>Details</em>.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-11-owner-overtime.png" alt="The owner's decision card with the part-time warning and the premium estimate.">
+  <figcaption>Figure 18. The same decision in a workplace with five regular employees and Minho's extra Friday shift (S8; FR-24, BR-15, BR-16): Minho 24 h &rarr; 29 h with premium +KRW&nbsp;30,960, Seoyeon premium &minus;KRW&nbsp;5,250, the store's labour cost +KRW&nbsp;24,810, and the warning that Minho would work 13 hours beyond his contract, above the limit of 12 for part-time workers; <em>Approve</em> stays enabled.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-10-schedule-owner.png" alt="The owner's week board with a handed-over shift and a shift that ends after midnight.">
+  <figcaption>Figure 19. Schedule, owner view, after the approval of S3 and with the shift of S9 (UC-03, BR-04, BR-05). Wednesday 9/30 18:00&ndash;23:00 shows Choi Minho with Lee Seoyeon struck through on an amber, striped background; Kang Doyun's Friday 22:00&ndash;02:00 shift is drawn on Friday and marked &ldquo;&rarr; next day&rdquo;. <em>Add shift</em> is the primary action.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-12-mark-absent.png" alt="The shift sheet of a started shift with the action Mark absent.">
+  <figcaption>Figure 20. Shift sheet of Choi Minho's Tuesday 9/29 18:00&ndash;23:00 shift, with the demo clock at 23:30 (S11; UC-03, FR-25): the shift has started, is still scheduled and has no attendance record, so the owner can mark it absent; changing and deleting the shift are offered as well.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-13-pay-week.png" alt="The weekly holiday-allowance cards with Minho absent on Tuesday.">
+  <figcaption>Figure 21. Pay, tab Weekly, week of 9/28 after S11 (UC-08, BR-06, BR-07): Choi Minho has no holiday allowance because of the absence on 9/29; the other workers' contracts are under 15 hours. The note states the store's policy for handed-over shifts.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-14-pay-month.png" alt="The September payroll draft with the minimum-wage warning.">
+  <figcaption>Figure 22. Pay, tab Monthly, September 2026 at 10/1 09:00 (S6, S10; UC-09, UC-14, FR-15, FR-16): the draft was prepared automatically; Seoyeon KRW&nbsp;472,500 and Minho KRW&nbsp;844,176 (estimated), Hana KRW&nbsp;495,360 with the probation minimum KRW&nbsp;9,288, Doyun KRW&nbsp;480,000 below the minimum wage with <em>Acknowledge</em>; total KRW&nbsp;2,292,036. <em>Confirm September pay</em> is disabled with its reason until the warning is acknowledged.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-05-staff-detail.png" alt="The staff detail form of Choi Minho with his fixed shifts.">
+  <figcaption>Figure 23. Staff detail of Choi Minho (UC-01, FR-01, FR-02): name, phone, hourly wage, contract dates, probation end, simple labour and &ldquo;currently employed&rdquo;, and the fixed shifts Tuesday and Thursday 18:00&ndash;23:00 and Saturday 12:00&ndash;18:00 with the resulting 16 contractual hours a week.</figcaption>
+</figure>
+
+<figure class="shot wide">
+  <img src="img/interim-v2/ui2-06-settings.png" alt="Settings with the store data, the policy, the minimum wages and the Demo tools.">
+  <figcaption>Figure 24. Settings (UC-10, FR-17, FR-20): store name, number of regular employees (premiums from five), the policy for handed-over shifts (&ldquo;Do not count as absence&rdquo;, the default, or &ldquo;Count as absence&rdquo;), the minimum wage by year, and the Demo tools that move the demo clock or restore the demo data.</figcaption>
+</figure>
+
+<figure class="shot phone">
+  <img src="img/interim-v2/ui2-09-owner-decision-ko.png" alt="The owner's Home in Korean on a phone with the decision card.">
+  <figcaption>Figure 25. The owner's Home of Figure 17 in Korean on a 390&nbsp;px phone (NFR-02, NFR-13): the same decision card with the same numbers, above the bottom tab bar of the owner's five pages.</figcaption>
+</figure>
+
+<p>Table 41 maps every use case to the screen that realises it. UC-11 and UC-14 have no screen of their own: the System Clock function runs whenever a screen is loaded. Notifications (FR-21) are reached from the bell in the header of every screen.</p>
+<table>
+  <caption>Table 41. Use cases and screens</caption>
+  <thead><tr><th>Screen</th><th>Role</th><th>Use cases</th><th>Figure</th></tr></thead>
+  <tbody>
+    <tr><td>Sign-in (demo)</td><td>All</td><td>UC-13</td><td>12</td></tr>
+    <tr><td>Home</td><td>Worker</td><td>UC-05, UC-04 (entry)</td><td>13</td></tr>
+    <tr><td>Swaps and the request flow</td><td>Worker</td><td>UC-04, UC-05, UC-12</td><td>14, 15</td></tr>
+    <tr><td>Me</td><td>Worker</td><td>UC-07 (recording)</td><td>16</td></tr>
+    <tr><td>Home</td><td>Owner</td><td>UC-06, UC-07 (confirmation), UC-14 (notice)</td><td>17, 18, 25</td></tr>
+    <tr><td>Schedule and the shift sheet</td><td>Owner, Worker</td><td>UC-03, UC-04 (entry), UC-06 (result)</td><td>19, 20</td></tr>
+    <tr><td>Pay, Weekly</td><td>Owner</td><td>UC-08</td><td>21</td></tr>
+    <tr><td>Pay, Monthly</td><td>Owner</td><td>UC-09, UC-14</td><td>22</td></tr>
+    <tr><td>Staff</td><td>Owner</td><td>UC-01</td><td>23</td></tr>
+    <tr><td>Settings and Demo tools</td><td>Owner</td><td>UC-10, UC-13 (demo clock, reset)</td><td>24</td></tr>
+    <tr><td>(no screen; runs on every screen load)</td><td>System Clock</td><td>UC-11, UC-14</td><td>&ndash;</td></tr>
+  </tbody>
+</table>
+
+
+<h1 id="s9">9. Requirements validation</h1>
+<p>Requirements validation checks that the requirements define the system that the customer really wants (Chapter 8). We check the five properties of Chapter 8 with the three techniques it names: requirements reviews, prototyping and test-case generation.</p>
+<h2 id="s9-1">9.1 Requirements review</h2>
+<p>Two kinds of review are used. In the internal review the requirements lead's FR, NFR and business-rule tables are reviewed by the other two members against the problem statement and the scenarios; the documents are reviewed in a shared document tool that keeps every version with its author and highlights what changed between versions, so that each comment can be followed to the requirement it changed. In the review with the owner of the reference store (planned for Week 8), the use cases will be read out as scenarios in the owner's own terms and the owner will be asked whether each step matches what is needed; the owner's answer to interview question 6 will decide the default of the BR-06 policy, and the system keeps both options in any case.</p>
+<table>
+  <caption>Table 42. Validation checklist (Chapter 8)</caption>
+  <thead><tr><th>Property</th><th>Question</th><th>How we check it</th></tr></thead>
+  <tbody>
+    <tr><td>Validity</td><td>Does the system provide the functions that best support the owner's and workers' needs?</td><td>Each problem P1&ndash;P3 is traced to functional requirements (P1 &rarr; FR-06 to FR-10, FR-22, FR-21; P2 &rarr; FR-11, FR-12, FR-14; P3 &rarr; FR-11, FR-14, FR-15, FR-16, FR-24); review with the owner.</td></tr>
+    <tr><td>Consistency</td><td>Are there conflicting requirements?</td><td>One specification is the single source of all identifiers; the state diagrams are checked against the scenarios (Section 7.3); the dependency check of Table 9 found and removed two conflicts between <em>Must</em> and <em>Should</em>.</td></tr>
+    <tr><td>Completeness</td><td>Are all required functions included?</td><td>Every FR maps to a use case, every use case to a page and a database function (Table 41, Appendix B), and every business rule to a test group (Appendix A).</td></tr>
+    <tr><td>Realism</td><td>Can the requirements be implemented with the available time and technology?</td><td>MoSCoW priorities, with increment 1 independent of increment 2; a managed database on a free plan needs no paid hosting (NFR-16); the database functions of all use cases already run against the test cases.</td></tr>
+    <tr><td>Verifiability</td><td>Can each requirement be checked?</td><td>Each NFR has a verification method (Table 24); each FR has an observable outcome; the business rules have numeric boundaries (15 h, 40 h, 5 employees, 12 h, 90&nbsp;%, three months, 365 days, 30 minutes and 16 hours).</td></tr>
+  </tbody>
+</table>
+<h2 id="s9-2">9.2 Prototyping</h2>
+<p>The screens of Section 8 are used to validate the requirements in two ways. The team walks through scenarios S1 to S11 and records every step where a screen does not match the use-case description; this walk-through is also the acceptance checklist of the final prompt. The owner and the two co-workers will each be asked to perform one task without help: the owner approves the request of S3 and reads the cost line of the approval card, one co-worker creates the request of S1, and the other accepts it from <em>Home</em> as in S2. The team's own walk-throughs of the prototype already changed three requirements (Section 1.2); the sessions with the owner and the co-workers are planned for Week 10.</p>
+<h2 id="s9-3">9.3 Test-case generation</h2>
+<p>Chapter 8 recommends writing tests for requirements to find requirements that are ambiguous or cannot be tested, and Chapter 10 recommends tests on and just off each boundary. We derived one test group per business rule before implementing the user interface. The groups make the boundaries of the requirements explicit: 15 contractual hours are eligible and 14.99 are not; holiday hours are capped at 40 contractual hours; premiums start at five regular employees; 12 hours beyond contract give no warning and 13 do; a shift may last from 30 minutes to 16 hours and may end after midnight. Table 43 lists the groups and Appendix A the individual test cases with their inputs and expected results; they are fixed in Week 8, before the final prompt.</p>
+<table>
+  <caption>Table 43. Business rules and test groups</caption>
+  <thead><tr><th>Business rule</th><th>Test group</th><th>What the group checks</th><th>Related NFR</th></tr></thead>
+  <tbody>
+    <tr><td>BR-01, BR-05</td><td>TC-01x</td><td>Candidate eligibility and overlap on the time line, also across midnight and contract ends</td><td>&ndash;</td></tr>
+    <tr><td>BR-03</td><td>TC-02x</td><td>Request validity (own shift, future, one open request, deadline)</td><td>&ndash;</td></tr>
+    <tr><td>BR-02</td><td>TC-05x</td><td>First acceptance: a second acceptance is refused, also when concurrent</td><td>NFR-04</td></tr>
+    <tr><td>BR-04</td><td>TC-06x</td><td>Approval effect on the shift, the request and both weeks</td><td>&ndash;</td></tr>
+    <tr><td>BR-06, BR-07</td><td>TC-08x</td><td>Holiday allowance at 14.99 h and 15 h, the 40 h cap, both policies, unmarked and absent shifts (S3, S11)</td><td>NFR-10</td></tr>
+    <tr><td>BR-08</td><td>TC-09x</td><td>Premium at four and five employees, night hours across midnight, hours beyond contract (S8)</td><td>NFR-10</td></tr>
+    <tr><td>BR-09, BR-10</td><td>TC-10x</td><td>Minimum-wage warning and each probation condition (S6)</td><td>NFR-10</td></tr>
+    <tr><td>BR-11</td><td>TC-11x</td><td>Monthly payroll totals and rounding in minutes</td><td>&ndash;</td></tr>
+    <tr><td>BR-12</td><td>TC-12x</td><td>Expiry when a screen is loaded and inside accept and decide (S4)</td><td>&ndash;</td></tr>
+    <tr><td>BR-13</td><td>TC-13x</td><td>No taker at creation and after the last &ldquo;can't&rdquo; (S5)</td><td>&ndash;</td></tr>
+    <tr><td>BR-14</td><td>TC-14x</td><td>Automatic drafts for every missing past month (S10)</td><td>&ndash;</td></tr>
+    <tr><td>BR-15</td><td>TC-15x</td><td>Warning at 13 h, none at 12 h, none with four employees (S8)</td><td>NFR-10</td></tr>
+    <tr><td>&ndash;</td><td>TC-16x</td><td>The API roles cannot write tables; functions check their arguments</td><td>NFR-14</td></tr>
+    <tr><td>BR-16</td><td>TC-17x</td><td>Swap cost estimate (S3, S7, S8)</td><td>NFR-10</td></tr>
+    <tr><td>BR-17</td><td>TC-18x</td><td>Attendance only after the end, plausible times, clock-out after midnight</td><td>&ndash;</td></tr>
+    <tr><td>&ndash;</td><td>TC-19x</td><td>Seed and reset of the demo data</td><td>NFR-05</td></tr>
+  </tbody>
+</table>
+<p>The test cases run automatically against the database script in an embedded PostgreSQL (PGlite); at the time of this report all 84 pass. The first-acceptance case is also run with two concurrent connections against the deployed PostgreSQL database (record of 10 October 2026 kept with the tests): one acceptance succeeds and the other, answered only after the first transaction has committed, is refused with &ldquo;Choi Minho accepted first&rdquo;.</p>
+
+<h1 id="s10">10. Progress, risks and next steps</h1>
+<p>Work package 3 of the WBS (requirements elicitation and specification) is complete with this report except the interviews (3.1.1), which are planned for Week 8, and the analysis models of work package 4.1 are drawn. In response to the proposal feedback the team also moved two items forward: the test cases (work package 6.1.1, planned for Week 12) are written and fixed before implementation of the user interface, and the database functions, which carry every business rule, are implemented and tested against them. The user interface of all thirteen use cases has also been built from the same specification with Claude Code (Section 8) and is checked automatically against the deployed database: the walk-through of the scenarios S1&ndash;S11 with their numbers and the layout audit of every page at 360 and 1280&nbsp;px in Korean and English pass (145 checks; record of 10 October 2026 kept with the tests). This first complete build is used to validate the requirements; in Weeks 10 and 11 the increments are built again from the final prompt, to verify that the prompt reproduces them (goal G6 of the proposal: a system that the final prompt reproduces).</p>
+<table>
+  <caption>Table 44. Plan to the final report</caption>
+  <thead><tr><th>Week</th><th>Dates</th><th>Work</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>8</td><td>10-19 to 10-25</td><td>Interviews with the owner and two co-workers (Section 3); design models (design class diagram, sequence diagrams of UC-04, UC-05, UC-06 and UC-09); test cases of Appendix A fixed</td><td>Interview notes; design models; frozen test cases</td></tr>
+    <tr><td>9</td><td>10-26 to 11-01</td><td>Final prompt for Lovable, first version (database script, design system, pages, checklist); first trial of its first step (the database script) in Lovable</td><td>Prompt, first version; trial record with the credits used</td></tr>
+    <tr><td>10</td><td>11-02 to 11-08</td><td>Increment 1 (<em>Must</em> use cases) built again from the final prompt in an empty project with Claude Code and checked against Appendix A; sessions with the owner and the co-workers on the system (Section 9.2)</td><td>Increment 1 by 11-06; session notes</td></tr>
+    <tr><td>11</td><td>11-09 to 11-15</td><td>Increment 2 (<em>Should</em> use cases) built again from the final prompt; changes from the sessions</td><td>Increment 2 by 11-13</td></tr>
+    <tr><td>12</td><td>11-16 to 11-22</td><td>Deployment; all test groups and the scenario walk-through on the deployed system</td><td>Deployed URL by 11-20</td></tr>
+    <tr><td>13</td><td>11-23 to 11-29</td><td>The final prompt re-run in an empty Lovable project; every fix recorded with its reason</td><td>Final prompt frozen</td></tr>
+    <tr><td>14</td><td>11-30 to 12-06</td><td>Final report, slides, presentation</td><td>Submission by 12-04</td></tr>
+  </tbody>
+</table>
+<table>
+  <caption>Table 45. Risks</caption>
+  <thead><tr><th>ID</th><th>Risk</th><th>Response</th></tr></thead>
+  <tbody>
+    <tr><td>R1</td><td>Legal interpretation where the law leaves the method open: attendance when a shift is handed over (BR-06), and how the hours of a part-time worker beyond contract are counted (BR-08 (iv)) &mdash; the labour ministry's examples count them against the contractual hours of the day, the system against those of the week.</td><td>The attendance rule is a store setting (BR-06), EXCUSED by default, and both policies are tested (TC-08x); the weekly method of BR-08 (iv) is stated as a design decision and will be reviewed with the owner.</td></tr>
+    <tr><td>R2</td><td>Scope creep.</td><td>The Won't list of the proposal is fixed; a new requirement enters the specification only with a team decision and a priority.</td></tr>
+    <tr><td>R3</td><td>Reproducibility of the final prompt in Lovable, whose output varies from run to run and whose free plan grants five build credits a day and at most 30 a month [24].</td><td>Every rule is in the database script, which is attached to the first message and applied unchanged; the prompt is a short ordered set of messages with an acceptance checklist; a trial in Week 9 and a full re-run in Week 13; the credits used are recorded.</td></tr>
+    <tr><td>R4</td><td>Pay rules implemented incorrectly.</td><td>Rules in database functions with the boundary tests of Appendix A.</td></tr>
+    <tr><td>R5</td><td>Reduced availability of members during examinations.</td><td>Each work package has an owner and a reviewer who can take over.</td></tr>
+    <tr><td>R6</td><td>A free-plan database is paused after inactivity [21].</td><td>A scheduled read every six hours, a weekly check of the deployed URL, and a check before every submission (NFR-16).</td></tr>
+    <tr><td>R7</td><td>Notifications are in-app only, so a candidate sees a request only when opening the application; the quick answers that goals G1 and G2 of the proposal aim at (no telephone round of the owner; an answer in two clicks) depend on it.</td><td>Unread count in the header; the reply deadline on every request card; screens refreshed every 10 seconds and when the window regains focus (NFR-15); the default deadline of 24 hours leaves time to answer. Messaging services stay out of scope (Won't list).</td></tr>
+  </tbody>
+</table>
+
+<h1 id="appA">Appendix A. Test cases</h1>
+<p>The 84 test cases below are written against the business rules and the demo data of Section 2.5. Each has an identifier of its test group (Table 43), the situation with its input and expected result, and the rules it checks; values on and just off each boundary are included. Every case is an automated test of the database functions; the scenarios S1&ndash;S11 appear here with the numbers of Section 6. The group numbers follow the test plan of the proposal, in which the numbers 03, 04 and 07 are not used.</p>
+<table class="page-start">
+  <caption>Table 46. Test cases of the database functions</caption>
+  <thead><tr><th>TC</th><th>Input and expected result</th><th>Rules / requirements</th></tr></thead>
+  <tbody>
+    <tr><td colspan="3"><strong>TC-01x Eligibility, overlap on the time line, weekly schedule (BR-01, BR-05, FR-02, FR-04, FR-05, FR-25)</strong></td></tr>
+    <tr><td class="req-id">TC-011</td><td>S9: Fri 2026-10-02 22:00–02:00 belongs to Friday and the week of 09-28, lasts 4 h; Sat 01:00–05:00 overlaps it</td><td>BR-05</td></tr>
+    <tr><td class="req-id">TC-012</td><td>single shifts: Mon 22:00–02:00 overlaps Tue 01:00–05:00, Sun 22:00–02:00 overlaps the next Monday 01:00–05:00</td><td>BR-05, FR-05</td></tr>
+    <tr><td class="req-id">TC-013</td><td>fixed slots of one worker are compared on the weekly time line, across midnight and from Sunday into Monday</td><td>FR-02, BR-05</td></tr>
+    <tr><td class="req-id">TC-014</td><td>S1: the seed request asks Minho, Hana and Doyun, each with a REQUEST_RECEIVED notification</td><td>BR-01, FR-07</td></tr>
+    <tr><td class="req-id">TC-015</td><td>S7 / S5: Doyun is not asked for Minho's Sat 12:00–18:00 (his Sat 10:00–16:00 overlaps); a shift that ends exactly when the requested shift starts does not exclude</td><td>BR-01</td></tr>
+    <tr><td class="req-id">TC-016</td><td>a co-worker whose overnight shift of the previous evening runs into the shift is not eligible</td><td>BR-01 on the time line</td></tr>
+    <tr><td class="req-id">TC-017</td><td>only active workers within their contract period are asked: Doyun after 2026-11-15, an inactive Hana</td><td>BR-01, FR-04</td></tr>
+    <tr><td class="req-id">TC-018</td><td>generate_week creates each fixed slot once and only within each contract; Doyun has no shift after 2026-11-15</td><td>FR-04</td></tr>
+    <tr><td class="req-id">TC-019</td><td>generate_week skips a slot whose shift was moved or that would overlap a shift the worker already has</td><td>FR-04</td></tr>
+    <tr><td class="req-id">TC-01A</td><td>add, move and delete a single shift; SHIFT_LOCKED, SHIFT_HAS_HISTORY, OUTSIDE_CONTRACT, WORKER_INVALID, TIME_INVALID</td><td>FR-05</td></tr>
+    <tr><td class="req-id">TC-01B</td><td>FR-25: the owner marks a started SCHEDULED shift absent with or without a record; not before the start, not twice</td><td>FR-25</td></tr>
+    <tr><td class="req-id">TC-01C</td><td>week board and shift detail: names, open-request and handover markers, allowed actions</td><td>UC-03</td></tr>
+    <tr><td colspan="3"><strong>TC-02x Request validity (BR-03)</strong></td></tr>
+    <tr><td class="req-id">TC-021</td><td>a valid request: own future SCHEDULED shift, deadline after now and not after the start; one target and notification per candidate</td><td>BR-03, FR-06, FR-07</td></tr>
+    <tr><td class="req-id">TC-022</td><td>invalid requests are refused: SHIFT_NOT_FOUND, NOT_YOUR_SHIFT, NOT_SCHEDULED, OPEN_REQUEST_EXISTS, DEADLINE_INVALID, SHIFT_STARTED</td><td>BR-03</td></tr>
+    <tr><td class="req-id">TC-023</td><td>at most one open request per shift; a closed request does not block a new one</td><td>BR-03</td></tr>
+    <tr><td colspan="3"><strong>TC-05x First acceptance (BR-02, NFR-04)</strong></td></tr>
+    <tr><td class="req-id">TC-051</td><td>S2: the first acceptance wins; Doyun's later acceptance is refused with ALREADY_TAKEN naming Choi Minho</td><td>BR-02, FR-09, FR-10</td></tr>
+    <tr><td class="req-id">TC-052</td><td>accepting a FAILED or an EXPIRED request is refused with REQUEST_CLOSED</td><td>BR-02, BR-13</td></tr>
+    <tr><td class="req-id">TC-053</td><td>ACCEPTOR_BUSY: a candidate with an overlapping shift cannot accept; the overlap is checked again at approval</td><td>BR-02</td></tr>
+    <tr><td class="req-id">TC-054</td><td>only a target can answer: NOT_A_TARGET for the requester and the owner, REQUEST_NOT_FOUND for an unknown request</td><td>BR-02</td></tr>
+    <tr><td class="req-id">TC-055</td><td>a single "can't" keeps the request open and notifies no one; that candidate cannot accept afterwards</td><td>FR-22</td></tr>
+    <tr><td colspan="3"><strong>TC-06x Approval effect (BR-04)</strong></td></tr>
+    <tr><td class="req-id">TC-061</td><td>approval hands the shift to the acceptor, keeps the original worker, recomputes both weeks and notifies both</td><td>BR-04, FR-12</td></tr>
+    <tr><td class="req-id">TC-062</td><td>rejection leaves the shift unchanged; only an ACCEPTED request can be decided; the decision is APPROVE or REJECT</td><td>BR-04</td></tr>
+    <tr><td class="req-id">TC-063</td><td>a shift swapped twice keeps its first worker as original worker</td><td>BR-04</td></tr>
+    <tr><td colspan="3"><strong>TC-08x Holiday allowance (BR-06, BR-07)</strong></td></tr>
+    <tr><td class="req-id">TC-081</td><td>holiday allowance needs 15 contractual hours: 14.99 h → none, 15 h → 3 h</td><td>BR-06 a, BR-07</td></tr>
+    <tr><td class="req-id">TC-082</td><td>holiday hours are capped at 40 contractual hours: 16 h → 3.2 h, 45 h → 8 h</td><td>BR-07</td></tr>
+    <tr><td class="req-id">TC-083</td><td>both substitution-attendance policies: a shift given away by an approved swap keeps (EXCUSED) or breaks (ABSENT) attendance</td><td>BR-06</td></tr>
+    <tr><td class="req-id">TC-084</td><td>S3 holiday allowance: Minho 3.2 h = 33,024 before and after taking the shift; Seoyeon none (contract 10 h)</td><td>BR-06, BR-07</td></tr>
+    <tr><td class="req-id">TC-085</td><td>S11 no-show: at 2026-09-29 23:30 the owner marks Minho's Tue shift absent without a record; his week loses 33,024 → 0</td><td>FR-25, BR-06</td></tr>
+    <tr><td class="req-id">TC-086</td><td>BR-06 default: a past shift that was not marked absent counts as worked (no attendance needed)</td><td>BR-06</td></tr>
+    <tr><td class="req-id">TC-087</td><td>weeks of a month whose payroll is confirmed are not recomputed</td><td>FR-14</td></tr>
+    <tr><td class="req-id">TC-088</td><td>monthly holiday pay is the sum over the weeks whose Sunday falls in the month</td><td>BR-07, BR-11</td></tr>
+    <tr><td colspan="3"><strong>TC-09x Premium pay (BR-08)</strong></td></tr>
+    <tr><td class="req-id">TC-091</td><td>premium is zero below five regular employees and paid from five</td><td>BR-08</td></tr>
+    <tr><td class="req-id">TC-092</td><td>night hours are the minutes between 22:00 and 06:00 on the actual time line: 22:00–02:00 is 4 h, on its work date</td><td>BR-08 iii, S9</td></tr>
+    <tr><td class="req-id">TC-093</td><td>premium categories: daily beyond 8 h, weekly beyond 40 h, night hours, part-time beyond contract counted once</td><td>BR-08 i-iv</td></tr>
+    <tr><td class="req-id">TC-094</td><td>in a monthly payroll the days of an ISO week outside the month only decide where the first C and the first 40 hours end</td><td>BR-08, monthly payroll</td></tr>
+    <tr><td class="req-id">TC-095</td><td>S8 worked: October pays Minho 13 h beyond contract = 67,080 plus 1 night hour; September only night hours</td><td>BR-08 iv</td></tr>
+    <tr><td colspan="3"><strong>TC-10x Minimum wage and probation (BR-09, BR-10)</strong></td></tr>
+    <tr><td class="req-id">TC-101</td><td>S6: September draft at 2026-10-01: Doyun's warning, Hana's probation minimum 9,288; confirmation waits for the acknowledgement</td><td>BR-09, BR-10, FR-16</td></tr>
+    <tr><td class="req-id">TC-102</td><td>probation applies only when all BR-10 conditions hold (one-year contract incl. 2026-09-01 to 2027-08-31, first 3 months, until probation_end, not simple labour)</td><td>BR-10</td></tr>
+    <tr><td class="req-id">TC-103</td><td>the probation floor is exactly 9,288; a regenerated draft needs a new acknowledgement</td><td>BR-09</td></tr>
+    <tr><td colspan="3"><strong>TC-11x Monthly payroll (BR-11)</strong></td></tr>
+    <tr><td class="req-id">TC-111</td><td>S6 September draft: Seoyeon 472,500, Minho 844,176 (64 h worked + 5 h scheduled, four holiday weeks), Hana 495,360, Doyun 480,000 with warning, total 2,292,036</td><td>BR-11</td></tr>
+    <tr><td class="req-id">TC-112</td><td>hours are summed in minutes and converted once; WORKED shifts count their recorded minutes</td><td>BR-11</td></tr>
+    <tr><td class="req-id">TC-113</td><td>ABSENT shifts are paid 0; a month of worked shifts only is not estimated</td><td>BR-11</td></tr>
+    <tr><td class="req-id">TC-114</td><td>a confirmed month is read-only; NO_DRAFT and MONTH_INVALID</td><td>FR-15</td></tr>
+    <tr><td colspan="3"><strong>TC-12x Expiry (BR-12)</strong></td></tr>
+    <tr><td class="req-id">TC-121</td><td>S4: nobody answers; at 2026-09-29 21:00 the System Clock expires the request and notifies requester and owner</td><td>BR-12, FR-18</td></tr>
+    <tr><td class="req-id">TC-122</td><td>an ACCEPTED request expires at the shift start; expire_overdue_requests returns the number expired</td><td>BR-12</td></tr>
+    <tr><td class="req-id">TC-123</td><td>accept_sub_request evaluates the expiry first: a late acceptance is refused even if no screen was loaded</td><td>BR-12</td></tr>
+    <tr><td class="req-id">TC-124</td><td>decide_sub_request evaluates the expiry first: approval at the deadline or after the shift start is refused</td><td>BR-12, BR-04</td></tr>
+    <tr><td class="req-id">TC-125</td><td>cancel: the requester cancels; every PENDING or ACCEPTED target is told; a closed request cannot be cancelled</td><td>UC-12, FR-19</td></tr>
+    <tr><td colspan="3"><strong>TC-13x No taker (BR-13)</strong></td></tr>
+    <tr><td class="req-id">TC-131</td><td>S5: Hana's Sun 10-04 request; all three answer "can't" → FAILED; Hana and the owner receive REQUEST_FAILED and acknowledge it</td><td>BR-13, FR-22</td></tr>
+    <tr><td class="req-id">TC-132</td><td>no eligible worker at creation: the request ends FAILED at once without targets</td><td>BR-13, FR-08</td></tr>
+    <tr><td colspan="3"><strong>TC-14x Automatic payroll drafts (BR-14)</strong></td></tr>
+    <tr><td class="req-id">TC-141</td><td>S10: no draft is due before 2026-10-01; at 10-01 09:00 the System Clock drafts September once and tells the owner</td><td>BR-14, FR-23</td></tr>
+    <tr><td class="req-id">TC-142</td><td>every missing month is drafted: clock 2026-09-28 → 2026-12-02 drafts September, October and November, one notification each</td><td>BR-14</td></tr>
+    <tr><td colspan="3"><strong>TC-15x Part-time weekly limit warning (BR-15)</strong></td></tr>
+    <tr><td class="req-id">TC-151</td><td>S8: with 5 regular employees the preview shows Minho 24 → 29 h and warns of 13 h beyond contract (limit 12); approval is not blocked</td><td>BR-15, FR-24</td></tr>
+    <tr><td class="req-id">TC-152</td><td>S8 with Friday 10:00–17:00: Minho 23 → 28 h is exactly 12 h beyond contract, no warning</td><td>BR-15</td></tr>
+    <tr><td class="req-id">TC-153</td><td>S8 with 4 regular employees: 13 h beyond contract but no warning and no premium</td><td>BR-15, BR-08</td></tr>
+    <tr><td colspan="3"><strong>TC-16x Security of the database (NFR-14)</strong></td></tr>
+    <tr><td class="req-id">TC-161</td><td>the API roles read every table but cannot insert, update, delete or truncate any of the 11 tables</td><td>NFR-14</td></tr>
+    <tr><td class="req-id">TC-162</td><td>the API roles change data only through the functions: S2 runs as anon; the internal helper functions cannot be called</td><td>NFR-14</td></tr>
+    <tr><td class="req-id">TC-163</td><td>functions validate their arguments, also when called by the API role</td><td>NFR-14</td></tr>
+    <tr><td class="req-id">TC-164</td><td>row-level security on all 11 tables with read policies for anon and authenticated; execute grants only on the API</td><td>NFR-14</td></tr>
+    <tr><td colspan="3"><strong>TC-17x Swap cost estimate (BR-16)</strong></td></tr>
+    <tr><td class="req-id">TC-171</td><td>S3: Seoyeon 10 → 5 h, pay −52,500; Minho 16 → 21 h, holiday 33,024 unchanged, pay +51,600; premium 0; store −900</td><td>BR-16, FR-11</td></tr>
+    <tr><td class="req-id">TC-172</td><td>S7: policy ABSENT; Minho gives away Sat 12:00–18:00 to Hana: Minho eligible → not, holiday −33,024, pay −61,920; Hana +61,920; store −33,024</td><td>BR-16</td></tr>
+    <tr><td class="req-id">TC-173</td><td>S8: Minho base +51,600 and premium +30,960 (beyond contract 8 → 13 h, night 2 → 3 h); Seoyeon base −52,500 and premium −5,250 (night 2 → 1 h)</td><td>BR-16, BR-08</td></tr>
+    <tr><td colspan="3"><strong>TC-18x Attendance (BR-17, FR-13)</strong></td></tr>
+    <tr><td class="req-id">TC-181</td><td>attendance can be recorded only after the scheduled end (SHIFT_NOT_ENDED), by the shift's worker</td><td>BR-17, FR-13</td></tr>
+    <tr><td class="req-id">TC-182</td><td>23:00 → 18:00 on an 18:00–23:00 shift lies on the next day and is implausible</td><td>BR-17</td></tr>
+    <tr><td class="req-id">TC-183</td><td>an overnight shift: clock-out after midnight is on the next day and accepted; an early clock-in stays on the work date</td><td>BR-17</td></tr>
+    <tr><td class="req-id">TC-184</td><td>the owner confirms a record (WORKED) or the shift stays open; a WORKED or ABSENT shift cannot change again</td><td>FR-13, Figure 7</td></tr>
+    <tr><td class="req-id">TC-185</td><td>the seed history and the week of 09-21 are recorded at the scheduled times and confirmed</td><td>Section 2.5, BR-17</td></tr>
+    <tr><td colspan="3"><strong>TC-19x Seed, reset and the read functions of the screens (NFR-05, Table 48)</strong></td></tr>
+    <tr><td class="req-id">TC-191</td><td>the seed reproduces Section 2.5: store, demo clock, minimum wages, accounts and fixed shifts</td><td>Section 2.5</td></tr>
+    <tr><td class="req-id">TC-192</td><td>the seed work history: every fixed slot from contract start to 2026-09-20 WORKED and confirmed, weeks 09-21 and 09-28 generated</td><td>Section 2.5</td></tr>
+    <tr><td class="req-id">TC-193</td><td>the seed payroll: March–August generated, acknowledged and confirmed by the functions; no September row</td><td>Section 2.5, BR-14</td></tr>
+    <tr><td class="req-id">TC-194</td><td>the seed request: Lee Seoyeon, Wed 2026-09-30 18:00–23:00, deadline 09-29 21:00, "Midterm exam", created 08:30</td><td>Section 2.5, S1</td></tr>
+    <tr><td class="req-id">TC-195</td><td>reset_demo_data restores the same data with the same ids, also after changes, and resets the demo clock</td><td>NFR-05</td></tr>
+    <tr><td class="req-id">TC-196</td><td>the SQL file can be run again on the same database (with the API roles): same objects, same demo data</td><td>R3</td></tr>
+    <tr><td class="req-id">TC-197</td><td>the API of Table 48 exist with the exact names, arguments and result types; every function has an empty search_path</td><td>NFR-14</td></tr>
+    <tr><td class="req-id">TC-19A</td><td>demo_accounts: the active accounts, owner first, with weekly contractual hours and fixed shifts</td><td>FR-20</td></tr>
+    <tr><td class="req-id">TC-19B</td><td>get_settings: store, regular employees, policy, demo clock, now and the minimum wages</td><td>UC-10</td></tr>
+    <tr><td class="req-id">TC-19C</td><td>list_workers and worker_detail: the staff with contract data and contractual hours</td><td>UC-01</td></tr>
+    <tr><td class="req-id">TC-19D</td><td>requestable_shifts: own future SCHEDULED shifts without an open request, with the default deadline</td><td>UC-04</td></tr>
+    <tr><td class="req-id">TC-19E</td><td>my_requests: my own requests newest first and the requests for me, open ones first, with the effect on my week</td><td>UC-04, UC-05, UC-12</td></tr>
+    <tr><td class="req-id">TC-19F</td><td>attendance_list: my shifts of the previous and the current week with their records; can_record after the end</td><td>UC-07, BR-17</td></tr>
+    <tr><td class="req-id">TC-19G</td><td>payroll_month and payroll_months: stored rows, flags, status and totals; nothing is generated</td><td>UC-09, UC-14</td></tr>
+    <tr><td class="req-id">TC-19H</td><td>notifications and mark_notifications_read: the inbox newest first with the unread count</td><td>FR-21</td></tr>
+    <tr><td class="req-id">TC-19I</td><td>worker_home: requests for me with the effect on my week, my open requests, next shift, this week</td><td>NFR-13, UC-05</td></tr>
+    <tr><td class="req-id">TC-19J</td><td>owner_home: decisions with the preview, open requests, today's shifts and week totals</td><td>NFR-13, UC-06</td></tr>
+  </tbody>
+</table>
+
+<h1 id="appB">Appendix B. Pages and role-based access</h1>
+<table>
+  <caption>Table 47. Role-based access</caption>
+  <thead><tr><th>Feature</th><th>Owner</th><th>Worker</th></tr></thead>
+  <tbody>
+    <tr><td>View the week board</td><td>O</td><td>O</td></tr>
+    <tr><td>Add, move or delete a shift; mark a shift absent</td><td>O</td><td>X</td></tr>
+    <tr><td>Request a substitute for an own shift</td><td>X</td><td>O</td></tr>
+    <tr><td>Accept or answer &ldquo;can't&rdquo;</td><td>X</td><td>O</td></tr>
+    <tr><td>Approve or reject a swap</td><td>O</td><td>X</td></tr>
+    <tr><td>Cancel an own request</td><td>X</td><td>O</td></tr>
+    <tr><td>Record attendance</td><td>X</td><td>O (own shift)</td></tr>
+    <tr><td>Confirm attendance</td><td>O</td><td>X</td></tr>
+    <tr><td>Weekly summary and payroll</td><td>O</td><td>X</td></tr>
+    <tr><td>Register workers and fixed shifts</td><td>O</td><td>X</td></tr>
+    <tr><td>Settings and Demo tools</td><td>O</td><td>X</td></tr>
+    <tr><td>Notification inbox</td><td>O</td><td>O</td></tr>
+    <tr><td>See a worker's phone number and wage</td><td>O</td><td>own only (screen level, NFR-11)</td></tr>
+  </tbody>
+</table>
+<table>
+  <caption>Table 48. Pages, use cases and database functions</caption>
+  <thead><tr><th>Page</th><th>Role</th><th>Use cases</th><th>Database functions</th></tr></thead>
+  <tbody>
+    <tr><td>Sign-in (demo)</td><td>All</td><td>UC-13</td><td><code>demo_accounts</code></td></tr>
+    <tr><td>Home</td><td>Worker</td><td>UC-05, UC-04 (entry)</td><td><code>worker_home</code>, <code>accept_sub_request</code>, <code>decline_sub_request</code></td></tr>
+    <tr><td>Home</td><td>Owner</td><td>UC-06, UC-07 (confirm), UC-14 (notice)</td><td><code>owner_home</code> (which contains the result of <code>approval_preview</code> for each decision), <code>decide_sub_request</code>, <code>confirm_attendance</code>, <code>mark_notifications_read</code></td></tr>
+    <tr><td>Schedule</td><td>Both</td><td>UC-03, UC-04 (entry), UC-06 (result)</td><td><code>week_board</code>, <code>shift_detail</code>, <code>generate_week</code>, <code>add_shift</code>, <code>update_shift</code>, <code>delete_shift</code>, <code>mark_absent</code></td></tr>
+    <tr><td>Swaps and the request flow</td><td>Worker</td><td>UC-04, UC-05, UC-12</td><td><code>my_requests</code>, <code>requestable_shifts</code>, <code>preview_candidates</code>, <code>create_sub_request</code>, <code>cancel_sub_request</code></td></tr>
+    <tr><td>Me</td><td>Worker</td><td>UC-07 (recording)</td><td><code>worker_detail</code>, <code>attendance_list</code>, <code>record_attendance</code></td></tr>
+    <tr><td>Staff</td><td>Owner</td><td>UC-01</td><td><code>list_workers</code>, <code>worker_detail</code>, <code>save_worker</code>, <code>save_fixed_schedule</code></td></tr>
+    <tr><td>Pay (Weekly, Monthly)</td><td>Owner</td><td>UC-08, UC-09</td><td><code>week_summary</code>, <code>payroll_months</code>, <code>payroll_month</code>, <code>generate_payroll</code>, <code>acknowledge_min_wage</code>, <code>confirm_payroll</code></td></tr>
+    <tr><td>Settings and Demo tools</td><td>Owner</td><td>UC-10, UC-13</td><td><code>get_settings</code>, <code>update_settings</code>, <code>set_demo_clock</code>, <code>reset_demo_data</code></td></tr>
+    <tr><td>Notifications</td><td>Both</td><td>FR-21</td><td><code>notifications</code>, <code>mark_notifications_read</code></td></tr>
+    <tr><td>(every page)</td><td>System Clock</td><td>UC-11, UC-14</td><td><code>run_system_clock</code></td></tr>
+  </tbody>
+</table>
+
+<h1 id="refs">References</h1>
+<ol class="small">
+  <li>Ministry of Employment and Labor, &ldquo;2026 minimum wage KRW 10,320 per hour,&rdquo; MOEL notice, Aug. 2025. https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144</li>
+  <li>Korea Policy Briefing, &ldquo;2026년 시간당 최저임금 10,320원.&rdquo; https://www.korea.kr/news/policyNewsView.do?newsId=148956812</li>
+  <li>Labor Standards Act (근로기준법), Art. 11, 18, 55, 56; Enforcement Decree Art. 30. https://www.law.go.kr/법령/근로기준법</li>
+  <li>Easy-Law (찾기쉬운 생활법령정보), &ldquo;기간제 및 단시간근로자: 「근로기준법」 적용의 특례&rdquo; (paid holidays of part-time workers and the 15-hour threshold). https://www.easylaw.go.kr/CSP/CnpClsMain.laf?csmSeq=1347&amp;ccfNo=3&amp;cciNo=2&amp;cnpClsNo=1</li>
+  <li>Minimum Wage Act (최저임금법), Art. 5 &#9313;; Enforcement Decree Art. 3. https://www.law.go.kr/법령/최저임금법</li>
+  <li>D. A. Gustafson, <em>Schaum's Outline of Software Engineering</em>, McGraw-Hill, 2002.</li>
+  <li>I. Sommerville, <em>Software Engineering</em>, 10th ed., Pearson, 2016.</li>
+  <li>OMG, <em>Unified Modeling Language Specification</em>, v2.5.1, 2017.</li>
+  <li>PostgreSQL Global Development Group, &ldquo;Transaction Isolation,&rdquo; PostgreSQL Documentation (Read Committed: a concurrent UPDATE re-evaluates its WHERE condition on the updated row). https://www.postgresql.org/docs/current/transaction-iso.html</li>
+  <li>Deputy Help Center, &ldquo;Allow team members to swap or offer shifts.&rdquo; https://help.deputy.com/hc/en-au/articles/4688726501135-Allow-team-members-to-swap-or-offer-shifts</li>
+  <li>When I Work Help Center, &ldquo;Getting your shifts covered.&rdquo; https://help.wheniwork.com/articles/getting-your-shifts-covered/</li>
+  <li>When I Work Help Center, &ldquo;Giving your team schedule flexibility.&rdquo; https://help.wheniwork.com/articles/giving-your-team-schedule-flexibility/</li>
+  <li>Homebase Support, help article on trading and covering shifts. https://support.joinhomebase.com/s/article/Trading-and-covering-shifts</li>
+  <li>Deputy Help Center, &ldquo;Manage different languages in the workplace with Deputy.&rdquo; https://help.deputy.com/hc/en-au/articles/4621854798223-Manage-different-languages-in-the-workplace-with-Deputy</li>
+  <li>Shiftee, &ldquo;시프티 200% 활용하기: 근무일정 수정 요청과 전자결재,&rdquo; Shiftee blog, 2019. https://shiftee.io/ko/blog/article/tipScheduleRequest</li>
+  <li>Shiftee Help Center, frequently asked question on the conditions under which the weekly holiday allowance is recognized. https://shiftee.io/ko/help</li>
+  <li>Shopl, &ldquo;아르바이트 직원마다 다른 근무 스케줄을 관리하는 방법,&rdquo; Shopl blog. https://www.shoplworks.com/blog-guides/managing-different-work-schedules-part-time-employees</li>
+  <li>Albami (알바미), service website. https://albame.co.kr/</li>
+  <li>Gig for owners (기그 사장님), app listings on Google Play and the App Store. https://play.google.com/store/apps/details?id=connectfit.logout.ceo; https://apps.apple.com/kr/app/id1523613072</li>
+  <li>Act on the Protection, etc. of Fixed-term and Part-time Employees (기간제 및 단시간근로자 보호 등에 관한 법률), Art. 3 &#9313;, Art. 6; Enforcement Decree Art. 2 and Annex 1. https://www.law.go.kr/법령/기간제및단시간근로자보호등에관한법률</li>
+  <li>Supabase Docs, &ldquo;Free project pausing.&rdquo; https://supabase.com/docs/guides/platform/free-project-pausing</li>
+  <li>GitHub Docs, &ldquo;Events that trigger workflows&rdquo; (schedule). https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows</li>
+  <li>Supabase Docs, &ldquo;Database Functions&rdquo; and &ldquo;Row Level Security.&rdquo; https://supabase.com/docs/guides/database/functions ; https://supabase.com/docs/guides/database/postgres/row-level-security</li>
+  <li>Lovable Documentation, &ldquo;Lovable Cloud,&rdquo; &ldquo;Database,&rdquo; &ldquo;Build with URL&rdquo; and &ldquo;Credits and usage.&rdquo; https://docs.lovable.dev/features/cloud ; https://docs.lovable.dev/features/database ; https://docs.lovable.dev/integrations/build-with-url ; https://docs.lovable.dev/introduction/credits-and-usage</li>
+</ol>
+<p class="small">Web pages [1]&ndash;[5] and [10]&ndash;[22] were accessed on 29 September 2026; [9], [23] and [24] on 10 October 2026.</p>
+
+</body>
+</html>

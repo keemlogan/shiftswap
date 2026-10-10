@@ -1,0 +1,151 @@
+node tools/check-system.mjs — run on 2026-10-11 02:10 KST against the deployed Supabase database (build of web/ in system/ with the corrected EXCUSED hint, after the BR-06 (c) function patch)
+
+PASS i18n: a Korean and an English message for each of the 30 error codes of spec §9.2
+PASS reset_demo_data before the walkthrough
+PASS Sign-in: shared fictional-data notice, three-step tour, all five accounts with role and weekly hours
+PASS S1 tour step 1 signs in as Seoyeon: Swaps shows her request with the tracker and three candidates
+PASS S1 Minho, Hana and Doyun each have one REQUEST_RECEIVED notification
+PASS S2 Doyun's Home (English) offers Accept on Seoyeon's request
+PASS S2 tour step 2: Minho's Home card shows the effect 16시간 → 21시간, holiday allowance 33,024원, the deadline; bell 1
+PASS S1 Minho's inbox shows the REQUEST_RECEIVED sentence
+PASS S2 Minho accepts from the inbox in two clicks (Open → Accept, NFR-01) and sees the result
+PASS S2 Doyun's later Accept is refused: "Choi Minho accepted first" (ALREADY_TAKEN) and his Home shows the taken card
+PASS S2 accept_sub_request for Doyun answers ALREADY_TAKEN with the hint "Choi Minho accepted first."
+PASS S3 the owner's Home says "오늘 처리할 일 1개"
+PASS S3 Seoyeon: 10 → 5 h, no holiday allowance (contract below 15 h), pay −52,500
+PASS S3 Minho: 16 → 21 h, holiday allowance unchanged 33,024, pay +51,600
+PASS S3 store labour cost −900 for the week; no premium with 4 regular employees
+PASS S3 Details shows the full preview table (base pay 105,000 → 52,500 and 165,120 → 216,720)
+PASS S3 Approve (primary) approves with a result message
+PASS S3 the Schedule shows the handover: amber edge, 최민호 with 이서연 struck through
+PASS S3 the sign-in tour marks all three steps as done
+PASS S4 Demo tools move the clock to 2026-09-29 21:00
+PASS S4 the next screen load expires the request: Seoyeon's Swaps shows 만료됐어요
+PASS S4 requester and owner receive REQUEST_EXPIRED
+PASS S5 Hana's request flow: reason chip 개인 사정, deadline pre-filled 2026-09-29 09:00, candidates Seoyeon, Minho, Doyun
+PASS S5 Send swap request shows the result screen
+PASS S5 the result screen: one primary, targets ≥ 44 px, no h-scroll
+PASS S5 worker 2 answers 불가 in one tap
+PASS S5 worker 3 answers 불가 in one tap
+PASS S5 worker 5 answers 불가 in one tap
+PASS S5 Hana sees "모든 동료가 대타가 불가능하다고 해요. 사장님께 연락드려 보세요."
+PASS NFR-15 the owner's Home, open in another browser, shows the FAILED card within 10 s without a reload
+PASS S5 the owner's FAILED card has only 확인했어요
+PASS S5 the owner acknowledges the card (marks the notification read)
+PASS S7 the owner sets the policy to ABSENT
+PASS S7 Minho's request for Sat 10-03 goes to Seoyeon and Hana (Doyun's Saturday overlaps)
+PASS S7 Hana accepts
+PASS S7 the preview shows Minho eligible → not eligible, holiday pay −33,024 (highlighted), pay −61,920
+PASS S7 Hana +61,920; store −33,024
+PASS S8 the owner sets 5 regular employees
+PASS S8 the owner adds Fri 2026-10-02 10:00–18:00 for Minho
+PASS S8 Minho's card shows his week 24 → 29 h before he accepts
+PASS S8 the preview shows Minho 24 → 29 h and the BR-15 warning (13 h beyond contract); Approve stays enabled
+PASS S8 BR-16 estimate: Minho base +51,600, premium +30,960; Seoyeon base −52,500, premium −5,250
+PASS S8 the owner changes the Friday shift to 10:00–17:00
+PASS S8 with 10:00–17:00 the preview shows 23 → 28 h, exactly 12 h beyond contract, and no warning
+PASS S9 the owner adds Fri 2026-10-02 22:00–02:00 for Doyun; the board shows it on Friday with 다음 날 02:00까지
+PASS S9 it belongs to the week of 2026-09-28, lasts 4 h (Doyun 12 → 16 h) and all 4 h are night hours with 5 employees
+PASS S9 Sat 2026-10-03 01:00–05:00 for Doyun is refused (OVERLAP), with the reason in the sheet and the toast
+PASS S10 the demo clock is moved to 2026-10-01 09:00
+PASS S10 the owner's Home shows "9월 급여 초안이 준비됐어요" with 급여 확인하기
+PASS S10 급여 확인하기 opens Pay → Monthly with the automatic September DRAFT
+PASS S6 September rows 472,500 / 844,176 / 495,360 / 480,000 and total 2,292,036
+PASS S6 Doyun's row shows the minimum-wage warning; Hana's probation minimum 9,288 applies and her wage is above it
+PASS S6 confirmation is blocked, with its reason, until the warning is acknowledged
+PASS S6 after 확인했어요 on Doyun's warning, 9월 급여 확정하기 is enabled
+PASS S6 the September payroll is confirmed
+PASS S10 opening the draft marked PAYROLL_DRAFT_READY read (the Home card is gone)
+PASS S11 the owner's sheet of Minho's started Tue 09-29 shift (no attendance) offers 결근 처리
+PASS S11 결근 처리 marks the no-show ABSENT
+PASS S11 Minho's week of 2026-09-28 loses perfect attendance and its holiday allowance (33,024 → 0)
+PASS S11 Minho's Home explains the lost holiday allowance
+PASS BR-06 (c): after handing over all three shifts (EXCUSED) Minho's week of 2026-09-28 has no holiday allowance, reason 이번 주 일한 날 없음
+PASS BR-06 (c): Minho's Home explains why there is no holiday allowance
+PASS RBAC: a worker cannot open Pay, the owner cannot open Swaps, no account → sign-in
+PASS NFR-11: Seoyeon's Me shows her own phone and wage with the note that, on screen, only she and the owner see them and the data are fictional
+PASS Language: English from the sign-in header, Korean again from the user menu; the choice is kept in localStorage
+PASS Audit sign-in ko 1280px: 1 primary (처음부터 다시 하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Home ko 1280px: 1 primary (수락하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Schedule ko 1280px: 1 primary (대타 구하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Swaps ko 1280px: 1 primary (대타 구하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 1 ko 1280px: 1 primary (다음), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 2 ko 1280px: 1 primary (다음), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 3 ko 1280px: 1 primary (대타 요청 보내기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request result ko 1280px: 1 primary (홈으로), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Me ko 1280px: 1 primary (근무표 보기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Notifications ko 1280px: 1 primary (모두 읽음으로 표시), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit sign-in ko 360px: 1 primary (처음부터 다시 하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Home ko 360px: 1 primary (수락하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Schedule ko 360px: 1 primary (대타 구하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Swaps ko 360px: 1 primary (대타 구하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 1 ko 360px: 1 primary (다음), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 2 ko 360px: 1 primary (다음), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 3 ko 360px: 1 primary (대타 요청 보내기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request result ko 360px: 1 primary (홈으로), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Me ko 360px: 1 primary (근무표 보기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Notifications ko 360px: 1 primary (모두 읽음으로 표시), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit sign-in en 1280px: 1 primary (Start over), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Home en 1280px: 1 primary (Accept), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Schedule en 1280px: 1 primary (Find a substitute), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Swaps en 1280px: 1 primary (Find a substitute), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 1 en 1280px: 1 primary (Next), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 2 en 1280px: 1 primary (Next), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 3 en 1280px: 1 primary (Send swap request), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request result en 1280px: 1 primary (Go to Home), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Me en 1280px: 1 primary (Open schedule), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Notifications en 1280px: 1 primary (Mark all as read), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit sign-in en 360px: 1 primary (Start over), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Home en 360px: 1 primary (Accept), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Schedule en 360px: 1 primary (Find a substitute), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Swaps en 360px: 1 primary (Find a substitute), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 1 en 360px: 1 primary (Next), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 2 en 360px: 1 primary (Next), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request step 3 en 360px: 1 primary (Send swap request), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit request result en 360px: 1 primary (Go to Home), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Me en 360px: 1 primary (Open schedule), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit worker Notifications en 360px: 1 primary (Mark all as read), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Home (decision) ko 1280px: 1 primary (승인하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Schedule ko 1280px: 1 primary (근무 추가), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff ko 1280px: 1 primary (직원 추가), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff detail ko 1280px: 1 primary (저장하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit new worker ko 1280px: 1 primary (직원 추가하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay weekly ko 1280px: 1 primary (10월 급여 보기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (confirmed) ko 1280px: 1 primary (8월 급여 확정 완료), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (no draft) ko 1280px: 1 primary (9월 급여 초안 만들기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Settings ko 1280px: 1 primary (저장하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Notifications ko 1280px: 1 primary (모두 읽음으로 표시), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Home (decision) ko 360px: 1 primary (승인하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Schedule ko 360px: 1 primary (근무 추가), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff ko 360px: 1 primary (직원 추가), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff detail ko 360px: 1 primary (저장하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit new worker ko 360px: 1 primary (직원 추가하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay weekly ko 360px: 1 primary (10월 급여 보기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (confirmed) ko 360px: 1 primary (8월 급여 확정 완료), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (no draft) ko 360px: 1 primary (9월 급여 초안 만들기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Settings ko 360px: 1 primary (저장하기), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Notifications ko 360px: 1 primary (모두 읽음으로 표시), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Home (decision) en 1280px: 1 primary (Approve), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Schedule en 1280px: 1 primary (Add shift), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff en 1280px: 1 primary (Add worker), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff detail en 1280px: 1 primary (Save), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit new worker en 1280px: 1 primary (Add worker), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay weekly en 1280px: 1 primary (See October pay), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (confirmed) en 1280px: 1 primary (August pay confirmed), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (no draft) en 1280px: 1 primary (Create September pay draft), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Settings en 1280px: 1 primary (Save), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Notifications en 1280px: 1 primary (Mark all as read), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Home (decision) en 360px: 1 primary (Approve), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Schedule en 360px: 1 primary (Add shift), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff en 360px: 1 primary (Add worker), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Staff detail en 360px: 1 primary (Save), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit new worker en 360px: 1 primary (Add worker), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay weekly en 360px: 1 primary (See October pay), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (confirmed) en 360px: 1 primary (August pay confirmed), 1 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Pay monthly (no draft) en 360px: 1 primary (Create September pay draft), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit Settings en 360px: 1 primary (Save), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS Audit owner Notifications en 360px: 1 primary (Mark all as read), 0 disabled with reason, targets ≥ 44 px, no h-scroll
+PASS no console errors or exceptions in either browser (expected refusals discounted)
+PASS reset_demo_data at the end (the shared database is back at the seed)
+
+147 passed, 0 failed
